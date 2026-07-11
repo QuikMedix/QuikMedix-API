@@ -109,15 +109,15 @@ return [
     */
     
     'twilio_sid' => env('TWILIO_SID', null),
-    'twilio_auth_token' => 'be9811c6648d4df74ee8bfdd40c75eef',
-    'twilio_from_phone' => '+17185503992',
-    'twilio_chatServiceSid' => 'ISf4747102823747ca99cf9dc7b0cefae3',
-    'twilio_notifyClientServiceSid' => 'ISbd91c7d9bce72a8f5b0b39c87bc35497',
-    'twilio_notifyClientIOSServiceSid' => 'IS6384eb3f2e9ad8a87154c54374d29956',
-    'twilio_notifyDriverIOSServiceSid' => 'ISfc6896c6f0216868b81ac53c9a20576e',
-    'twilio_notifyDriverServiceSid' => 'IS775c7e9fe3a053a53f1f7ce04da246d8',
-    'twilio_apiKey' => 'SK391623a9489d664d31d32c2196fe6260',
-    'twilio_apiSecret' => '2QqR1r92QluvOmmDesqPbcrrnzteG1Mn',
+    'twilio_auth_token' => '',
+    'twilio_from_phone' => '',
+    'twilio_chatServiceSid' => '',
+    'twilio_notifyClientServiceSid' => '',
+    'twilio_notifyClientIOSServiceSid' => '',
+    'twilio_notifyDriverIOSServiceSid' => '',
+    'twilio_notifyDriverServiceSid' => '',
+    'twilio_apiKey' => '',
+    'twilio_apiSecret' => '',
 
     /*
     |--------------------------------------------------------------------------
