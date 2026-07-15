@@ -15,7 +15,6 @@ yarn-error.log
 /public/agreements
 /public/feedb
 /public/imports
-/public/libs
 package-lock.json	
 .DS_Store
 public/01.pdf
