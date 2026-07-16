@@ -52588,7 +52588,7 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 window.Echo = new laravel_echo__WEBPACK_IMPORTED_MODULE_0__["default"]({
   broadcaster: larasocket_js__WEBPACK_IMPORTED_MODULE_1___default.a,
-  token: "419|6f4F6HIYMpDpjJtXkQQUjU01WtcPTj5sFTWckNr5XGDl2eoyoGKotitBO4aHUPvWvJiK7onCZuRg02EF"
+  token: "3722|O6JA9OlHhPLtliwKpiaXYBoNVwu7r0T2PdxZdmC6"
 });
 
 /***/ }),
@@ -52680,8 +52680,8 @@ __webpack_require__.r(__webpack_exports__);
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(/*! /var/www/a2brx/data/www/cp.a2brx.com/resources/js/app.js */"./resources/js/app.js");
-module.exports = __webpack_require__(/*! /var/www/a2brx/data/www/cp.a2brx.com/resources/sass/app.scss */"./resources/sass/app.scss");
+__webpack_require__(/*! /Users/insidious/Documents/Developer Insight/playground/MavlonProject/MyFork/QuikMedix-API/resources/js/app.js */"./resources/js/app.js");
+module.exports = __webpack_require__(/*! /Users/insidious/Documents/Developer Insight/playground/MavlonProject/MyFork/QuikMedix-API/resources/sass/app.scss */"./resources/sass/app.scss");
 
 
 /***/ })
