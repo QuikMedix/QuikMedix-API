@@ -502,7 +502,7 @@ class MerchantApi extends Controller
 
     public function ordersTicket(Request $request) {
         if($pharmacy_auth = $this->checkAuth($request)){
-            $order_id = $_GET['order_id'];
+            $order_id = $request->query('order_id');
             $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
                 $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
@@ -534,7 +534,7 @@ class MerchantApi extends Controller
 
     public function ordersTicketPrintPdf(Request $request) {
         if($pharmacy_auth = $this->checkAuth($request)){
-            $order_id = $_GET['order_id'];
+            $order_id = $request->query('order_id');
             $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
                 $rxs = DB::table('rxs')->where('order_id',$order->id)->get();

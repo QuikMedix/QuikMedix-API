@@ -474,23 +474,38 @@ class LexaAdminApi extends Controller
                 return ($a->priority - $b->priority);
             });
             $driver= DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',Auth::user()->id)->first();
+            if(empty($driver) || empty($driver->location)) {
+                return response()->json([
+                    'message' => 'Driver location is not available',
+                    'errors' => 'Missing driver location'
+                ], 409);
+            }
             foreach ($routes as $key => $value) {
                 if($value->type=='pharmacy') {
                     $pharmacy = DB::table('pharmacys')->where('id',$value->type_id)->first();
+                    if(empty($pharmacy)) {
+                        continue;
+                    }
                     $routes[$key]->name_point=$pharmacy->name;
                     $routes[$key]->phone_point=$pharmacy->phone;
                     $routes[$key]->address_point=$pharmacy->address;
                     $routes[$key]->google_maps_point="https://www.google.com/maps/dir/".str_replace(' ','',$driver->location)."/".str_replace(' ','',$pharmacy->location)."/";
                     $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    if(empty($order)) {
+                        continue;
+                    }
                     if($order->statuse_copay==6) {
                         $order->statuse_copay=4;
                     }
                     $routes[$key]->order=$order;
-                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->first()->name;
-                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->first()->name;
+                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->value('name') ?? '';
+                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
                 }
                 if($value->type=='patient') {
                     $patient0 = DB::table('users')->where('id',$value->type_id)->first();
+                    if(empty($patient0)) {
+                        continue;
+                    }
                     $routes[$key]->name_point=$patient0->name.' '.$patient0->last_name;
                     $routes[$key]->phone_point=$patient0->phone;
                     $routes[$key]->address_point=$patient0->address;
@@ -514,16 +529,22 @@ class LexaAdminApi extends Controller
                     }
                     $routes[$key]->google_maps_point="https://www.google.com/maps/dir/".str_replace(' ','',$driver->location)."/".str_replace(' ','',$routes[$key]->location_point)."/";
                     $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    if(empty($order)) {
+                        continue;
+                    }
                     if($order->statuse_copay==6) {
                         $order->statuse_copay=4;
                     }
                     $routes[$key]->order=$order;
-                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->first()->name;
-                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->first()->name;
+                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->value('name') ?? '';
+                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
                     $routes[$key]->order->count_scanned=DB::table('packages_transitions')->where('order_id',$value->order_id)->where('user_id',$value->type_id)->where('driver_id',Auth::user()->id)->count();
                 }
                 if($value->type=='office') {
                     $office = DB::table('offices')->where('id',$value->type_id)->first();
+                    if(empty($office)) {
+                        continue;
+                    }
                     $routes[$key]->name_point=$office->name;
                     $routes[$key]->phone_point=$office->phone;
                     $routes[$key]->address_point=$office->address;
@@ -1576,16 +1597,25 @@ class LexaAdminApi extends Controller
             foreach ($routes as $key => $value) {
                 if($value->type=='pharmacy') {
                     $pharmacy = DB::table('pharmacys')->where('id',$value->type_id)->first();
+                    if(empty($pharmacy)) {
+                        continue;
+                    }
                     $routes[$key]->name_point=$pharmacy->name;
                     $routes[$key]->phone_point=$pharmacy->phone;
                     $routes[$key]->address_point=$pharmacy->address;
                     $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    if(empty($order)) {
+                        continue;
+                    }
                     $routes[$key]->order=$order;
-                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->first()->name;
-                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->first()->name;
+                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->value('name') ?? '';
+                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
                 }
                 if($value->type=='patient') {
                     $patient0 = DB::table('users')->where('id',$value->type_id)->first();
+                    if(empty($patient0)) {
+                        continue;
+                    }
                     $routes[$key]->name_point=$patient0->name.' '.$patient0->last_name;
                     $routes[$key]->phone_point=$patient0->phone;
                     if($patient0->primary_address==3){
@@ -1596,12 +1626,18 @@ class LexaAdminApi extends Controller
                         $routes[$key]->address_point=$patient0->address;
                     }
                     $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    if(empty($order)) {
+                        continue;
+                    }
                     $routes[$key]->order=$order;
-                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->first()->name;
-                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->first()->name;
+                    $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->value('name') ?? '';
+                    $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
                 }
                 if($value->type=='office') {
                     $office = DB::table('offices')->where('id',$value->type_id)->first();
+                    if(empty($office)) {
+                        continue;
+                    }
                     $routes[$key]->name_point=$office->name;
                     $routes[$key]->phone_point=$office->phone;
                     $routes[$key]->address_point=$office->address;
@@ -2400,14 +2436,17 @@ class LexaAdminApi extends Controller
     static function next_patient_push($driver_id,$next_route){
         $distance=0;
         $duration=0;
-        $driver_loc= DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver_id)->first()->location;
+        $driver_loc = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver_id)->value('location');
         $driver = DB::table('users')->where('id',$driver_id)->first();
+        $patient0 = DB::table('users')->where('id',$next_route->type_id)->first();
+        if(empty($driver_loc) || empty($driver) || empty($patient0)) {
+            return false;
+        }
         if($driver->transport=='2') {
             $transport = "bicycle";
         } else {
             $transport = "car";
         }
-        $patient0 = DB::table('users')->where('id',$next_route->type_id)->first();
         $patient=[];
         if($patient0->primary_address==3){
             $patient['address']=$patient0->address3;
@@ -2424,6 +2463,9 @@ class LexaAdminApi extends Controller
             $patient['location']=$patient0->location;
             $patient['apartment']=$patient0->apartment;
             $patient['zip']=$patient0->zip;
+        }
+        if(empty($patient['location'])) {
+            return false;
         }
         $last_loc=str_replace(' ','',$patient['location']);
         $access_token = Redis::get('here_access_token');

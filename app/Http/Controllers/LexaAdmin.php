@@ -64,7 +64,7 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if(Auth::user()->role == 'medic'){
-            $res_arr=unserialize(Redis::get(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id));
+            $res_arr=self::get_cached_value(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id);
             if(!empty($res_arr)) {
                 return view('dashboard.index',$res_arr);
             }
@@ -126,7 +126,7 @@ class LexaAdmin extends Controller
             Redis::set(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id, serialize($res_arr), 'EX', 200);
             return view('dashboard.index',$res_arr);
         } else {
-            $res_arr=unserialize(Redis::get(request()->getHttpHost().':admin_dash'));
+            $res_arr=self::get_cached_value(request()->getHttpHost().':admin_dash');
             if(!empty($res_arr)) {
                 return view('dashboard.index',$res_arr);
             }
@@ -589,7 +589,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->first()->pharmacy_id==$pharmacy_id  || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $user = DB::table('users')->where('id', $user_id)->first();
             $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
             $pharmacys = DB::table('pharmacys')->get();
@@ -727,7 +727,7 @@ class LexaAdmin extends Controller
             $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
             $pharmacy_areas = DB::table('pharmacys')->where('id', $pharmacy_id)->get();
             $pharmacy_plan = DB::table('plans')->where('id', $pharmacy->plan_id)->first();
-            $polygons = DB::table('area')->join('pharmacy_areas','pharmacy_areas.area_id',"=","area.id")->where('pharmacy_areas.pharmacy_id',$pharmacy_id)->select('area.name',DB::raw('AsText(area.polygon) as polygon'),'pharmacy_areas.type')->get();
+            $polygons = DB::table('area')->join('pharmacy_areas','pharmacy_areas.area_id',"=","area.id")->where('pharmacy_areas.pharmacy_id',$pharmacy_id)->select('area.name',DB::raw('ST_AsText(area.polygon) as polygon'),'pharmacy_areas.type')->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
                     $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
@@ -1199,7 +1199,7 @@ class LexaAdmin extends Controller
                     $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     DB::table('pharmacys')->insert(['isactive'=>'1','name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'address' => $request->input('address'),'location' => $location,'admin_id'=>Auth::user()->id,'ip'=>$request->ip()]);
-                    DB::table('users')->where('id', Auth::user()->id)->update(['role' => 'medic','pharmacy_id' => DB::table('pharmacys')->where('admin_id', Auth::user()->id)->first()->id]);
+                    DB::table('users')->where('id', Auth::user()->id)->update(['role' => 'medic','pharmacy_id' => DB::table('pharmacys')->where('admin_id', Auth::user()->id)->value('id')]);
                 }
             }
             return redirect("pharmacys");
@@ -1485,7 +1485,7 @@ class LexaAdmin extends Controller
                 if(!empty($loc))
                 $user->location = $loc->location;
             }
-            $pharmacylocation = DB::table('pharmacys')->where('id', $pharmacy_id)->first()->location;
+            $pharmacylocation = DB::table('pharmacys')->where('id', $pharmacy_id)->value('location') ?? '';
             $res_view = view('drivers.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'pharmacylocation'=>$pharmacylocation,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'title'=>'Drivers Users','br1'=>'Drivers','br2'=>'Users']);
             if(isset($_GET['ajax'])) {
                 return $res_view->renderSections();
@@ -1533,7 +1533,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->first()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists() || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $user = DB::table('users')->where('id', $user_id)->first();
             $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
             $pharmacys = DB::table('pharmacys')->get();
@@ -2094,7 +2094,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->first()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists() || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $user = DB::table('users')->where('id', $user_id)->first();
             $pharmacys = DB::table('pharmacys')->get();
             $additional_recipients = DB::table('additional_recipients')->where('user_id', $user_id)->get();
@@ -2236,7 +2236,7 @@ class LexaAdmin extends Controller
             }
             if($request->input('remove')>0) {
                 if(!empty($request->input('user_id'))) {
-                    if(Hash::check($request->input('password'),DB::table('users')->where('id', Auth::user()->id)->first()->password)) {
+                    if(Hash::check($request->input('password'),Auth::user()->password)) {
                         DB::table('deleted_patients')->insert(['user_id' => $request->input('user_id'),'medic_id' => Auth::user()->id,'reason' => $request->input('reason')]);
                         DB::table('users')->where('id', $request->input('user_id'))->update(['pharmacy_id' => NULL]);
                     } else {
@@ -2256,7 +2256,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->first()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists() || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $user = DB::table('users')->where('id', $user_id)->first();
             $pharmacys = DB::table('pharmacys')->get()->keyBy('id');
             $family_members = DB::table('family_members')->where('user_id', $user_id)->get();
@@ -3087,7 +3087,11 @@ class LexaAdmin extends Controller
                 $locations = [];
                 $routesL = [];
                 $type_route = $request->input('type');
-                $driver_location = explode(",",DB::table('locations')->where('user_id', $driver_id)->orderBy("id","desc")->first()->location);
+                $driver_location_value = DB::table('locations')->where('user_id', $driver_id)->orderBy("id","desc")->value('location');
+                $driver_location = explode(",", (string) $driver_location_value);
+                if(count($driver_location) < 2) {
+                    return redirect()->back()->with('error', 'The driver does not have a valid current location.');
+                }
                 array_push($locations,[(float)$driver_location[1],(float)$driver_location[0]]);
                 array_push($routesL,"driver");
                 $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver_id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
@@ -3106,30 +3110,39 @@ class LexaAdmin extends Controller
                     foreach($routes_priority as $key => $routes_priorit){
                         if($routes_priorit->type=='pharmacy') {
                             $dot = DB::table('pharmacys')->where("id",$routes_priorit->type_id)->first();
-                            if(!empty($dot)) {
+                            if(!empty($dot) && !empty($dot->location)) {
                                 $location = explode(",",$dot->location);
-                                array_push($locations,[(float)$location[1],(float)$location[0]]);
-                                array_push($routesL,$routes_priorit);
+                                if(count($location) >= 2) {
+                                    array_push($locations,[(float)$location[1],(float)$location[0]]);
+                                    array_push($routesL,$routes_priorit);
+                                }
                             }
                         }
                         if($routes_priorit->type=='patient') {
                             $dot = DB::table('users')->where("id",$routes_priorit->type_id)->first();
-                            if(!empty($dot)) {
+                            if(!empty($dot) && !empty($dot->location)) {
                                 $location = explode(",",$dot->location);
-                                array_push($locations,[(float)$location[1],(float)$location[0]]);
-                                array_push($routesL,$routes_priorit);
+                                if(count($location) >= 2) {
+                                    array_push($locations,[(float)$location[1],(float)$location[0]]);
+                                    array_push($routesL,$routes_priorit);
+                                }
                             }
                         } 
                         if($routes_priorit->type=='office') {
                             $dot = DB::table('offices')->where("id",$routes_priorit->type_id)->first();
-                            if(!empty($dot)) {
+                            if(!empty($dot) && !empty($dot->location)) {
                                 $location = explode(",",$dot->location);
-                                array_push($locations,[(float)$location[1],(float)$location[0]]);
-                                array_push($routesL,$routes_priorit);
+                                if(count($location) >= 2) {
+                                    array_push($locations,[(float)$location[1],(float)$location[0]]);
+                                    array_push($routesL,$routes_priorit);
+                                }
                             }
                         }
                     }
                     $driver = DB::table('users')->where('id',$driver_id)->first();
+                    if(empty($driver)) {
+                        return redirect()->back()->with('error', 'Driver not found.');
+                    }
                     if($driver->transport=='2') {
                         $transport = "cycling-regular";
                     } else {
@@ -4006,7 +4019,7 @@ class LexaAdmin extends Controller
                 $date = date('Y-m-d');
                 $statuse_id = '';
                 $statuses = DB::table('statuses')->get();
-                $polygons = DB::table('area')->select('id','name',DB::raw('AsText(polygon) as polygon'))->get();
+                $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
                 foreach($polygons as $key=>$pol) {
                     if(!empty($pol->polygon)) {
                         $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
@@ -4047,7 +4060,7 @@ class LexaAdmin extends Controller
                 $date = date('Y-m-d',strtotime($request->input('date')));
                 $statuse_id = $request->input('statuse_id');
                 $statuses = DB::table('statuses')->get();
-                $polygons = DB::table('area')->select('id','name',DB::raw('AsText(polygon) as polygon'))->get();
+                $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
                 foreach($polygons as $key=>$pol) {
                     if(!empty($pol->polygon)) {
                         $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
@@ -4083,7 +4096,7 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
-            $search = $_GET['search'];
+            $search = request()->query('search', '');
             $max_res = 100;
             if(!empty($search)) {
                 $orders_results = [];
@@ -4413,7 +4426,7 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $date = $_GET['date'];
+            $date = request()->query('date');
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('users as users2', 'orders.driver_id', '=', 'users2.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.count_bags', 'orders.statuse_id', 'orders.copay', 'orders.finish', 'users.apartment as userapartment', 'users2.name as driver_name', 'users2.last_name as driver_last_name', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.pharmacy_id', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id',4)->whereRaw('date(finish) = "'.$date.'"')->groupBy('orders.id', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.statuse_id', 'orders.driver_id', 'users.apartment', 'orders.count_bags', 'orders.finish', 'orders.created', 'users2.name', 'users2.last_name', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'),'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc')->get();
             foreach($orders as $key=>$order) {
                 $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
@@ -4432,7 +4445,7 @@ class LexaAdmin extends Controller
             }
             return view('orders.print',['orders'=>$orders]);
         } else if (Auth::user()->role == 'medic') {
-            $date = $_GET['date'];
+            $date = request()->query('date');
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('users as users2', 'orders.driver_id', '=', 'users2.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.count_bags', 'orders.statuse_id', 'orders.copay', 'orders.finish', 'users.apartment as userapartment', 'users2.name as driver_name', 'users2.last_name as driver_last_name', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.pharmacy_id', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id',4)->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->whereRaw('date(finish) = "'.$date.'"')->groupBy('orders.id', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.statuse_id', 'orders.driver_id', 'users.apartment','users2.name', 'users2.last_name', 'orders.count_bags', 'orders.finish', 'orders.created', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc')->get();
             foreach($orders as $key=>$order) {
                 $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
@@ -4455,7 +4468,7 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'medic') || (Auth::user()->role == 'superadmin') || (Auth::user()->role == 'admin') || (Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'driver') || (Auth::user()->role == 'logist')) {
-            $order_id = $_GET['order_id'];
+            $order_id = request()->query('order_id');
             $order = DB::table('orders')->where('id',$order_id)->first();
             $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
             foreach($rxs as $key0=>$rx) {
@@ -5945,7 +5958,7 @@ class LexaAdmin extends Controller
                 DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'admin']);
             }
             if($request->input('tomedic')>0) {
-                if(DB::table('users')->where('id', $request->input('user_id'))->first()->pharmacy_id>0) {
+                if((int) DB::table('users')->where('id', $request->input('user_id'))->value('pharmacy_id')>0) {
                     DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'medic']);
                 } else {
                     $alert="Error, this user dont have pharmacy_id!";
@@ -6068,7 +6081,7 @@ class LexaAdmin extends Controller
                 DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'admin']);
             }
             if($request->input('tomedic')>0) {
-                if(DB::table('users')->where('id', $request->input('user_id'))->first()->pharmacy_id>0) {
+                if((int) DB::table('users')->where('id', $request->input('user_id'))->value('pharmacy_id')>0) {
                     DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'medic']);
                 } else {
                     $alert="Error, this user dont have pharmacy_id!";
@@ -6198,7 +6211,7 @@ class LexaAdmin extends Controller
                 DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'admin']);
             }
             if($request->input('tomedic')>0) {
-                if(DB::table('users')->where('id', $request->input('user_id'))->first()->pharmacy_id>0) {
+                if((int) DB::table('users')->where('id', $request->input('user_id'))->value('pharmacy_id')>0) {
                     DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'medic']);
                 } else {
                     $alert="Error, this user dont have pharmacy_id!";
@@ -6321,7 +6334,7 @@ class LexaAdmin extends Controller
                 DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'admin']);
             }
             if($request->input('tomedic')>0) {
-                if(DB::table('users')->where('id', $request->input('user_id'))->first()->pharmacy_id>0) {
+                if((int) DB::table('users')->where('id', $request->input('user_id'))->value('pharmacy_id')>0) {
                     DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'medic']);
                 } else {
                     $alert="Error, this user dont have pharmacy_id!";
@@ -8979,7 +8992,7 @@ class LexaAdmin extends Controller
             $polygon="";
             $states=[];
             $states_list = DB::table('states')->get();
-            $polygons = DB::table('area')->select('name',DB::raw('AsText(polygon) as polygon'))->get();
+            $polygons = DB::table('area')->select('name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
                     $polygons[$key]->polygon = $this->encodePolygon($pol->polygon);
@@ -9001,7 +9014,7 @@ class LexaAdmin extends Controller
     public function settingsStatesAddHandler(Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
-                $area_id = DB::table('area')->insertGetId(['name' => $request->input('name'),'state' => $request->input('state'),'polygon'=>DB::raw("ST_geomfromtext('POLYGON((".$this->decodePolygon($request->input('polygon'))."))')")]);
+                $area_id = DB::table('area')->insertGetId(['name' => $request->input('name'),'state' => $request->input('state'),'polygon'=>DB::raw("ST_GeomFromText('POLYGON((".$this->decodePolygon($request->input('polygon'))."))')")]);
                 if(!empty($request->input('zip'))){
                     $zips = array_filter(explode("\n",$request->input('zip')));
                     foreach($zips as $zip){
@@ -9019,13 +9032,13 @@ class LexaAdmin extends Controller
 
     public function settingsStatesEdit($area_id) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $area = DB::table('area')->where('id', $area_id)->select('id','name','state','tariff',DB::raw('AsText(polygon) as polygon'))->first();
+            $area = DB::table('area')->where('id', $area_id)->select('id','name','state','tariff',DB::raw('ST_AsText(polygon) as polygon'))->first();
             if(!empty($area->polygon)) {
                 $polygon = $this->encodePolygon($area->polygon);
             } else {
                 $polygon = "";
             }
-            $polygons = DB::table('area')->where('id', '!=', $area_id)->where('state',$area->state)->select('name',DB::raw('AsText(polygon) as polygon'))->get();
+            $polygons = DB::table('area')->where('id', '!=', $area_id)->where('state',$area->state)->select('name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
                     $polygons[$key]->polygon = $this->encodePolygon($pol->polygon);
@@ -9049,7 +9062,7 @@ class LexaAdmin extends Controller
     public function settingsStatesEditHandler($area_id, Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
-                DB::table('area')->where("id",$area_id)->update(['name' => $request->input('name'),'state' => $request->input('state'),'polygon'=>DB::raw("ST_geomfromtext('POLYGON((".$this->decodePolygon($request->input('polygon'))."))')")]);
+                DB::table('area')->where("id",$area_id)->update(['name' => $request->input('name'),'state' => $request->input('state'),'polygon'=>DB::raw("ST_GeomFromText('POLYGON((".$this->decodePolygon($request->input('polygon'))."))')")]);
                 //DB::table('area_zip')->where("area_id",$area_id)->delete();
                 if(!empty($request->input('zip'))){
                     $zips = array_filter(explode("\r\n",$request->input('zip')));
@@ -9517,8 +9530,13 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $accessTokenDb = DB::table('quickbook')->where('id',1)->first()->data;
-            $accessToken = unserialize($accessTokenDb);
+            $accessTokenDb = DB::table('quickbook')->where('id',1)->value('data');
+            try {
+                $accessToken = !empty($accessTokenDb) ? unserialize($accessTokenDb) : null;
+            } catch (\Throwable $exception) {
+                $accessTokenDb = null;
+                $accessToken = null;
+            }
             $dataService = DataService::Configure(array(
                 'auth_mode' => 'oauth2',
                 'ClientID' => config('app.quick_client_id'),
@@ -9675,7 +9693,7 @@ class LexaAdmin extends Controller
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $date = date('Y-m-d');
-            $polygons = DB::table('area')->select('id','name',DB::raw('AsText(polygon) as polygon'))->get();
+            $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
                     $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
@@ -9702,7 +9720,7 @@ class LexaAdmin extends Controller
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $date = date('Y-m-d',strtotime($request->input('date')));
-            $polygons = DB::table('area')->select('id','name',DB::raw('AsText(polygon) as polygon'))->get();
+            $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
                     $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
@@ -9724,7 +9742,7 @@ class LexaAdmin extends Controller
     }
 
     public function reportsCustomers() {
-        $areas = DB::table('area')->select('id','name',DB::raw('AsText(polygon) as polygon'))->get();
+        $areas = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
         $count_all = 0;
         foreach($areas as $key=>$pol) {
             if(!empty($pol->polygon)) {
@@ -9874,7 +9892,7 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
-            $orders = User::where('users.role','driver')->where('users.work_now','1')->where('users.isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->join("orders","routes_priority.order_id","=","orders.id")->leftJoin("try_call","orders.id","=","try_call.order_id")->leftJoin("notes", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes.order_id');$leftJoin->on(DB::raw('notes.type'), DB::raw('='),DB::raw("1"));})->leftJoin("notes as notes2", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes.order_id');$leftJoin->on(DB::raw('notes.type'), DB::raw('='),DB::raw("2"));})->join("users as users2","orders.user_id","=","users2.id")->join("pharmacys","orders.pharmacy_id","=","pharmacys.id")->where('routes_priority.type','patient')->where('orders.actual','0')->havingRaw("max(try_call.created) < (now() - interval 10 minute) OR COUNT(try_call.id) = 0")
+            $orders = User::where('users.role','driver')->where('users.work_now','1')->where('users.isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->join("orders","routes_priority.order_id","=","orders.id")->leftJoin("try_call","orders.id","=","try_call.order_id")->leftJoin("notes", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes.order_id');$leftJoin->where('notes.type', '=', 1);})->leftJoin("notes as notes2", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes2.order_id');$leftJoin->where('notes2.type', '=', 2);})->join("users as users2","orders.user_id","=","users2.id")->join("pharmacys","orders.pharmacy_id","=","pharmacys.id")->where('routes_priority.type','patient')->where('orders.actual','0')->havingRaw("max(try_call.created) < (now() - interval 10 minute) OR COUNT(try_call.id) = 0")
             ->select("users.id as driver_id","routes_priority.priority",DB::raw("CONCAT(users.name, ' ', users.last_name) as driver_name"),"users.phone as driver_phone",DB::raw("CONCAT(users2.name, ' ', users2.last_name) as patient_name"),"users2.phone as patient_phone","users2.address as patient_address","users2.location as patient_location","users2.apartment as patient_apartment","orders.eta","orders.copay","orders.special_instructions",DB::raw("GROUP_CONCAT(DISTINCT CONCAT(notes.created,'!-',notes.note) SEPARATOR ';/') as notes_dispetch"),DB::raw("GROUP_CONCAT(CONCAT(notes2.created,'!-',notes2.note) SEPARATOR ';/') as notes_cust"),DB::raw("GROUP_CONCAT(DISTINCT routes_priority.order_id SEPARATOR ',') as order_id"),"routes_priority.type_id",DB::raw("GROUP_CONCAT(DISTINCT(pharmacys.name) SEPARATOR ',') as pharmacy_name"),DB::raw("GROUP_CONCAT(DISTINCT(pharmacys.phone) SEPARATOR ',') as pharmacy_phone"),DB::raw("count(DISTINCT try_call.id)/count(DISTINCT routes_priority.order_id) as count_call"),DB::raw("case when max(try_call.created) >= now() - interval 10 minute then 1 else 0 end as call_disabled"))
             ->groupBy("users.id","users.name","users.last_name","users.phone","users2.name","users2.last_name","users2.phone","users2.address","users2.apartment","users2.location","routes_priority.type_id","routes_priority.priority","orders.eta","orders.copay","orders.special_instructions")->orderBy(DB::raw("0 - orders.eta"),"desc")->limit(30);
             if(!empty(Auth::user()->zone_id)){
@@ -10115,6 +10133,9 @@ class LexaAdmin extends Controller
     }
 
     public static function slice_location($location) {
+        if(!is_string($location) || $location === '') {
+            return '';
+        }
         $arr = explode(',',$location);
         if(count($arr)>1) {
             $arr[0]=round(floatval($arr[0]),5);
@@ -10127,7 +10148,11 @@ class LexaAdmin extends Controller
     public static function eta_calculate($driver_id,$primary=FALSE) {
         $driver = DB::table('users')->where('id',$driver_id)->first();
         if(!empty($driver)) {
-            $driver_loc= self::slice_location(DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->first()->location);
+            $driver_location = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->value('location');
+            if(empty($driver_location)) {
+                return false;
+            }
+            $driver_loc = self::slice_location($driver_location);
             $eta = DB::table('drivers_eta')->where('driver_id',$driver->id)->first();
             $access=TRUE;
             if(!empty($eta)) {
@@ -10159,18 +10184,20 @@ class LexaAdmin extends Controller
                     $loc_arr = [];
                     $orders_arr = [];
                     foreach ($routes as $key => $value) {
+                        $location = null;
                         if($value->type=='pharmacy') {
-                            $pharmacy = DB::table('pharmacys')->where('id',$value->type_id)->first();
-                            array_push($loc_arr,self::slice_location(str_replace(' ','',$pharmacy->location)));
+                            $location = DB::table('pharmacys')->where('id',$value->type_id)->value('location');
                         }
                         if($value->type=='patient') {
-                            $patient0 = DB::table('users')->where('id',$value->type_id)->first();
-                            array_push($loc_arr,self::slice_location(str_replace(' ','',$patient0->location)));
+                            $location = DB::table('users')->where('id',$value->type_id)->value('location');
                         }
                         if($value->type=='office') {
-                            $office = DB::table('offices')->where('id',$value->type_id)->first();
-                            array_push($loc_arr,self::slice_location(str_replace(' ','',$office->location)));
+                            $location = DB::table('offices')->where('id',$value->type_id)->value('location');
                         }
+                        if(empty($location)) {
+                            continue;
+                        }
+                        array_push($loc_arr,self::slice_location(str_replace(' ','',$location)));
                         array_push($orders_arr,["order_id"=>$value->order_id,"type"=>$value->type,"type_id"=>$value->type_id,"priority"=>$value->priority]);
                     }
                     $legs_arr = [];
@@ -10443,8 +10470,21 @@ class LexaAdmin extends Controller
         }
     }
 
+    private static function get_cached_value($key) {
+        $cached = Redis::get($key);
+        if(!is_string($cached) || $cached === '') {
+            return null;
+        }
+        try {
+            return unserialize($cached);
+        } catch (\Throwable $exception) {
+            Redis::del($key);
+            return null;
+        }
+    }
+
     static function get_statuses() {
-        $statuses = unserialize(Redis::get(request()->getHttpHost().':statuses'));
+        $statuses = self::get_cached_value(request()->getHttpHost().':statuses');
         if(empty($statuses)) {
             $statuses = DB::table('statuses')->get()->keyBy('id');
             Redis::set(request()->getHttpHost().':statuses', serialize($statuses), 'EX', 3600);
@@ -10453,7 +10493,7 @@ class LexaAdmin extends Controller
     }
 
     static function get_statuses_copay() {
-        $statuses_copay = unserialize(Redis::get(request()->getHttpHost().':statuses_copay'));
+        $statuses_copay = self::get_cached_value(request()->getHttpHost().':statuses_copay');
         if(empty($statuses_copay)) {
             $statuses_copay = DB::table('statuses_copay')->get()->keyBy('id');
             Redis::set(request()->getHttpHost().':statuses_copay', serialize($statuses_copay), 'EX', 3600);
@@ -10462,7 +10502,7 @@ class LexaAdmin extends Controller
     }
 
     static function get_delivery_methods() {
-        $delivery_methods = unserialize(Redis::get(request()->getHttpHost().':delivery_methods'));
+        $delivery_methods = self::get_cached_value(request()->getHttpHost().':delivery_methods');
         if(empty($delivery_methods)) {
             $delivery_methods = DB::table('delivery_methods')->get()->keyBy('id');
             Redis::set(request()->getHttpHost().':delivery_methods', serialize($delivery_methods), 'EX', 3600);
@@ -10471,7 +10511,7 @@ class LexaAdmin extends Controller
     }
 
     static function get_delivery_times() {
-        $delivery_times = unserialize(Redis::get(request()->getHttpHost().':delivery_times'));
+        $delivery_times = self::get_cached_value(request()->getHttpHost().':delivery_times');
         if(empty($delivery_times)) {
             $delivery_times = DB::table('delivery_times')->get()->keyBy('id');
             Redis::set(request()->getHttpHost().':delivery_times', serialize($delivery_times), 'EX', 3600);
@@ -10507,7 +10547,7 @@ class LexaAdmin extends Controller
     }
 
     static function get_wishs(){
-        $wishs = unserialize(Redis::get(request()->getHttpHost().':orders_wishs'));
+        $wishs = self::get_cached_value(request()->getHttpHost().':orders_wishs');
         if(empty($wishs)) {
             $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();
             Redis::set(request()->getHttpHost().':orders_wishs', serialize($wishs), 'EX', 3600);
@@ -10518,14 +10558,17 @@ class LexaAdmin extends Controller
     static function next_patient_push($driver_id,$next_route){
         $distance=0;
         $duration=0;
-        $driver_loc= DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver_id)->first()->location;
+        $driver_loc = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver_id)->value('location');
         $driver = DB::table('users')->where('id',$driver_id)->first();
+        $patient0 = DB::table('users')->where('id',$next_route->type_id)->first();
+        if(empty($driver_loc) || empty($driver) || empty($patient0) || empty($patient0->location)) {
+            return false;
+        }
         if($driver->transport=='2') {
             $transport = "bicycle";
         } else {
             $transport = "car";
         }
-        $patient0 = DB::table('users')->where('id',$next_route->type_id)->first();
         $last_loc=str_replace(' ','',$patient0->location);
         $access_token = Redis::get('here_access_token');
         if(empty($access_token)) {

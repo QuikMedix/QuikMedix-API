@@ -112,7 +112,7 @@ class User extends Authenticatable
             return $res;
         }
         if($this->pharmacy_id>0) {
-            $res = DB::table('pharmacys')->where('id', $this->pharmacy_id)->first()->name;
+            $res = DB::table('pharmacys')->where('id', $this->pharmacy_id)->value('name') ?? '';
         } else {
             $res = '';
         }
@@ -126,7 +126,7 @@ class User extends Authenticatable
             return $res;
         }
         if($this->pharmacy_id>0) {
-            $res = DB::table('pharmacys')->where('id', $this->pharmacy_id)->first()->balance;
+            $res = DB::table('pharmacys')->where('id', $this->pharmacy_id)->value('balance') ?? 0;
         } else {
             $res = 0;
         }
@@ -140,8 +140,9 @@ class User extends Authenticatable
             return $res;
         }
         if($this->pharmacy_id>0) {
-            $pharmacy_balance = DB::table('pharmacys')->where('id', $this->pharmacy_id)->first()->balance;
-            $pharmacy_balance_ban = DB::table('pharmacys')->where('id', $this->pharmacy_id)->first()->balance_ban;
+            $pharmacy = DB::table('pharmacys')->where('id', $this->pharmacy_id)->select('balance', 'balance_ban')->first();
+            $pharmacy_balance = $pharmacy->balance ?? 0;
+            $pharmacy_balance_ban = $pharmacy->balance_ban ?? '0';
             if($pharmacy_balance_ban==='1') {
                 $res = 1;
                 if($pharmacy_balance>=0) {

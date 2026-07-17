@@ -15,8 +15,8 @@ class BestRxApi extends Controller
 {
     public function getpharmacyinfo(Request $request) {
         if($pharmacy_auth = $this->checkAuth($request)){
-            $address = explode(',',$pharmacy_auth->address);
-            $address_line_1 = $address[0];
+            $address = explode(',', (string) $pharmacy_auth->address);
+            $address_line_1 = $address[0] ?? '';
             $city = '-';
             $state = 'NY';
             $zip_code = '0';
@@ -24,10 +24,9 @@ class BestRxApi extends Controller
                 $city=trim($address[1]);
             }
             if(isset($address[2])) {
-                $state=explode(' ',trim($address[2]))[0];
-                if(explode(' ',trim($address[2]))[1]) {
-                    $zip_code=explode(' ',trim($address[2]))[1];
-                }
+                $state_zip = preg_split('/\s+/', trim($address[2]));
+                $state = $state_zip[0] ?? 'NY';
+                $zip_code = $state_zip[1] ?? '0';
             }
             return response()->json([
                 'store' => [
@@ -35,7 +34,7 @@ class BestRxApi extends Controller
                     'delivery_provider_acct_no' => $pharmacy_auth->id,
                     'name' => $pharmacy_auth->name,
                     'address' => [
-                        'address_line_1'=>$address[0],
+                        'address_line_1'=>$address_line_1,
                         'address_line_2'=>NULL,
                         'city'=>$city,
                         'state'=>$state,
@@ -220,7 +219,7 @@ class BestRxApi extends Controller
     }
 
     public function ordersTicket(Request $request) {
-        $order_id = $_GET['order_id'];
+        $order_id = $request->query('order_id');
         $order=DB::table('orders')->where('id',$order_id)->whereNotNull('bestrx_order_id')->first();
         if(!empty($order)){
             $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
@@ -245,7 +244,7 @@ class BestRxApi extends Controller
     }
 
     public function ordersTicketPrintPdf(Request $request) {
-        $order_id = $_GET['order_id'];
+        $order_id = $request->query('order_id');
         $order=DB::table('orders')->where('id',$order_id)->whereNotNull('bestrx_order_id')->first();
         if(!empty($order)){
             $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
