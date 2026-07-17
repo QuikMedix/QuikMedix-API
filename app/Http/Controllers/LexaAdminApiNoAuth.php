@@ -215,6 +215,12 @@ class LexaAdminApiNoAuth extends Controller
             $created=date("Y-m-d H:i:s",strtotime($request->input('created')));
             $body=$request->input('body');
             $chat = DB::table('chats')->where('name',$chat_name)->first();
+            if(empty($chat)) {
+                return response()->json([
+                    'message' => 'Chat not found',
+                    'errors' => 'Not Found'
+                ], 404);
+            }
             if($chat->user1==$user) {
                 if($request->input('not_me_author')>0) {
                     $unread_user=0;
@@ -222,13 +228,19 @@ class LexaAdminApiNoAuth extends Controller
                     $unread_user=$chat->unread_user2+1;
                 }
                 $user = DB::table('users')->where('id', $chat->user1)->first();
+                $user2 = DB::table('users')->where('id', $chat->user2)->first();
+                if(empty($user) || empty($user2)) {
+                    return response()->json([
+                        'message' => 'Chat user not found',
+                        'errors' => 'Not Found'
+                    ], 404);
+                }
                 $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
                 if(empty($user_pharmacy)) {
                     $user_pharmacy='';
                 } else {
                     $user_pharmacy=' ('.$user_pharmacy->name.')';
                 }
-                $user2 = DB::table('users')->where('id', $chat->user2)->first();
                 Notifications::send_push($user2->id,"A2BRx","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
                 DB::table('chats')->where('name',$chat_name)->update(['unread_user1'=>0,'unread_user2'=>$unread_user,'last_message_date'=>$created,'last_message_body'=>$body]);
             } else {
@@ -238,13 +250,19 @@ class LexaAdminApiNoAuth extends Controller
                     $unread_user=$chat->unread_user1+1;
                 }
                 $user = DB::table('users')->where('id', $chat->user2)->first();
+                $user2 = DB::table('users')->where('id', $chat->user1)->first();
+                if(empty($user) || empty($user2)) {
+                    return response()->json([
+                        'message' => 'Chat user not found',
+                        'errors' => 'Not Found'
+                    ], 404);
+                }
                 $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
                 if(empty($user_pharmacy)) {
                     $user_pharmacy='';
                 } else {
                     $user_pharmacy=' ('.$user_pharmacy->name.')';
                 }
-                $user2 = DB::table('users')->where('id', $chat->user1)->first();
                 Notifications::send_push($user2->id,"A2BRx","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
                 DB::table('chats')->where('name',$chat_name)->update(['unread_user2'=>0,'unread_user1'=>$unread_user,'last_message_date'=>$created,'last_message_body'=>$body]);
             }

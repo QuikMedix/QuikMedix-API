@@ -314,6 +314,10 @@
 @endsection
 
 @section('footerScript')
+@php
+    $initialOrder = $orders->first();
+    $initialOrderId = $initialOrder ? str_replace(',', '', $initialOrder->order_id) : null;
+@endphp
 <script src="{{ URL::asset('/js/bootstrap.bundle.min.js')}}"></script>
 <script src="{{ URL::asset('/js/bootstrap-datepicker.min.js')}}"></script>
 <script src="{{ URL::asset('/js/select2.min.js')}}"></script>
@@ -329,8 +333,6 @@
     var locationDrivers = {@foreach($orders as $order)
     @if(isset($locations[$order->driver_id]))
     "{{str_replace(',','',$order->order_id)}}":"{{ $locations[$order->driver_id]->location }}",
-    @else
-    "",
     @endif
     @endforeach};
     var locationPatients = {@foreach($orders as $order)
@@ -349,11 +351,15 @@
         var refresh = function () {
             $(".row-dispatch").each(function( index ) {
                 var blockPosition = $(this).offset().top, 
-                windowScrollPosition = $('.list-dispatch').scrollTop();
+                    windowScrollPosition = $('.list-dispatch').scrollTop();
                 if( blockPosition>0 ) {
                     var order_id = $(this).data("id");
-                    map.removeLayer(marker);
-                    map.removeLayer(marker2);
+                    if (!locationPatients[order_id] || !locationDrivers[order_id]) {
+                        $(".loader").removeClass("show");
+                        return false;
+                    }
+                    if (marker) map.removeLayer(marker);
+                    if (marker2) map.removeLayer(marker2);
                     marker = L.marker([parseFloat(locationPatients[order_id].split(",")[0]),parseFloat(locationPatients[order_id].split(",")[1])],{
                         icon: customIconUser("Patient"),
                     }).addTo(map);
@@ -370,8 +376,11 @@
             });
         };
     };
+    const initialOrderId = @json($initialOrderId);
     $(document).ready(function() {
-        initMap();
+        if (initialOrderId && locationDrivers[initialOrderId] && locationPatients[initialOrderId]) {
+            initMap(initialOrderId);
+        }
     });
     const here = {
         apiKey:"{{config('app.hereApiKey')}}"
@@ -379,7 +388,10 @@
     const style = 'normal.day';
     const hereTileUrl = `https://maps.hereapi.com/v3/base/mc/{z}/{x}/{y}/png?apiKey=${here.apiKey}&ppi=400`;
     var map,marker,marker2;
-    function initMap(order_id = "{{str_replace(',','',$orders[0]->order_id)}}") {
+    function initMap(order_id) {
+        if (!order_id || !locationDrivers[order_id] || !locationPatients[order_id]) {
+            return;
+        }
         if(map!==undefined){
             map.remove();
         }

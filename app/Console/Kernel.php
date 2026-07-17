@@ -52,7 +52,11 @@ class Kernel extends ConsoleKernel
             $drivers = User::where('role','driver')->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->whereNotNull('routes_priority.id')->select('users.id')->groupBy('users.id')->get();
             foreach($drivers as $driver){
                 try {
-                    $driver_loc= self::slice_location(DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->first()->location);
+                    $driver_location = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->value('location');
+                    if(empty($driver_location)) {
+                        continue;
+                    }
+                    $driver_loc = self::slice_location($driver_location);
                     $eta = DB::table('drivers_eta')->where('driver_id',$driver->id)->first();
                     $access=TRUE;
                     if(!empty($eta)) {
@@ -84,18 +88,20 @@ class Kernel extends ConsoleKernel
                             $loc_arr = [];
                             $orders_arr = [];
                             foreach ($routes as $key => $value) {
+                                $location = null;
                                 if($value->type=='pharmacy') {
-                                    $pharmacy = DB::table('pharmacys')->where('id',$value->type_id)->first();
-                                    array_push($loc_arr,self::slice_location(str_replace(' ','',$pharmacy->location)));
+                                    $location = DB::table('pharmacys')->where('id',$value->type_id)->value('location');
                                 }
                                 if($value->type=='patient') {
-                                    $patient0 = DB::table('users')->where('id',$value->type_id)->first();
-                                    array_push($loc_arr,self::slice_location(str_replace(' ','',$patient0->location)));
+                                    $location = DB::table('users')->where('id',$value->type_id)->value('location');
                                 }
                                 if($value->type=='office') {
-                                    $office = DB::table('offices')->where('id',$value->type_id)->first();
-                                    array_push($loc_arr,self::slice_location(str_replace(' ','',$office->location)));
+                                    $location = DB::table('offices')->where('id',$value->type_id)->value('location');
                                 }
+                                if(empty($location)) {
+                                    continue;
+                                }
+                                array_push($loc_arr,self::slice_location(str_replace(' ','',$location)));
                                 array_push($orders_arr,["order_id"=>$value->order_id,"type"=>$value->type,"type_id"=>$value->type_id,"priority"=>$value->priority]);
                             }
                             $access_token = Redis::get('here_access_token');
@@ -158,7 +164,11 @@ class Kernel extends ConsoleKernel
             $drivers = User::where('role','driver')->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->whereNotNull('routes_priority.id')->select('users.id')->groupBy('users.id')->get();
             foreach($drivers as $driver){
                 try {
-                    $driver_loc= self::slice_location(DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->first()->location);
+                    $driver_location = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->value('location');
+                    if(empty($driver_location)) {
+                        continue;
+                    }
+                    $driver_loc = self::slice_location($driver_location);
                     $eta = DB::table('drivers_eta')->where('driver_id',$driver->id)->first();
                     $access=TRUE;
                     if(!empty($eta)) {
@@ -243,6 +253,9 @@ class Kernel extends ConsoleKernel
     }
 
     public static function slice_location($location) {
+        if(!is_string($location) || $location === '') {
+            return '';
+        }
         $arr = explode(',',$location);
         if(count($arr)>1) {
             $arr[0]=round(floatval($arr[0]),5);
