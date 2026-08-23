@@ -17,7 +17,7 @@
     <link href="{{ URL::asset('/css/app.min.css')}}" id="app-style" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.bootstrap3.min.css" integrity="sha256-ze/OEYGcFbPRmvCnrSeKbRTtjG4vGLHXgOqsyLFTRjg=" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">   
-    <link rel="stylesheet" href="https://cp.a2brx.com/public/libs/magnific-popup/magnific-popup.min.css" type="text/css" />   
+    <link rel="stylesheet" href="{{ URL::asset('/libs/magnific-popup/magnific-popup.min.css') }}" type="text/css" />
     <link rel="stylesheet" href="/css/sweetalert2.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -141,7 +141,7 @@
     </div>
     @if(Auth::user()->role=='superadmin' || Auth::user()->role=='admin' || Auth::user()->role=='medic')
     <div class="scan-qr">
-        <img src="https://cp.a2brx.com/images/qr_new.svg" alt="qr scan">
+        <img src="{{ URL::asset('/images/qr_new.svg') }}" alt="qr scan">
     </div>    
 
     <div class="scan-preload">
