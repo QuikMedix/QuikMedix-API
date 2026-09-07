@@ -13,7 +13,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') Icon Sidebar @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Layouts  @endslot
                      @slot('li3') Icon Sidebar @endslot
                 @endcomponent

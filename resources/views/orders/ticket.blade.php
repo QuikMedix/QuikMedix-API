@@ -2,7 +2,7 @@
     @for ($i = 1; ($i-1) < $order->count_bags; $i++)
         <div class="row" style="background: white;">
             <div class="text-center" style="width:306px;height: 406px;background: #ffffff;">
-                <p><img src="https://cp.a2brx.com/images/logoprint.png" alt="logo" height="75" style="margin-top: 17px;margin-left: 25px;"></p>
+                <p><img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix" width="260" height="63" style="margin-top: 17px;"></p>
                 <span style="font-size:13px;line-height: 12px;padding: 5px;color: #000000;border: solid 1px #000;">Bags: {{$order->count_bags}} -- RX qty: {{count($order->rxs)}} </span>
                 <p class="mb-0" style="font-size:14px;color:#000;margin-left:0px;margin-top: 0px; height: 130px">
                 <img src="data:image/png;base64,{{DNS2D::getBarcodePNG($order->id.'_'.$i, 'QRCODE',5,5)}}" alt="qrcode" style="margin-left: 20px;margin-top: 20px; float: left;"/>
@@ -21,7 +21,7 @@
                 <p class="text-center" style="color: #000000;text-transform: uppercase;font-size: 15px;font-weight: bold;">Signature Required</p>
                 @endif
                 <div class="row" style="width:306px; height: auto; background: #ffffff;">
-                <div align="center" style="width: 120px; height: auto; float: left; vertical-align: middle"><img src="https://cp.a2brx.com/images/smile.png" alt="" height="80" style="margin-top: 0px;margin-left: 30px; float: left;" > </div>
+                <div align="center" style="width: 120px; height: auto; float: left; vertical-align: middle"><img src="{{ asset('images/smile.png') }}" alt="" height="80" style="margin-top: 0px;margin-left: 30px; float: left;" > </div>
                     <div align="center"  style="width: 180px;height: auto vertical-align: middle;text-align: center; float: none;">
                         <span style="font-weight: normal; color: #000000; text-align: center;">{{$wishs[array_rand($wishs)]}}</span><br><b>Have a Nice Day!</b>
                     </div>

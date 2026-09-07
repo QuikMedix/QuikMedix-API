@@ -62,7 +62,7 @@
                     <div class="row">
                         <div class="col-xl-4 col-sm-6">
                             <div class="card">
-                                <div class="card-body"><h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Logo </h5>
+                                <div class="card-body"><h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Logo </h5>
                                     <form method="post" enctype="multipart/form-data">
                                         @csrf
                                         <input type="hidden" name="save" value="1">
@@ -78,7 +78,7 @@
                                                 </div>
                                         </div>                                    										
                                 </div>
-                                <div class="card-body"><h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Exterior</h5>  
+                                <div class="card-body"><h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Exterior</h5>
                                         <div class="form-group row" align="center">                                        
                                             <div class="col-sm-12" style="margin-bottom: 5px;">
                                                 <div style="margin: 10px; min-height: 200px;">
@@ -94,7 +94,7 @@
                         <div class="col-xl-4 col-sm-6">
                             <div class="card">
                             <div class="card-body" style="min-height: 430px;">
-                                    <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
+                                    <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
                                         <div class="form-group" style="margin-bottom: 0;">
                                             <label for="example-text-input" class="col-sm-12 col-form-label">Pharmacy name</label>
                                             <div class="col-sm-12">
@@ -263,7 +263,7 @@
                         <div class="col-xl-4 col-sm-6">
                             <div class="card">
                                 <div class="card-body" style="min-height: 430px;">
-                                    <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Tariff </h5><br>
+                                    <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Tariff </h5><br>
                                     <div class="row"> 
                                         <div class="col-xl-12 col-sm-12" style="margin: 0px 0;">                         
                                             <div class="col-sm-12">
@@ -351,7 +351,7 @@
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Hours:</h5>
+                                    <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Hours:</h5>
                                     <label class="col-form-label p-0" style="text-align: center;font-weight:bold;width: 100%;">Monday</label> 
                                     <div class="row">
                                         <div class="col-md-6">

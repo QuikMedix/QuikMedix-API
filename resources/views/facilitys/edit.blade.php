@@ -52,8 +52,8 @@
 }
 .btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
     color: #fff;
-    background-color: #7a6fbe;
-    border-color: #7a6fbe;
+    background-color: #c90016;
+    border-color: #c90016;
 }
 .btn-check {
     position: absolute;
@@ -100,8 +100,8 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
 }
 .form-check-input:checked {
-    background-color: #7a6fbe;
-    border-color: #7a6fbe;
+    background-color: #c90016;
+    border-color: #c90016;
 }
 .form-switch .form-check-input {
     width: 2em;
@@ -136,15 +136,15 @@
 }
 .irs--square .irs-from, .irs--square .irs-to, .irs--square .irs-single {
     font-size: 12px;
-    background-color: #7a6fbe;
+    background-color: #c90016;
 }
 .irs--square .irs-bar {
     top: 29px;
     height: 8px;
-    background-color: #7a6fbe;
+    background-color: #c90016;
 }
 .irs--square .irs-handle {
-    border: 3px solid #7a6fbe;
+    border: 3px solid #c90016;
     border-radius: 50%;
 }
 </style>
@@ -164,7 +164,7 @@
                                 <div class="card-body">
 									<div class="row">
                                         <div class="col-12">
-                                            <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Edit Order</h5> 
+                                            <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Edit Order</h5>
                                         </div>
                                     </div>									
                                     <form method="post" enctype="multipart/form-data" id="form">

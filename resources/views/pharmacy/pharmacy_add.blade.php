@@ -137,31 +137,31 @@
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup A2BRx Driver - Next day delivery</label>
+                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - Next day delivery</label>
                                             <div class="col-sm-10">
                                                 <input class="form-control" type="number" step="0.01" min="0" name="tariff_next_day" value="{{ $input['tariff_next_day'] }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup A2BRx Driver - Same day delivery</label>
+                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - Same day delivery</label>
                                             <div class="col-sm-10">
                                                 <input class="form-control" type="number" step="0.01" min="0" name="tariff_same_day" value="{{ $input['tariff_same_day'] }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup A2BRx Driver - ASAP Delivery</label>
+                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - ASAP Delivery</label>
                                             <div class="col-sm-10">
                                                 <input class="form-control" type="number" step="0.01" min="0" name="tariff_asap" value="{{ $input['tariff_asap'] }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup A2BRx Driver - After Hours Delivery</label>
+                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - After Hours Delivery</label>
                                             <div class="col-sm-10">
                                                 <input class="form-control" type="number" step="0.01" min="0" name="tariff_after_hours" value="{{ $input['tariff_after_hours'] }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup A2BRx Driver - Delivery With Fridge</label>
+                                            <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - Delivery With Fridge</label>
                                             <div class="col-sm-10">
                                                 <input class="form-control" type="number" step="0.01" min="0" name="tariff_fridge" value="{{ $input['tariff_fridge'] }}">
                                             </div>

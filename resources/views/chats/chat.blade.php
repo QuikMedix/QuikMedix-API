@@ -3,7 +3,7 @@
 @section('title') Chat {{$user->name.' '.$user->last_name}} @endsection
 
 @section('headerCss')
-<link rel="stylesheet" href="{{ asset('css/twiliochat.css') }}">
+<link rel="stylesheet" href="{{ asset('css/twiliochat.css?v=quikmedix-1') }}">
 @endsection
 
 @section('content')

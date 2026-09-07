@@ -8,7 +8,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') Preloader @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Layouts  @endslot
                      @slot('li3') Preloader @endslot
                 @endcomponent

@@ -8,7 +8,7 @@
 
                  @component('common-components.breadcrumb')
                      @slot('title') Timeline @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Pages  @endslot
                      @slot('li3') Timeline @endslot
                 @endcomponent

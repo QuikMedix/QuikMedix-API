@@ -12,9 +12,6 @@ class VerifyCsrfToken extends Middleware
      * @var array
      */
     protected $except = [
-        'github_pull',
-        'github_pull_zoz',
         'zadarma',
-        'livetex_hook',
     ];
 }

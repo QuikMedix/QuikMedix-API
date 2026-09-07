@@ -509,7 +509,7 @@ Particle.prototype.flee = function(target) {
       </div>
       <div id="santa-body"></div>
     </div>
-    <a href="https://cp.a2brx.com/"><img src="https://cp.a2brx.com/images/back-3.gif" alt="back"  class="back"></a>
+    <a href="{{ url('/') }}" class="back" aria-label="Back to QuikMedix">&#8592; QuikMedix</a>
   <p>We would like to take this opportunity to thank you for doing business with us and to wish you a very Merry Christmas and a Happy New Year!</p>
 
 

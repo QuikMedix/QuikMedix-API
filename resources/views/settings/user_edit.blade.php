@@ -11,8 +11,8 @@
 }
 .btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
     color: #fff;
-    border-color: #7a6fbe;
-    background-color: #7a6fbe;
+    border-color: #c90016;
+    background-color: #c90016;
 }
 .btn-check:active+.btn-outline-primary img, .btn-check:checked+.btn-outline-primary img, .btn-outline-primary.active img, .btn-outline-primary.dropdown-toggle.show img, .btn-outline-primary:active img {
     filter: invert(1);

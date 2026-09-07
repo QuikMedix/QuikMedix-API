@@ -14,7 +14,7 @@
                     <div class="row">
                @component('common-components.breadcrumb')
                      @slot('title') Form Advanced  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Forms  @endslot
                      @slot('li3') Form Advanced @endslot
                 @endcomponent
@@ -50,7 +50,7 @@
                                         <div class="form-group m-b-0">
                                             <label>As a component</label>
                                             <div class="input-group colorpicker-default" title="Using format option">
-                                                <input type="text" class="form-control input-lg" value="#7a6fbe" />
+                                                <input type="text" class="form-control input-lg" value="#c90016" />
                                                 <span class="input-group-append">
                                                     <span
                                                         class="input-group-text colorpicker-input-addon"><i></i></span>
@@ -65,7 +65,7 @@
                                         <div class="form-group">
                                             <label>Aliased color palette</label>
                                             <div id="colorpicker-color-pattern" class="input-group colorpicker-component">
-                                                <input type="text" class="form-control input-lg" value="#7a6fbe" />
+                                                <input type="text" class="form-control input-lg" value="#c90016" />
                                                 <span class="input-group-append">
                                                     <span
                                                         class="input-group-text colorpicker-input-addon"><i></i></span>

@@ -7,7 +7,7 @@
                     <div class="row">
             @component('common-components.breadcrumb')
                      @slot('title') Form Validation  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Forms  @endslot
                      @slot('li3') Form Validation @endslot
                 @endcomponent

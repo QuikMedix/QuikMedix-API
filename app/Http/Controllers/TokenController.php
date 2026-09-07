@@ -10,7 +10,7 @@ class TokenController extends Controller
 {
     public function generate(Request $request, AccessToken $accessToken, ChatGrant $chatGrant)
     {
-        $appName = "A2BRX";
+        $appName = "QuikMedix";
         $identity = $request->input("identity");
 
         $TWILIO_CHAT_SERVICE_SID = config('app.twilio_chatServiceSid');

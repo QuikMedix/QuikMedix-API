@@ -847,7 +847,7 @@ class LexaAdminApi extends Controller
             if(!empty($order)) {
                 if($order->statuse_id==1 || $order->statuse_id==2 || $order->statuse_id==6) {
                     DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>3]);
-                    Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id is on its way!");
+                    Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
                 }
                 return response()->json([
                     'message' => 'Order was changed'
@@ -1020,7 +1020,7 @@ class LexaAdminApi extends Controller
                         }
                     }
                     $route->delete();
-                    Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id has been delivered. \nIf you have any questions please contact us (855) 657-9595 \nBest regards, A2B Rx Inc.");
+                    Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id has been delivered. \nIf you have any questions please contact ".\App\Support\Branding::supportContact()." \nBest regards, QuikMedix");
                     $next_route = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->orderBy("priority","asc")->first();
                     if(!empty($next_route)) {
                         if($next_route->type=='patient') {
@@ -1201,7 +1201,7 @@ class LexaAdminApi extends Controller
                             }
                         }
                         $route->delete();
-                        Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id has been delivered. \nIf you have any questions please contact us (855) 657-9595 \nBest regards, A2B Rx Inc.");
+                        Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id has been delivered. \nIf you have any questions please contact ".\App\Support\Branding::supportContact()." \nBest regards, QuikMedix");
                         $next_route = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->orderBy("priority","asc")->first();
                         if(!empty($next_route)) {
                             if($next_route->type=='patient') {
@@ -1341,7 +1341,7 @@ class LexaAdminApi extends Controller
                 }
                 $binding = $twilio->notify->v1->services(config('app.twilio_notifyDriverServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"A2BRx","Hello Test");
+                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             } else {
                 $bindings = $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings->read(["identity"=>Auth::user()->id], 20);
                 foreach ($bindings as $record) {
@@ -1349,7 +1349,7 @@ class LexaAdminApi extends Controller
                 }
                 $binding = $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"A2BRx","Hello Test");
+                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             }
         } else {
             if(Auth::user()->role=='driver') {
@@ -1359,7 +1359,7 @@ class LexaAdminApi extends Controller
                 }
                 $binding = $twilio->notify->v1->services(config('app.twilio_notifyDriverIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"A2BRx","Hello Test");
+                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             } else {
                 $bindings = $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings->read(["identity"=>Auth::user()->id], 20);
                 foreach ($bindings as $record) {
@@ -1367,7 +1367,7 @@ class LexaAdminApi extends Controller
                 }
                 $binding = $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"A2BRx","Hello Test");
+                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             }
         }
         return response()->json([
@@ -1436,7 +1436,7 @@ class LexaAdminApi extends Controller
             $token->expires_at = Carbon::now()->addDays(7);
             $token->save();
         }
-        $bing = Notifications::send_push($user_id,"A2BRx","Test Notification");
+        $bing = Notifications::send_push($user_id,"QuikMedix","Test Notification");
         return response()->json([
             'message' => $bing
         ], 200);
@@ -1670,7 +1670,7 @@ class LexaAdminApi extends Controller
             $routes = DB::table('routes_priority')->where('driver_id', Auth::user()->id)->orderBy("priority","asc")->get();
             foreach($routes as $key => $value) {
                 if($value->type=='patient') {
-                    //Notifications::send_push(DB::table('orders')->where('id', $value->order_id)->first()->user_id,"A2BRx","Your orders are out for delivery today");
+                    //Notifications::send_push(DB::table('orders')->where('id', $value->order_id)->first()->user_id,"QuikMedix","Your orders are out for delivery today");
                 }
             }
             return response()->json([
@@ -2419,7 +2419,7 @@ class LexaAdminApi extends Controller
             $token->expires_at = Carbon::now()->addDays(7);
             $token->save();
         }
-        //$news = [["created"=>"2022-01-07 11:00:05","type"=>"news","link"=>"","title"=>"News from A2B Rx","text"=>"Welcome to our updated app"]];
+        //$news = [["created"=>"2022-01-07 11:00:05","type"=>"news","link"=>"","title"=>"News from QuikMedix","text"=>"Welcome to our updated app"]];
         if(!empty(Auth::user()->pharmacy_id)) {
             $news = DB::table('news_patient')->where("pharmacy_id",Auth::user()->pharmacy_id)->orderBy('id','desc')->get();
             foreach($news as $key=>$new) {
@@ -2494,7 +2494,7 @@ class LexaAdminApi extends Controller
         $duration = floor($duration / 60);
         $duration= $duration." hours ".$min." minutes";
         $distance= $distance.' miles';
-        Notifications::send_push($next_route->type_id,"A2BRx","Your delivery is next. \nPlease track your order #".$next_route->order_id." via our app. ETA: $duration \nThank you for using our service.");
+        Notifications::send_push($next_route->type_id,"QuikMedix","Your delivery is next. \nPlease track your order #".$next_route->order_id." via our app. ETA: $duration \nThank you for using our service.");
         return true;
     }
 

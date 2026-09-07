@@ -9,7 +9,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') Chartist Chart  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Charts  @endslot
                      @slot('li3') Chartist Chart  @endslot
                 @endcomponent
@@ -205,7 +205,7 @@
                             <div class="container-fluid">
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        © 2018 - 2020 Lexa <span class="d-none d-sm-inline-block"> - Crafted with <i class="mdi mdi-heart text-danger"></i> by Themesbrand.</span>
+                                        © {{ date('Y') }} QuikMedix. All rights reserved.
                                     </div>
                                 </div>
                             </div>

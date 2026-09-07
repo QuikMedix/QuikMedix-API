@@ -21,7 +21,7 @@
                         </div>
                     </div>
                     <div class="mt-5 text-center">
-                        <p>© 2025 All Rights Reserved - A2B RX Inc</p>
+                        <p>© {{ date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>
             </div>

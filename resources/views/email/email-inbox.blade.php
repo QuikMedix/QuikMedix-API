@@ -9,7 +9,7 @@
 
                          @component('common-components.breadcrumb')
                      @slot('title') Email Inbox  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Email  @endslot
                      @slot('li3') Email Inbox  @endslot
                 @endcomponent

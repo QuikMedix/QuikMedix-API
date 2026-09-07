@@ -93,7 +93,7 @@
                                                                     </div>
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" name="type[]" value="2" checked class="col-form-label status" id="exampleinput2">
-                                                                        <label for="exampleinput2" class="col-form-label">A2B Rx drivers</label>
+                                                                        <label for="exampleinput2" class="col-form-label">QuikMedix drivers</label>
                                                                     </div>
                                                                     @elseif($_GET['type']==[1])
                                                                     <div style="margin-bottom:5px;">
@@ -102,7 +102,7 @@
                                                                     </div>
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" name="type[]" value="2" class="col-form-label status" id="exampleinput2">
-                                                                        <label for="exampleinput2" class="col-form-label">A2B Rx drivers</label>
+                                                                        <label for="exampleinput2" class="col-form-label">QuikMedix drivers</label>
                                                                     </div>
                                                                     @elseif($_GET['type']==[2])
                                                                     <div style="margin-bottom:5px;">
@@ -111,7 +111,7 @@
                                                                     </div>
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" name="type[]" value="2" checked class="col-form-label status" id="exampleinput2">
-                                                                        <label for="exampleinput2" class="col-form-label">A2B Rx drivers</label>
+                                                                        <label for="exampleinput2" class="col-form-label">QuikMedix drivers</label>
                                                                     </div>
                                                                     @endif
                                                                 @else
@@ -121,7 +121,7 @@
                                                                     </div>
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" name="type[]" value="2" class="col-form-label status" id="exampleinput2">
-                                                                        <label for="exampleinput2" class="col-form-label">A2B Rx drivers</label>
+                                                                        <label for="exampleinput2" class="col-form-label">QuikMedix drivers</label>
                                                                     </div>
                                                                 @endif
                                                                     <button class="btn btn-primary" type="submit">Apply</button>
@@ -138,7 +138,7 @@
                                                         <td class="name-column">{{$user->name}} {{$user->last_name}}</td>
                                                         <td>{{$user->phone}}</td>
                                                         @if($user->pharmacy_id == NULL || $user->pharmacy_id == '')
-                                                        <td class="name-column">A2B Rx driver</td>
+                                                        <td class="name-column">QuikMedix driver</td>
                                                         @else 
                                                         <td class="name-column">Pharmacy driver</td>
                                                         @endif

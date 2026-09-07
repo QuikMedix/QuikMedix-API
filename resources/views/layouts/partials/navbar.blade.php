@@ -36,10 +36,10 @@ function time_elapsed_string($datetime, $full = false) {
                         <div class="navbar-brand-box">
                             <a href="/" class="logo logo-dark">
                                 <span class="logo-sm">
-                                    <img src="{{ URL::asset('/images/icon.svg')}}" alt="" height="50">
+                                    <img src="{{ asset('images/branding/quikmedix-icon.png?v=transparent-1') }}" alt="QuikMedix" width="44" height="44">
                                 </span>
                                 <span class="logo-lg">
-                                    <img src="{{ URL::asset('/images/logo.svg')}}" alt="" height="60">
+                                    <img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix — Your Health - Our Priority" width="190" style="max-width: 100%; height: auto;">
                                 </span>
                             </a>
                         </div>
@@ -256,7 +256,7 @@ function time_elapsed_string($datetime, $full = false) {
                             <div class="page-title-box"> 
                                 <h4 id="h-title">{{$title}}</h4>
                                 <ol class="breadcrumb m-0">
-                                    <li class="breadcrumb-item"><a href="javascript: void(0);">A2BRx</a></li>
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">QuikMedix</a></li>
                                 </ol>
                                 
                             </div>
@@ -273,7 +273,13 @@ function time_elapsed_string($datetime, $full = false) {
                         @elseif(Auth::user()->role == 'medic')
                         <div class="col-sm-6">
                             <div class="page-title-box float-right">
-                                <h4>Support <i class="mdi mdi-phone-in-talk-outline ml-2 mr-2"></i> (855) 657-9595</h4>
+                                @if(config('branding.support_phone'))
+                                    <h4>Support <i class="mdi mdi-phone-in-talk-outline ml-2 mr-2"></i> {{ config('branding.support_phone') }}</h4>
+                                @elseif(config('branding.support_email'))
+                                    <a href="mailto:{{ config('branding.support_email') }}">QuikMedix support</a>
+                                @else
+                                    <a href="{{ url('/chat') }}">QuikMedix support</a>
+                                @endif
                             </div>
                         </div>
                         @elseif(Auth::user()->role == 'sale')
@@ -482,7 +488,7 @@ function time_elapsed_string($datetime, $full = false) {
                                  <!-- <li class="nav-item">
                                     <a href="/drivers" class="nav-link">
                                         <i class="ti-id-badge"></i>
-                                        <span>A2B Rx Drivers</span>
+                                        <span>QuikMedix Drivers</span>
                                     </a>
                                 </li> -->
                                 @if(Auth::user()->role == 'medic')

@@ -195,7 +195,7 @@
                             <div class="col-xl-6 col-sm-6 bor text-left"> 
                                 <h5 class="mb-4 pb-2 text-center">Vehicle</h5>
                                 <div class="text-center mb-4">
-                                    <img src="@if(!empty($user->car_img)){{$user->car_img}}@else{{'https://cp.a2brx.com/images/drivers-bg.jpg'}}@endif" id="car"  alt="car" class="rounded" style="max-height: 250px;max-width: 100%;">
+                                    <img src="@if(!empty($user->car_img)){{$user->car_img}}@else{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}@endif" id="car"  alt="car" class="rounded" style="max-height: 250px;max-width: 100%;">
                                 </div>
                                 <div class="mb-4 text-center">
                                     <input type="radio" value="1" class="btn-check" @if($user->transport=='1'){{"checked"}}@endif name="transport" id="formRadios1" autocomplete="off">

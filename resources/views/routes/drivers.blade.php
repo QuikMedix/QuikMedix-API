@@ -49,9 +49,9 @@
                                                 </div>
                                                     <div class="directory-content text-center p-4">
 														 	@if($user->os==1)
-                                                                 <img class="float-left" src="https://cp.a2brx.com/images/android.png" alt="android" style="width: 30px;position: initial;margin-top: -14px;">
+                                                                 <i class="ion ion-logo-android mr-2" aria-hidden="true"></i>
                                                             @elseif($user->os==2)
-                                                                <img class="float-left" src="https://cp.a2brx.com/images/ios.png" alt="ios" style="width: 30px;position: initial;margin-top: -14px;s;">
+                                                                <i class="ion ion-logo-apple mr-2" aria-hidden="true"></i>
                                                             @else
                                                                 <i class="ion ion-logo-android float-left" style="font-size: 34px;"></i>                                                            
                                                             @endif                                                                                                                        												    

@@ -6,9 +6,10 @@
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  @include('layouts.partials.brand-icons')
   <!-- Site Title -->
   <title>Report - Invoice-{{$invoice->id}}</title>
-  <link rel="stylesheet" href="/css/print-style.css">
+  <link rel="stylesheet" href="/css/print-style.css?v=quikmedix-1">
 
 </head>
 
@@ -19,7 +20,7 @@
         <div class="tm_invoice_in">
           <div class="tm_invoice_head tm_top_head tm_mb15 tm_align_center">
             <div class="tm_invoice_left">
-              <div class="tm_logo"><img src="https://a2brx.com/assets/media/logo-2.svg" alt="Logo"></div>
+              <div class="tm_logo"><img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix"></div>
             </div>
             <div class="tm_invoice_right tm_text_right tm_mobile_hide">
               <div class="tm_f18 tm_text_uppercase tm_white_color">Weekly Statement</div>

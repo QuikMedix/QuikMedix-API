@@ -172,7 +172,7 @@
                             <div class="col-lg-12">
                                 <div class="card">
                                     <div class="card-body text-center">
-                                    <img src="https://cp.a2brx.com/images/micromerchantsystem.png" alt="micromerchantsystem" class="mr-3" height="30">
+                                    <span class="font-weight-bold">Micro Merchant Systems</span>
                                     <span class="mb-1">New orders: {{$count_orders_merchant}} <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=1&micromerchant=1" class="btn btn-sm btn-outline-dark waves-effect waves-light ml-3"> Check <i class="mdi mdi-arrow-right-circle-outline"></i></a><span>
                                     </div>
                                 </div>
@@ -262,7 +262,7 @@
                                 <div class="card" >
                                     <div class="card-body">
                                         <div class="inbox-item-img float-start me-3"><img src="{{ URL::asset('/images/icon-d4.gif')}}" alt="icon-d4" class="ml-0 pr-4 float-left" height="75" style="margin-top: -15px;"> </div>
-                                        <h4 class="card-title-3 mb-4">News from A2B Rx</h4>                                         
+                                        <h4 class="card-title-3 mb-4">News from QuikMedix</h4>
                                         <ol class="activity-feed mb-3">
                                             <li class="feed-item">
                                                 <div class="feed-item-list">
@@ -572,27 +572,27 @@
                                          
 
 
-                                        <!--  <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <!--  <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-thumb-up-outline float-right" style="color: #00bf7f;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                           
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Delivered</span> {{(isset($count_orders_today[4]))?$count_orders_today[4]:0}}</h4>
                                             <a href="/orders?filter=1&status%5B%5D=4" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
-                                            <i class="mdi mdi-highway float-right" style="color: #7a6fbe;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                            
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
+                                            <i class="mdi mdi-highway float-right" style="color: #c90016;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">On the way</span> {{(isset($count_orders_all[3]))?$count_orders_all[3]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=3" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-office-building float-right" style="color: #ffa500;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                            
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Office</span> {{(isset($count_orders_all[7]))?$count_orders_all[7]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=7" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-alien-outline float-right" style="color: #007ce9;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                          
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Unavailable</span> {{(isset($count_orders_today[8]))?$count_orders_today[8]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=8" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-alert float-right" style="color: red;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                           
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Refused</span> {{(isset($count_orders_today[9]))?$count_orders_today[9]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=9" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
@@ -628,7 +628,7 @@
                                     <div class="card mini-stat2 text-black mb-2">
                                         <div class="card-body">
                                             <div class="mini-stat-icon2">
-                                                <i class="mdi mdi-highway float-right" style="color: #7a6fbe;"></i>
+                                                <i class="mdi mdi-highway float-right" style="color: #c90016;"></i>
                                             </div>
                                             <div class="">
                                                 <h6 class="text-uppercase mb-3 font-size-12">Today</h6>
@@ -741,8 +741,8 @@
                                                 <p>Total Orders</p>
                                             </div>
                                             <div class="col-6 p-0">
-                                                <h5 class="font-size-24">{{ $total_count_orders_a2brx }}</h5>
-                                                <p>Delivered via A2B Rx</p>
+                                                <h5 class="font-size-24">{{ $total_count_orders_quikmedix }}</h5>
+                                                <p>Delivered via QuikMedix</p>
                                             </div>
                                         </div>
                                     </div>

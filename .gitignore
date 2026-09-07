@@ -3,7 +3,7 @@
 /public/storage
 /storage
 /vendor
-/resources/sass/a2b-rx-da5086605672.json
+/resources/sass/*.json
 .env
 .env.backup
 .phpunit.result.cache
