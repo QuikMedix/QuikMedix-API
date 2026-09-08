@@ -6,7 +6,7 @@
 <link href="/leaflet/leaflet.css" rel="stylesheet" type="text/css">
     <!-- Responsive Table css -->
     <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-multiselect.min.css')}}" type="text/css"/>
-    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css')}}">
+    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1')}}">
     <link href="{{ URL::asset('/libs/rwd-table/rwd-table.min.css')}}" rel="stylesheet" type="text/css" /> <!-- Bootstrap Css -->
     <link href="{{ URL::asset('/css/sweetalert2.min.css')}}" rel="stylesheet" type="text/css">
     <style>

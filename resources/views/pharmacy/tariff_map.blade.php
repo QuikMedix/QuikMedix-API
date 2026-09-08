@@ -156,7 +156,7 @@
         }
         if(indexX==='1') {
             var zindex = 101;
-            var color = '#7a6fbe';
+            var color = '#c90016';
             name = '$'+(tariff.tariff_default+plus);
             kof = 0.1;
         } else if(indexX==='2') {

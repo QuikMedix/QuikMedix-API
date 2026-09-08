@@ -13,7 +13,7 @@
                     <div class="row">
              @component('common-components.breadcrumb')
                      @slot('title') Range Slider @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') UI Elements @endslot
                      @slot('li3') Range Slider @endslot
                 @endcomponent

@@ -25,7 +25,7 @@ File: C3
                 type: 'bar',
                 colors: {
                     Desktop: '#f0f1f4',
-                    Mobile: '#7a6fbe',
+                    Mobile: '#c90016',
                     Tablet: '#28bbe3'
                 }
             }
@@ -51,7 +51,7 @@ File: C3
                 },
                 colors: {
                     SonyVaio: '#f0f1f4',
-                    iMacs: '#7a6fbe',
+                    iMacs: '#c90016',
                     Tablets: '#2f8ee0',
                     iPhones: '#fb4',
                     Macbooks: '#28bbe3'
@@ -131,7 +131,7 @@ File: C3
 				}
             },
             color: {
-            	pattern: ['#f0f1f4', '#7a6fbe', '#28bbe3', '#2f8ee0']
+                pattern: ['#f0f1f4', '#c90016', '#28bbe3', '#2f8ee0']
             }
         });
         
@@ -146,7 +146,7 @@ File: C3
                 type : 'pie'
             },
             color: {
-                pattern: ['#7a6fbe', '#28bbe3']
+                pattern: ['#c90016', '#28bbe3']
             },
             pie: {
 		        label: {
@@ -165,7 +165,7 @@ File: C3
                type : 'pie'
            },
            color: {
-               pattern: ['#7a6fbe', '#28bbe3']
+               pattern: ['#c90016', '#28bbe3']
            },
            pie: {
                label: {

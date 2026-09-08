@@ -72,7 +72,7 @@ function initAll () {
         height: '130',
         barWidth: '10',
         barSpacing: '7',
-        barColor: '#7A6FBE'
+        barColor: '#c90016'
     });
   
     
@@ -85,7 +85,7 @@ function initAll () {
             {label: "Android Customer", value: app_android_users}
         ];
         if(document.getElementById('morris-donut-example')!==null) {
-            this.createDonutChart('morris-donut-example', $donutData, ['#30898b', '#7a6fbe', '#28bbe3', '#262649']);
+            this.createDonutChart('morris-donut-example', $donutData, ['#30898b', '#c90016', '#28bbe3', '#262649']);
         }
 
         var $stckedData  = dataForChartDelivered;

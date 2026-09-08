@@ -8,7 +8,7 @@
 
              @component('common-components.breadcrumb')
                      @slot('title') Invoice @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Pages  @endslot
                      @slot('li3') Invoice @endslot
                 @endcomponent
@@ -33,7 +33,7 @@
                                             <div class="invoice-title">
                                                 <h4 class="float-right font-size-16"><strong>Order # 12345</strong></h4>
                                                 <h3 class="mt-0">
-                                                        <img src="{{ URL::asset('/images/logo-dark.png')}}" alt="logo" height="24"/>
+                                                        <img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix" height="48"/>
                                                     </h3>
                                             </div>
                                             <hr>

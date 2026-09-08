@@ -36,11 +36,11 @@ return [
     'mailers' => [
         'smtp' => [
             'transport' => 'smtp',
-            'host' => env('MAIL_HOST', 'mail.a2brx.com'),
+            'host' => env('MAIL_HOST', 'localhost'),
             'port' => env('MAIL_PORT', 25),
             'encryption' => env('MAIL_ENCRYPTION', 'null'),
-            'username' => env('mail@a2brx.com'),
-            'password' => env('3U7k9S5z'),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
         ],
 
@@ -83,8 +83,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'mail@a2brx.com'),
-        'name' => env('MAIL_FROM_NAME', 'A2BRx'),
+        'address' => env('MAIL_FROM_ADDRESS'),
+        'name' => env('MAIL_FROM_NAME', 'QuikMedix'),
     ],
 
     /*

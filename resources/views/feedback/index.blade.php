@@ -1,195 +1,37 @@
 @extends('layouts.master')
 
-@section('title') Feedback @endsection
-
-@section('headerCss')
-    <link rel="stylesheet" href="https://cp.a2brx.com/feedb/custom.css">
-	<link rel="stylesheet" href="https://cp.a2brx.com/feedb/vendors.min.css">
-	<link rel="stylesheet" href="https://cp.a2brx.com/feedb/grey.css">
-<style>
-.rep-menu a {
-    font-size: 14px;
-    line-height: 30px;
-    color: black;
-    display: block;
-    margin: 10px 0;
-    padding: 5px 0 5px 20px;
-
-}
-.rep-menu a:hover {
-    background: #7a6fbe;
-    color: #ffffff !important;
-}
-.rep-menu i {
-    font-size: 16px;
-    margin: 0px 7px;
-}
-
-</style>
-@endsection
+@section('title') Feedback | QuikMedix @endsection
 
 @section('content')
- <!-- start page title -->
-                    <div class="row">
-
-                   
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix" width="220" class="mb-4">
+                <h4>How can we help?</h4>
+                <p>Report a problem or share an idea with the QuikMedix support team.</p>
+                <div class="row mt-4">
+                    <div class="col-md-6 mb-3">
+                        <h5><i class="mdi mdi-message-alert-outline mr-2" aria-hidden="true"></i>Report a problem</h5>
+                        <p>Tell us what happened and include the order reference when relevant.</p>
                     </div>
-                    <!-- end page title -->                    
-                    <div class="row">                        
-                        <div class="col-xl-12">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div id="wizard_container">
-                                        <form name="start" id="wrapped" method="POST" enctype="multipart/form-data">
-                                            <input id="website" name="website" type="text" value="">
-                                            <div id="middle-wizard">
-                                                <div class="step" data-state="branchtype">
-                                                    <div class="question_title">
-                                                        <h3>Feedback</h3>
-                                                        <p>If you are reporting a problem, please remember to provide as much information that is relevant to the issue as possible. </p>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-lg-2 animated zoomIn delay-fast">
-                                                        </div>
-                                                        <div class="col-lg-4 animated zoomIn delay-normal">
-                                                            <div class="item">
-                                                                <input id="answer_2" name="branch_1_group_1" type="radio" value="Claim" class="required">
-                                                                <label for="answer_2"><img src="https://cp.a2brx.com/feedb/f_icon_1.svg" alt=""><strong>Claim</strong> 
-                                                               </label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-lg-4 animated zoomIn delay-medium">
-                                                            <div class="item">
-                                                                <input id="answer_3" name="branch_1_group_1" type="radio" value="new-features" class="required">
-                                                                <label for="answer_3"><img src="https://cp.a2brx.com/feedb/f_icon_2.svg" alt=""><strong>Improved functionality</strong>
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-lg-2 animated zoomIn delay-fast">
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            
-                                                <div class="branch" id="Claim">
-                                                    <div class="step" data-state="end">
-                                                        <div class="question_title">
-                                                            <h3>Claim</h3>
-                                                            <p>Describe the problem in more detail</p>
-                                                        </div>
-                                                        <div class="row justify-content-center">
-                                                            <div class="col-lg-5 animated zoomIn delay-fast">
-                                                                <div class="box_general">
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_2_answers[]" class="icheck" value="Problem with the driver">Problem with the driver</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_2_answers[]" class="icheck" value="Problem with the customer">Problem with the customer</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_2_answers[]" class="icheck" value="Difficulties with ordering">Difficulties with ordering</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_2_answers[]" class="icheck" value="Problems with payment">Problems with payment</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_2_answers[]" class="icheck" value="Any CMS">Wrong statistics</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_2_answers[]" class="icheck" value="Wrong calculation">Wrong calculation</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_2_answers[]" class="icheck" value="Copayment">Copayment</label>
-                                                                    </div>
-                                                                    <hr>                                                     
-                                                                    <textarea class="form-control" style="height:100px; margin-bottom:0;" placeholder="Detailed..." name="cms_development_notes"></textarea>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="branch" id="new-features">
-                                                    <div class="step" data-state="end">
-                                                        <div class="question_title">
-                                                            <h3>Improved functionality</h3>
-                                                            <p>What features would you like us to add?</p>
-                                                        </div>
-                                                        <div class="row justify-content-center">
-                                                            <div class="col-lg-5 animated zoomIn delay-fast">
-                                                                <div class="box_general">
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_1_answers[]" class="icheck" value="Application for the customer">Application for the customer</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_1_answers[]" class="icheck" value="Creating Orders">Creating Orders</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_1_answers[]" class="icheck" value="Payment Options">Payment Options</label>
-                                                                    </div>
-                                                                    <div class="form-group short">
-                                                                        <label><input type="checkbox" name="branch_2_1_answers[]" class="icheck" value="Other">Other</label>
-                                                                    </div>
-                                                                    <hr>
-                                                                    <textarea class="form-control" style="height:100px; margin-bottom:0;" placeholder="Detailed..." name="html_development_notes"></textarea>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    
-                                                    <div class="submit step" id="end">
-                                                        <div class="question_title">
-                                                            <h3>We will answer as soon as possible.</h3>
-                                                            <p></p>
-                                                        </div>
-                                                        <div class="row justify-content-center">
-                                                            <div class="col-lg-5 animated zoomIn delay-fast">
-                                                                <div class="box_general">
-                                                                    <div class="form-group">
-                                                                        <input type="text" name="first_last_name" class="required form-control" placeholder="Your name *">
-                                                                    </div>
-                                                                    <!--<div class="form-group">
-                                                                        <input type="email" name="email" class="form-control" placeholder="Email *">
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <input type="text" name="telephone" class="form-control" placeholder="Phone Number *">
-                                                                    </div> -->
-                                                                    <div class="form-group">
-                                                                        <input type="text" name="telephone"  value="{{Auth::user()->pharmacy_name()}}" class="form-control" placeholder="{{Auth::user()->pharmacy_name()}}" style="opacity: .6;" readonly>
-                                                                    </div>
-                                                                    <div class="form-group add_bottom_30">
-                                                                        <label>Optional File upload<br><small>(Files accepted: .jpg,.png,.pdf,.doc,.docx)</small></label>
-                                                                        <div class="fileupload">
-                                                                            <input type="file" name="fileupload" accept="image/*,.pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                                                                        </div>
-                                                                    </div>
-                                                                    <hr>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div id="bottom-wizard">
-                                                <button type="button" name="backward" class="backward">Back </button>
-                                                <button type="button" name="forward" class="forward">Next</button>
-                                                <button type="submit" name="process" class="submit">Submit</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- end col -->
+                    <div class="col-md-6 mb-3">
+                        <h5><i class="mdi mdi-lightbulb-outline mr-2" aria-hidden="true"></i>Suggest an improvement</h5>
+                        <p>Let us know how QuikMedix could work better for you.</p>
                     </div>
-                    <!-- end row -->
-
-@endsection
-
-@section('footerScript')
-    <script src="https://cp.a2brx.com/feedb/jquery-3.6.1.min.js"></script>
-    <script src="https://cp.a2brx.com/feedb/common_scripts.min.js"></script>
-	<script src="https://cp.a2brx.com/feedb/main.js"></script>
-	<script src="https://cp.a2brx.com/feedb/file-validator.js"></script>
-	<script src="https://cp.a2brx.com/feedb/wizard_func_multiple_branch_fileupload.js"></script>
+                </div>
+                <a href="{{ url('/chat') }}" class="btn btn-primary">Open support chat</a>
+                @if(config('branding.support_email'))
+                    <a href="mailto:{{ config('branding.support_email') }}" class="btn btn-outline-primary ml-2">Email support</a>
+                @endif
+                @if(config('branding.support_phone'))
+                    <p class="mt-3 mb-0">You can also call {{ config('branding.support_phone') }}.</p>
+                @endif
+                @if(config('branding.address'))
+                    <address class="mt-3 mb-0">{!! nl2br(e(config('branding.address'))) !!}</address>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

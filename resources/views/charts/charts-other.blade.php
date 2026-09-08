@@ -7,7 +7,7 @@
                     <div class="row">
                 @component('common-components.breadcrumb')
                      @slot('title') Jquery Knob Chart  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Charts  @endslot
                      @slot('li3') Jquery Knob Chart  @endslot
                 @endcomponent
@@ -34,7 +34,7 @@
                                     <div class="row text-center">
                                         <div class="col-lg-4 text-center" dir="ltr">
                                             <h5 class="font-size-16 mb-4">Disable display input</h5>
-                                            <input class="knob" data-width="150" data-fgcolor="#7a6fbe" data-displayinput="false" value="35">
+                                            <input class="knob" data-width="150" data-fgcolor="#c90016" data-displayinput="false" value="35">
                                         </div>
                                         <div class="col-lg-4 text-center" dir="ltr">
                                             <h5 class="font-size-16 mb-4">Cursor mode</h5>

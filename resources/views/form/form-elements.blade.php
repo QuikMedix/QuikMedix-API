@@ -7,7 +7,7 @@
                     <div class="row">
           @component('common-components.breadcrumb')
                      @slot('title') Form Elements  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Forms  @endslot
                      @slot('li3') Form Elements @endslot
                 @endcomponent
@@ -106,7 +106,7 @@
                                     <div class="form-group row">
                                         <label for="example-color-input" class="col-sm-2 col-form-label">Color</label>
                                         <div class="col-sm-10">
-                                            <input class="form-control" type="color" value="#7a6fbe" id="example-color-input">
+                                            <input class="form-control" type="color" value="#c90016" id="example-color-input">
                                         </div>
                                     </div>
                                     <div class="form-group row">

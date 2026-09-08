@@ -17,7 +17,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') Editable Table @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Tables  @endslot
                      @slot('li3') Editable Table @endslot
                 @endcomponent

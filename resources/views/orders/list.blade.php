@@ -6,7 +6,7 @@
 
     <!-- Responsive Table css -->
     <link href="{{ URL::asset('/libs/rwd-table/rwd-table.min.css')}}" rel="stylesheet" type="text/css" /> <!-- Bootstrap Css -->
-    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css')}}">
+    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1')}}">
     <style>
         .statuses {
             position: absolute;
@@ -74,7 +74,7 @@
             font-size: 11px;
         }
         .start-ph { 
-            background-color: rgba(122, 111, 190, 1);
+            background-color: rgba(201, 0, 22, 1);
             padding: 11px 11px 11px 10px;
             border-top-right-radius: 10px;
             border-bottom-right-radius: 10px;
@@ -88,7 +88,7 @@
             cursor: pointer;
         }
         .filter-btn { 
-            background-color: rgba(122, 111, 190, 1);
+            background-color: rgba(201, 0, 22, 1);
             padding: 11px 11px 11px 10px;
             border-top-right-radius: 10px;
             border-bottom-right-radius: 10px;
@@ -171,7 +171,7 @@
         }  
 
         .printstick {
-            background: #7a6fbe;
+            background: #c90016;
             color: white;
             padding: 0px 11px 11px 7px;
             border-top-right-radius: 10px;
@@ -345,7 +345,7 @@
                                                             @if(!empty($drivers[$order->driver_id]->pharmacy_id))
                                                             <span style="font-size:10px;white-space:normal;padding: 5px;color: white;" class="badge badge-pill badge-secondary">Pharmacy driver</span>
                                                             @else
-                                                            <span style="font-size:10px;white-space:normal;padding: 5px;color: white;" class="badge badge-pill badge-info">A2B Rx driver</span>
+                                                            <span style="font-size:10px;white-space:normal;padding: 5px;color: white;" class="badge badge-pill badge-info">QuikMedix driver</span>
                                                             @endif
                                                             <br>
                                                             <span style="line-height: 22px;">{{$drivers[$order->driver_id]->name}} {{$drivers[$order->driver_id]->last_name}}<span> <br>
@@ -438,7 +438,7 @@
                     <!-- end row -->
                 @if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'medic') && !empty($pharmacy_id))
                 <div class="start-ph" id="sa-params" title="Start route automation" data-bs-original-title="Start route automation">              
-                    <img src="https://cp.a2brx.com/images/start_new.svg" alt="Start">
+                    <i class="ion ion-md-play mr-2" aria-hidden="true"></i>
                     @php
                     $get_pharmacy_notReady = Auth::user()->get_pharmacy_notReady($pharmacy_id);
                     @endphp
@@ -453,7 +453,7 @@
                 </a>
                 @endif     
                 <div class="filter-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft" aria-controls="offcanvasLeft" title="Filter orders" data-bs-original-title="Filter orders">              
-                    <img src="https://cp.a2brx.com/images/filter.svg" alt="filter icon">
+                    <i class="ion ion-md-funnel mr-2" aria-hidden="true"></i>
                 </div>
                 <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft" aria-labelledby="offcanvasLeftLabel" aria-modal="true" role="dialog">
                     <div class="offcanvas-header">
@@ -711,7 +711,7 @@
     function Popup(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>Print Check</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap-lib.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap-lib.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');

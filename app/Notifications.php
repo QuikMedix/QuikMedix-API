@@ -11,7 +11,7 @@ class Notifications extends Model
 {
     public static function send_push($user_id,$title,$body) {
         $user = DB::table('users')->where('id',$user_id)->first();
-        if(!empty($user) && !empty($user->device_token)) {
+        if(!empty($user) && !empty($user->device_token) && config('services.fcm.server_key')) {
             if($user->role=='user' && !empty($user->pharmacy_id)) {
                 $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
                 if(!empty($pharmacy) && !empty($pharmacy->name)) {
@@ -22,7 +22,7 @@ class Notifications extends Model
                 'body' 	=> $body,
                 'title'	=> $title,
                 'vibrate'=> 1,
-                'icon'	=> 'myicon',/*Default Icon*/
+                'icon'	=> config('services.fcm.notification_icon'),
                 'sound'	=> 1,
             );
             $fields = array(
@@ -30,7 +30,7 @@ class Notifications extends Model
                 'notification'=> $msg
             );
             $headers = array(
-                'Authorization: key=AAAAdQbuxsY:APA91bFdvwYwIxAOK1mAfMcbkLguwJnIKs2u19MuOdemG7Cr36c83MGd7nqTBIvg8MSmqF7MbOwsq-BXD9rLWhSDCN3EDStpY9kB2AY77LLuWMoOJHm6ZxJPzFj2u_NZ5HtMn41GdtJv',
+                'Authorization: key='.config('services.fcm.server_key'),
                 'Content-Type: application/json'
             );
             $ch = curl_init();
@@ -47,11 +47,11 @@ class Notifications extends Model
             } else {
                 return $result;
             }
-        } else if(!empty($user)) {
+        } else if(!empty($user) && config('app.twilio_sid') && config('app.twilio_auth_token') && config('app.twilio_from_phone')) {
             if($user->role=='user' && !empty($user->pharmacy_id)) {
                 $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
                 if(!empty($pharmacy) && !empty($pharmacy->name)) {
-                    $title = "A2B Rx is greeting you! \n".$pharmacy->name;                    
+                    $title = "QuikMedix is greeting you! \n".$pharmacy->name;
                 }
             }
             $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
@@ -64,22 +64,23 @@ class Notifications extends Model
     }
 
     public static function send_push_web($user_id,$title,$body,$url,$type_text="") {
-        $beamsClient = new PushNotifications(
-            array(
-              "instanceId" => "686711de-e011-415d-9a38-c8a05adfaae2",
-              "secretKey" => "FDC16BE22D1C3F3F8E2595D8056231930FB856732BA999F99B577A5AD1944DD9",
-            )
-        );
         foreach($user_id as $user) {
             DB::table('notifications')->insert(['user_id'=>$user,'type'=>'warning','link'=>$url,'text'=>$title.":\n ".$body,"type_text"=>$type_text]);
         }
+        if (!config('services.beams.instance_id') || !config('services.beams.secret_key')) {
+            return;
+        }
+        $beamsClient = new PushNotifications([
+            'instanceId' => config('services.beams.instance_id'),
+            'secretKey' => config('services.beams.secret_key'),
+        ]);
         $publishResponse = $beamsClient->publishToUsers($user_id,
             [
                 "web" => array(
                     "notification" => array(
                         "title" => $title,
                         "body" => $body,
-                        "icon" => "https://cp.a2brx.com/images/users/0116195432icon.png",
+                        "icon" => asset('images/branding/quikmedix-icon-192.png?v=transparent-1'),
                         "deep_link" => $url
                     )
                 )

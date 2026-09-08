@@ -22,7 +22,7 @@ class MerchantApi extends Controller
                         [
                             'service_level_code'=>'1',
                             'service_name'=> 'Regular',
-                            'description'=>'A2BRx Next day delivery',
+                            'description'=>'QuikMedix Next day delivery',
                             'service_windows' => [
                                 [
                                     "date"=>date("Y-m-d"),
@@ -39,7 +39,7 @@ class MerchantApi extends Controller
                         [
                             'service_level_code'=>'2',
                             'service_name'=> 'SameDay',
-                            'description'=>'A2BRx Same day delivery',
+                            'description'=>'QuikMedix Same day delivery',
                             'service_windows' => [
                                 [
                                     "date"=>date("Y-m-d"),
@@ -175,11 +175,11 @@ class MerchantApi extends Controller
                         if(preg_match( '/^(\d{3})(\d{3})(\d{4})$/', $response->patient->home_phone_number,  $matches)) {
                             $home_phone = '('.$matches[1].') '.$matches[2].'-'.$matches[3];
                         }
-                        $email = 'patients'.DB::table('users')->max('id').'@cp.a2brx.com';
+                        $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
                         DB::table('users')->insert(['isactive' => '1','name' => $response->patient->first_name,'last_name' => $response->patient->last_name,'email' => $email,'phone' => $patient_phone,'home_phone'=> $home_phone,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $response->recipient->address->zipcode,'pharmacy_id' => $pharmacy_auth->id]);
                         try {
                             $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                            if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->patient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')])){
+                            if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->patient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')])){
                                 
                             }
                         } catch (\Throwable $th) {
@@ -224,7 +224,7 @@ class MerchantApi extends Controller
                             $user_address = $patient->address;
                         }
                     }
-                    Notifications::send_push($request->input('user'),"A2BRx","A2B Rx is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact us phone number (855) 657-9595 or your pharmacy ASAP");
+                    Notifications::send_push($request->input('user'),"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
                     return response()->json([
                         'order' => [
                             'id'=>$id_max,
@@ -402,7 +402,7 @@ class MerchantApi extends Controller
                             }
                             $record["delivery"]=[
                                 "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish)),
-                                "signature_url"=>"https://cp.a2brx.com".$order->signature_photo,
+                                "signature_url"=>url($order->signature_photo),
                                 "signed_by"=>$order->signature_type,
                                 "relationship"=>$relationship,
                                 "failure_reason"=>$failure_reason,
@@ -469,7 +469,7 @@ class MerchantApi extends Controller
                             $r = explode('.',$order->drop_off_photo);
                             $type_img =$r[(count($r)-1)];
                             $record["proof_of_delivery"]=[
-                                "image_url"=>"https://cp.a2brx.com".$order->drop_off_photo,
+                                "image_url"=>url($order->drop_off_photo),
                                 "type_of_image"=>strtoupper($type_img)
                             ];
                         } else {

@@ -3,7 +3,7 @@
 @section('title') Driver Detail @endsection
 @section('headerCss')
 <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-multiselect.min.css')}}" type="text/css"/>
-<link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css')}}">
+<link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1')}}">
 <link href="{{ URL::asset('/css/bootstrap-datepicker.min.css')}}" rel="stylesheet">
 <link href="{{ URL::asset('/css/select2.min.css')}}" rel="stylesheet" type="text/css">
 <link href="{{ URL::asset('/css/jquery.bootstrap-touchspin.min.css')}}" rel="stylesheet">
@@ -238,7 +238,7 @@
     color: #006311;
     padding: 5px 5px;
     font-size: 12px;
-    border: 1px solid #7a6fbe;
+    border: 1px solid #c90016;
     margin-bottom: 5px;
     -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none;   /* Chrome/Safari/Opera */
@@ -286,7 +286,7 @@
 {
 	border-radius: 10px;
 	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
-	background-color: #7a6fbe;
+	background-color: #c90016;
 }
 .office_block{
     cursor: move;
@@ -368,8 +368,8 @@
 }
 .btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
     color: #fff;
-    background-color: #7a6fbe;
-    border-color: #7a6fbe;
+    background-color: #c90016;
+    border-color: #c90016;
 }
 .btn-check {
     position: absolute;
@@ -433,7 +433,7 @@ label {
                         Are you sure you want to assign order #{{$_GET['order']}} to this driver?
                         <div style="float:right;">
                             <button class="btn btn-success" onclick="$('#confirm_order').submit()">Yes</button>
-                            <button class="btn btn-danger" onclick="location.href='https://cp.a2brx.com/routes-list/show/{{$_GET['order']}}'">No</button>
+                            <button class="btn btn-danger" onclick="location.href='{{ url('/routes-list/show') }}/{{$_GET['order']}}'">No</button>
                         </div>
                         <form method="POST" id="confirm_order" style="display:none;">
                             @csrf

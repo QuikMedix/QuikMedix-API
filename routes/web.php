@@ -17,7 +17,6 @@ use App\Http\Controllers\LexaAdmin;
 Route::get('zadarma', 'LexaAdminApiNoAuth@zadarma_get');
 
 Route::post('zadarma', 'LexaAdminApiNoAuth@zadarma_post');
-Route::post('livetex_hook', 'LexaAdminApiNoAuth@livetex_hook');
 
 Auth::routes();
 Route::get('/logout', 'LexaAdmin@logout');
@@ -276,13 +275,11 @@ Route::get('/payroll', "LexaAdmin@payroll");
 
 Route::get('test', "LexaAdmin@test");
 
-Route::post('/github_pull', 'LexaAdminApiNoAuth@github_pull');
 
-Route::post('/github_pull_zoz', 'LexaAdminApiNoAuth@github_pull_zoz');
 
 Route::get('/orders/get_records/{order_id}', "LexaAdmin@get_records");
 
-Route::get('a2bchat', "LexaAdmin@a2bChat");
+Route::get('/support-chat', "LexaAdmin@supportChat");
 
 Route::get('/reports', "LexaAdmin@reports");
 Route::get('/reports/billing', "LexaAdmin@reportsBilling");

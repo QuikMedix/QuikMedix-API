@@ -10,11 +10,11 @@
                     <div class="card overflow-hidden">
                         <div class="card-body pt-0">
                             <h3 class="text-center mt-4">
-                                <a href="/dashboard/index" class="logo logo-admin"><img src="{{ URL::asset('/images/logo-dark.png')}}"  height="30" alt="logo"></a>
+                                <a href="/dashboard/index" class="logo logo-admin"><img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" width="260" height="191" style="max-width: 100%; height: auto;" alt="QuikMedix — Your Health - Our Priority"></a>
                             </h3>
                             <div class="p-3">
                                 <h4 class="text-muted font-size-18 mb-1 text-center">Free Register</h4>
-                                <p class="text-muted text-center">Get your free Lexa account now.</p>
+                                <p class="text-muted text-center">Get your free QuikMedix account now.</p>
                                 <form class="form-horizontal mt-4" action="/">
 
                                     <div class="form-group">
@@ -40,7 +40,7 @@
 
                                     <div class="form-group mb-0 row">
                                         <div class="col-12 mt-4">
-                                            <p class="text-muted mb-0 font-size-14">By registering you agree to the Lexa <a href="#" class="text-primary">Terms of Use</a></p>
+                                            <p class="text-muted mb-0 font-size-14">By registering you agree to the QuikMedix <a href="#" class="text-primary">Terms of Use</a></p>
                                         </div>
                                     </div>
                                 </form>
@@ -49,7 +49,7 @@
                     </div>
                     <div class="mt-5 text-center">
                         <p>Already have an account ? <a href="/pages/pages-login" class="text-primary"> Login </a> </p>
-                        <p>© {{  date('Y', strtotime('-2 year')) }} - {{  date('Y') }} Lexa. Crafted with <i class="mdi mdi-heart text-danger"></i> by Themesbrand</p>
+                        <p>© {{  date('Y', strtotime('-2 year')) }} - {{  date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>
             </div>

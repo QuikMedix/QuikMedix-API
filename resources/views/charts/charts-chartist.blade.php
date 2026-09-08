@@ -13,7 +13,7 @@
 
                           @component('common-components.breadcrumb')
                      @slot('title') Chartist Chart  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Charts  @endslot
                      @slot('li3') Chartist Chart  @endslot
                 @endcomponent

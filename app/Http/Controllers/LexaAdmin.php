@@ -71,7 +71,7 @@ class LexaAdmin extends Controller
             }
             $count_orders = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->where('pharmacy_id', Auth::user()->pharmacy_id)->where('statuse_id', '4')->whereYear('created', '=', date('Y', strtotime('now')))->whereMonth('created', '=', date('m', strtotime('now')))->first()->count0;
             $total_count_orders = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->where('pharmacy_id', Auth::user()->pharmacy_id)->where('statuse_id', '4')->first()->count0;
-            $total_count_orders_a2brx = DB::table('orders')->join('users',function ($join) {
+            $total_count_orders_quikmedix = DB::table('orders')->join('users',function ($join) {
                 $join->on('orders.driver_id', '=' , 'users.id') ;
                 $join->whereNull('users.pharmacy_id');
             })->select(DB::raw('count(orders.id) as count0'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', '4')->first()->count0;
@@ -116,7 +116,7 @@ class LexaAdmin extends Controller
             $count_orders_merchant = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->where('pharmacy_id', Auth::user()->pharmacy_id)->where('merchantOrder','1')->where('statuse_id', '1')->first()->count0;
             $orders_7days = DB::table('orders')->select(DB::raw('DATE(orders.finish) as date'),DB::raw('count(orders.id) as count'))->whereBetween('finish', [Carbon::now()->subDays(7),Carbon::now()])->where('statuse_id', '4')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy(DB::raw('DATE(orders.finish)'))->orderBy(DB::raw('DATE(orders.finish)'),'asc')->get();
             $orders_7days_c = DB::table('orders')->select(DB::raw('DATE(orders.created) as date'),DB::raw('count(orders.id) as count'))->whereBetween('created', [Carbon::now()->subDays(7),Carbon::now()])->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy(DB::raw('DATE(orders.created)'))->orderBy(DB::raw('DATE(orders.created)'),'asc')->get();
-            $res_arr = ['count_orders'=>$count_orders,'total_count_orders'=>$total_count_orders,'total_count_orders_a2brx'=>$total_count_orders_a2brx,'new_patients'=>$new_patients,'new_patients_app'=>$new_patients_app,'pageviews'=>$pageviews,'patients'=>$patients,'orders'=>$orders,'orders0'=>$orders0,'chartDelivered'=>$chartDelivered,'app_android_users'=>$app_android_users,'app_android_drivers'=>$app_android_drivers,'app_ios_users'=>$app_ios_users,'app_ios_drivers'=>$app_ios_drivers,'orders_proc'=>$orders_proc,
+            $res_arr = ['count_orders'=>$count_orders,'total_count_orders'=>$total_count_orders,'total_count_orders_quikmedix'=>$total_count_orders_quikmedix,'new_patients'=>$new_patients,'new_patients_app'=>$new_patients_app,'pageviews'=>$pageviews,'patients'=>$patients,'orders'=>$orders,'orders0'=>$orders0,'chartDelivered'=>$chartDelivered,'app_android_users'=>$app_android_users,'app_android_drivers'=>$app_android_drivers,'app_ios_users'=>$app_ios_users,'app_ios_drivers'=>$app_ios_drivers,'orders_proc'=>$orders_proc,
             'patients_proc'=>$patients_proc,
             'orders_7days'=>$orders_7days,
             'orders_7days_c'=>$orders_7days_c,
@@ -141,14 +141,14 @@ class LexaAdmin extends Controller
                 $total_count_orders=$total_count_orders->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
             }
             $total_count_orders=$total_count_orders->first()->count0;
-            $total_count_orders_a2brx = DB::table('orders')->join('users',function ($join) {
+            $total_count_orders_quikmedix = DB::table('orders')->join('users',function ($join) {
                 $join->on('orders.driver_id', '=' , 'users.id') ;
                 $join->whereNull('users.pharmacy_id');
             })->select(DB::raw('count(orders.id) as count0'))->where('orders.statuse_id', '4');
             if(!empty(Auth::user()->zone_id)){
-                $total_count_orders_a2brx=$total_count_orders_a2brx->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
+                $total_count_orders_quikmedix=$total_count_orders_quikmedix->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
             }
-            $total_count_orders_a2brx=$total_count_orders_a2brx->first()->count0;
+            $total_count_orders_quikmedix=$total_count_orders_quikmedix->first()->count0;
             $orders_this = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->whereBetween('orders.created', [Carbon::now()->startOfMonth(),Carbon::now()->addDays(1)])->where('statuse_id', '4');
             if(!empty(Auth::user()->zone_id)){
                 $orders_this=$orders_this->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
@@ -435,7 +435,7 @@ class LexaAdmin extends Controller
                 'total_count_orders'=>$total_count_orders,
                 'count_orders_today'=>$count_orders_today,
                 'count_orders_all'=>$count_orders_all,
-                'total_count_orders_a2brx'=>$total_count_orders_a2brx,
+                'total_count_orders_quikmedix'=>$total_count_orders_quikmedix,
                 'count_pharmacies'=>$count_pharmacies,
                 'count_pharmacies_active'=>$count_pharmacies_active,
                 'count_drivers_all'=>$count_drivers_all,
@@ -2000,7 +2000,7 @@ class LexaAdmin extends Controller
             if($request->input('save')>0) {
                 $email = $request->input('email');
                 if(empty($email)){
-                    $email = 'facilitys'.DB::table('users')->max('id').'@cp.a2brx.com';
+                    $email = 'facilitys'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
                 }
                 if(!empty(DB::table('users')->where('email', $email)->where('pharmacy_id', $pharmacy_id)->first())) {
                     $input['name']=$request->input('name');
@@ -2066,13 +2066,13 @@ class LexaAdmin extends Controller
                         $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
                         if(!empty($pharmacy_name)) {
                             try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')]);
+                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
                             } catch (\Throwable $th) {
                                 //throw $th;
                             }
                         } else {
                             try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')]);
+                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
                             } catch (\Throwable $th) {
                                 //throw $th;
                             }
@@ -2139,7 +2139,7 @@ class LexaAdmin extends Controller
                 $pharmacys = DB::table('pharmacys')->get();
                 $email = $request->input('email');
                 if(empty($email)){
-                    $email = 'facilitys'.(intval(DB::table('users')->max('id'))+1).'@cp.a2brx.com';
+                    $email = 'facilitys'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
                 }
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
@@ -2299,7 +2299,7 @@ class LexaAdmin extends Controller
                 $pharmacys = DB::table('pharmacys')->get();
                 $email = $request->input('email');
                 if(empty($email)){
-                    $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@cp.a2brx.com';
+                    $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
                 }
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
@@ -2434,7 +2434,7 @@ class LexaAdmin extends Controller
             if($request->input('save')>0) {
                 $email = $request->input('email');
                 if(empty($email)){
-                    $email = 'patients'.DB::table('users')->max('id').'@cp.a2brx.com';
+                    $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
                 }
                 if(!empty(DB::table('users')->where('email', $email)->where('pharmacy_id', $pharmacy_id)->first())) {
                     $input['name']=$request->input('name');
@@ -2499,13 +2499,13 @@ class LexaAdmin extends Controller
                         $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
                         if(!empty($pharmacy_name)) {
                             try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')]);
+                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
                             } catch (\Throwable $th) {
                                 //throw $th;
                             }
                         } else {
                             try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')]);
+                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
                             } catch (\Throwable $th) {
                                 //throw $th;
                             }
@@ -2627,7 +2627,7 @@ class LexaAdmin extends Controller
                     if($key>0 && $row!='') {
                         $data0 = explode($delimiter, $row);
                         if(empty($key_email) || empty($data0[$key_email])){
-                            $email = 'patients'.DB::table('users')->max('id').'@cp.a2brx.com';
+                            $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
                         } else {
                             $email = $data0[$key_email];
                         }
@@ -3068,7 +3068,7 @@ class LexaAdmin extends Controller
                     $data_array[] = $record;  
                 }
                 DB::table('routes_priority')->insert($data_array);
-                Notifications::send_push($driver_id,"A2BRx","New route has added to your shift (or schedule)");
+                Notifications::send_push($driver_id,"QuikMedix","New route has added to your shift (or schedule)");
             } else if(!empty($request->input('close_route'))) {
                 $count = DB::table('payouts_driver')->where('driver_id',$driver_id)->where('amount',-1)->count();
                 $type_pay = $request->input('type_pay');
@@ -3330,7 +3330,7 @@ class LexaAdmin extends Controller
                     DB::table('routes_priority')->insert($data_array);
                 }
                 //DB::table('users')->where('id', $driver_id)->update(['route_status'=>'updated']);
-                Notifications::send_push($driver_id,"A2BRx","Your schedule was updated! Please check");
+                Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
             } else {
                 DB::table('routes_priority')->where('driver_id', $driver_id)->delete();
                 $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id', 'orders.user_id', 'users.location as userlocation', 'pharmacys.location as pharmacylocation')->where('driver_id',$driver_id)->whereIn("statuse_id",[1,2,3,7,8,9])->get();
@@ -3388,7 +3388,7 @@ class LexaAdmin extends Controller
                 }
                 DB::table('routes_priority')->where('driver_id',$driver_id)->update(['type_pay'=>$type_pay,'pay_value'=>$pay_value]);
                 self::eta_calculate($driver_id);
-                Notifications::send_push($driver_id,"A2BRx","Your schedule was updated! Please check");
+                Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
             }
             return redirect("/routes-list/driver/$driver_id");
         } else {
@@ -5061,7 +5061,7 @@ class LexaAdmin extends Controller
                     $driver_location=$user_location;
                     DB::table('orders')->where('orders.id',$order_id)->update(['statuse_id'=>$request->input('statuse'),'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'tariff'=>$tariff_res]);
                 } else if($order->statuse_id!=$request->input('statuse') && $request->input('statuse')==3) {
-                    Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id is on its way!");
+                    Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
                 } else if($order->statuse_id!=$request->input('statuse') && $request->input('statuse')==4) {
                     $route = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',$driver_id)->where('type','patient')->first();
                     $route2 = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',$driver_id)->where('type','pharmacy')->first();
@@ -5345,7 +5345,7 @@ class LexaAdmin extends Controller
                     $driver_location=$user_location;
                     DB::table('orders')->where('orders.id',$order_id)->update(['statuse_id'=>$request->input('statuse'),'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'tariff'=>$tariff_res]);
                 } else if($order->statuse_id!=$request->input('statuse') && $request->input('statuse')==3) {
-                    Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id is on its way!");
+                    Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
                 }
                 DB::table('medicine')->where('order_id', $order_id)->delete();
             }
@@ -5486,7 +5486,7 @@ class LexaAdmin extends Controller
                         $user_address = $us->address;
                     }
                 }
-                Notifications::send_push($request->input('user'),"A2BRx","created your order #$id_max (medicines), which will be delivered to: $user_address. If the address is wrong, please contact us phone number (855) 657-9595 or your pharmacy ASAP");
+                Notifications::send_push($request->input('user'),"QuikMedix","created your order #$id_max (medicines), which will be delivered to: $user_address. If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
                 if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
                     $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                     Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
@@ -5627,7 +5627,7 @@ class LexaAdmin extends Controller
                         $user_address = $us->address;
                     }
                 }
-                Notifications::send_push($request->input('user'),"A2BRx","A2B Rx is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact us phone number (855) 657-9595  or your pharmacy ASAP");
+                Notifications::send_push($request->input('user'),"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
                 if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
                     $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                     Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
@@ -6186,7 +6186,7 @@ class LexaAdmin extends Controller
                 $user = DB::table('users')->where('id', $request->input('user_id'))->first();
                 try {
                     $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                    $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Welcome to A2B Rx, ".$user->name."!\nYour account has been verified. Now you can use the app.\nAll the best,\nThe team at A2B Rx", "from" => config('app.twilio_from_phone')]);
+                    $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Welcome to QuikMedix, ".$user->name."!\nYour account has been verified. Now you can use the app.\nAll the best,\nThe team at QuikMedix", "from" => config('app.twilio_from_phone')]);
                 } catch (\Throwable $th) {
                     //throw $th;
                 }
@@ -6795,7 +6795,7 @@ class LexaAdmin extends Controller
                     $billTo = new AnetAPI\CustomerAddressType();
                     $billTo->setFirstName($name[0]);
                     $billTo->setLastName($name[1]);
-                    $billTo->setCompany("A2BRX");
+                    $billTo->setCompany("QuikMedix");
                     $billTo->setAddress($user_address[0]);
                     $billTo->setCity($user_address[1]);
                     $billTo->setState($user_address[2]);
@@ -6831,7 +6831,7 @@ class LexaAdmin extends Controller
                     $billTo = new AnetAPI\CustomerAddressType();
                     $billTo->setFirstName($name[0]);
                     $billTo->setLastName($name[1]);
-                    $billTo->setCompany("A2BRX");
+                    $billTo->setCompany("QuikMedix");
                     $billTo->setAddress($user_address[0]);
                     $billTo->setCity($user_address[1]);
                     $billTo->setState($user_address[2]);
@@ -6843,7 +6843,7 @@ class LexaAdmin extends Controller
                     $customerShippingAddress = new AnetAPI\CustomerAddressType();
                     $customerShippingAddress->setFirstName($name[0]);
                     $customerShippingAddress->setLastName($name[1]);
-                    $customerShippingAddress->setCompany("A2BRX");
+                    $customerShippingAddress->setCompany("QuikMedix");
                     $customerShippingAddress->setAddress($user_address[0]);
                     $customerShippingAddress->setCity($user_address[1]);
                     $customerShippingAddress->setState($user_address[2]);
@@ -7128,7 +7128,7 @@ class LexaAdmin extends Controller
                         $billTo = new AnetAPI\CustomerAddressType();
                         $billTo->setFirstName($name[0]);
                         $billTo->setLastName($name[1]);
-                        $billTo->setCompany("A2BRX");
+                        $billTo->setCompany("QuikMedix");
                         $billTo->setAddress($user_address[0]);
                         $billTo->setCity($user_address[1]);
                         $billTo->setState($user_address[2]);
@@ -7140,7 +7140,7 @@ class LexaAdmin extends Controller
                         $customerShippingAddress = new AnetAPI\CustomerAddressType();
                         $customerShippingAddress->setFirstName($name[0]);
                         $customerShippingAddress->setLastName($name[1]);
-                        $customerShippingAddress->setCompany("A2BRX");
+                        $customerShippingAddress->setCompany("QuikMedix");
                         $customerShippingAddress->setAddress($user_address[0]);
                         $customerShippingAddress->setCity($user_address[1]);
                         $customerShippingAddress->setState($user_address[2]);
@@ -7377,7 +7377,7 @@ class LexaAdmin extends Controller
                     $user_pharmacy=' ('.$user_pharmacy->name.')';
                 }
                 $user2 = DB::table('users')->where('id', $chat->user2)->first();
-                Notifications::send_push($user2->id,"A2BRx","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
+                Notifications::send_push($user2->id,"QuikMedix","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
                 DB::table('chats')->where('name',$chat_name)->update(['unread_user1'=>0,'unread_user2'=>$unread_user,'last_message_date'=>$created,'last_message_body'=>$body]);
             } else {
                 if($request->input('not_me_author')>0) {
@@ -7393,7 +7393,7 @@ class LexaAdmin extends Controller
                     $user_pharmacy=' ('.$user_pharmacy->name.')';
                 }
                 $user2 = DB::table('users')->where('id', $chat->user1)->first();
-                Notifications::send_push($user2->id,"A2BRx","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
+                Notifications::send_push($user2->id,"QuikMedix","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
                 DB::table('chats')->where('name',$chat_name)->update(['unread_user2'=>0,'unread_user1'=>$unread_user,'last_message_date'=>$created,'last_message_body'=>$body]);
             }
             
@@ -7546,9 +7546,9 @@ class LexaAdmin extends Controller
                                 }
                                 $route->delete();
                                 if(empty($order->eta) || $order->eta>60) {
-                                    //Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id will be delivered by 1 p.m. \nFor more information about your order (medication) please contact us (855) 657-9595 \nBest regards, A2B Rx Inc.");
+                                    //Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id will be delivered by 1 p.m. \nFor more information about your order (medication) please contact ".\App\Support\Branding::supportContact()." \nBest regards, QuikMedix");
                                 } else {
-                                    //Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id will be delivered from 1 p.m. until 9 p.m. \nFor more information about your order (medication) please contact us (855) 657-9595 \nBest regards, A2B Rx Inc.");
+                                    //Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id will be delivered from 1 p.m. until 9 p.m. \nFor more information about your order (medication) please contact ".\App\Support\Branding::supportContact()." \nBest regards, QuikMedix");
                                 }
                                 $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                                 if(!empty($next_route)) {
@@ -7656,7 +7656,7 @@ class LexaAdmin extends Controller
                                     }
                                 }
                                 $route->delete();
-                                Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id has been confirmed. \nFor more information about your order (medication) please contact us (855) 657-9595 \nBest regards, A2B Rx Inc.");
+                                Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id has been confirmed. \nFor more information about your order (medication) please contact ".\App\Support\Branding::supportContact()." \nBest regards, QuikMedix");
                                 $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                                 if(!empty($next_route)) {
                                     if($next_route->type=='patient') {
@@ -7958,7 +7958,7 @@ class LexaAdmin extends Controller
                                 }
                             }
                             $route->delete();
-                            Notifications::send_push($order->user_id,"A2BRx","Your order #$order_id has been confirmed. \nFor more information about your order (medication) please contact us (855) 657-9595 \nBest regards, A2B Rx Inc.");
+                            Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id has been confirmed. \nFor more information about your order (medication) please contact ".\App\Support\Branding::supportContact()." \nBest regards, QuikMedix");
                             $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                             if(!empty($next_route)) {
                                 if($next_route->type=='patient') {
@@ -8390,7 +8390,7 @@ class LexaAdmin extends Controller
                         $billTo = new AnetAPI\CustomerAddressType();
                         $billTo->setFirstName($name[0]);
                         $billTo->setLastName($name[1]);
-                        $billTo->setCompany("A2BRX");
+                        $billTo->setCompany("QuikMedix");
                         $billTo->setAddress($user_address[0]);
                         $billTo->setCity($user_address[1]);
                         $billTo->setState($user_address[2]);
@@ -8402,7 +8402,7 @@ class LexaAdmin extends Controller
                         $customerShippingAddress = new AnetAPI\CustomerAddressType();
                         $customerShippingAddress->setFirstName($name[0]);
                         $customerShippingAddress->setLastName($name[1]);
-                        $customerShippingAddress->setCompany("A2BRX");
+                        $customerShippingAddress->setCompany("QuikMedix");
                         $customerShippingAddress->setAddress($user_address[0]);
                         $customerShippingAddress->setCity($user_address[1]);
                         $customerShippingAddress->setState($user_address[2]);
@@ -8483,7 +8483,7 @@ class LexaAdmin extends Controller
                     $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
                     if(!empty($pharmacy_name)) {
                         try {
-                            $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')]);
+                            $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
                             return json_encode([
                                 'message' => 'OK'
                             ]);
@@ -8495,7 +8495,7 @@ class LexaAdmin extends Controller
                         }
                     } else {
                         try {
-                            $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')]);
+                            $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
                             return json_encode([
                                 'message' => 'OK'
                             ]);
@@ -9330,7 +9330,7 @@ class LexaAdmin extends Controller
                     $src = '';
                     $email = $request->input('email');
                     if(empty($email)){
-                        $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@cp.a2brx.com';
+                        $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
                     }
                     $address = $request->input('address');
                     $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
@@ -9377,7 +9377,7 @@ class LexaAdmin extends Controller
                     $driver_id = NULL;
                 }
                 DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id' => Auth::user()->id, 'driver_id'=>$driver_id, 'user_id' => $user->id, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge]);
-                Notifications::send_push($user->id,"A2BRx","A2B Rx is greeting you! Your order #$id_max is ready to be shipped to this address: $user->address If the address is wrong, please contact us phone number (855) 657-9595 or your pharmacy ASAP");
+                Notifications::send_push($user->id,"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user->address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
                 if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
                     $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                     Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
@@ -9893,13 +9893,8 @@ class LexaAdmin extends Controller
             return $res_view;
         }
     }
-    public function a2bChat() {
-        $res_view = view('a2bchat.index',['alert'=>'','title'=>'a2bChat','br1'=>'a2bChat','br2'=>'Index']);
-        if(isset($_GET['ajax'])) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+    public function supportChat() {
+        return redirect('/chat');
     }
 
     public function dispatching() {
@@ -10311,7 +10306,7 @@ class LexaAdmin extends Controller
                 $join->on('locations.user_id', '=', 'users.id');
                 $join->whereNull("users.pharmacy_id");
             })->select('locations.*',DB::raw("CONCAT(users.name, ' ', users.last_name) as name"), "users.phone")->whereIn('locations.id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->get();
-            $res_view = view('drivers.map',['locations'=>$locations, 'title'=>'A2B Rx Drivers','br1'=>'A2B Rx Drivers','br2'=>'Drivers','alert'=>'']);
+            $res_view = view('drivers.map',['locations'=>$locations, 'title'=>'QuikMedix Drivers','br1'=>'QuikMedix Drivers','br2'=>'Drivers','alert'=>'']);
             if(isset($_GET['ajax'])) {
                 return $res_view->renderSections();
             } else {
@@ -10611,7 +10606,7 @@ class LexaAdmin extends Controller
         $duration = floor($duration / 60);
         $duration= $duration." hours ".$min." minutes";
         $distance= $distance.' miles';
-        Notifications::send_push($next_route->type_id,"A2BRx","Your delivery is next. \nPlease track your order #".$next_route->order_id." via our app. ETA: $duration \nThank you for using our service.");
+        Notifications::send_push($next_route->type_id,"QuikMedix","Your delivery is next. \nPlease track your order #".$next_route->order_id." via our app. ETA: $duration \nThank you for using our service.");
         return true;
     }
 

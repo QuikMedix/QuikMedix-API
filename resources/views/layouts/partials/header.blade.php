@@ -6,19 +6,19 @@
                     <div class="navbar-brand-box">
                         <a href="/" class="logo logo-dark">
                             <span class="logo-sm">
-                                <img src="{{ URL::asset('/images/logo-sm.png')}}" alt="" height="22">
+                                <img src="{{ asset('images/branding/quikmedix-icon.png?v=transparent-1') }}" alt="QuikMedix" width="44" height="44">
                             </span>
                             <span class="logo-lg">
-                                <img src="{{ URL::asset('/images/logo-dark.png')}}" alt="" height="17">
+                                <img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix — Your Health - Our Priority" width="190" style="max-width: 100%; height: auto;">
                             </span>
                         </a>
 
                         <a href="/" class="logo logo-light">
                             <span class="logo-sm">
-                                <img src="{{ URL::asset('/images/logo-sm.png')}}" alt="" height="22">
+                                <img src="{{ asset('images/branding/quikmedix-icon-light.png?v=transparent-1') }}" alt="QuikMedix" width="44" height="44">
                             </span>
                             <span class="logo-lg">
-                                <img src="{{ URL::asset('/images/logo-light.png')}}" alt="" height="18">
+                                <img src="{{ asset('images/branding/quikmedix-wordmark-light.png?v=transparent-1') }}" alt="QuikMedix — Your Health - Our Priority" width="190" style="max-width: 100%; height: auto;">
                             </span>
                         </a>
                     </div>

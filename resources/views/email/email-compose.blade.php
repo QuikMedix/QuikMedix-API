@@ -14,7 +14,7 @@
 
                          @component('common-components.breadcrumb')
                      @slot('title') Email Compose  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Email  @endslot
                      @slot('li3') Email Compose  @endslot
                 @endcomponent

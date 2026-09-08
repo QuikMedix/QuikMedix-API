@@ -11,8 +11,8 @@
 }
 .btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
     color: #fff;
-    border-color: #7a6fbe;
-    background-color: #7a6fbe;
+    border-color: #c90016;
+    background-color: #c90016;
 }
 .btn-check:active+.btn-outline-primary img, .btn-check:checked+.btn-outline-primary img, .btn-outline-primary.active img, .btn-outline-primary.dropdown-toggle.show img, .btn-outline-primary:active img {
     filter: invert(1);
@@ -82,7 +82,7 @@
 				    <div class="row">
                         <div class="col-3">
                             <div class="card">
-                                <div class="card-body" style="min-height: 200px;"><h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Photo </h5>
+                                <div class="card-body" style="min-height: 200px;"><h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Photo </h5>
                                     <div style="text-align: center;"  class="user-phnew">
                                         <img style="width: 60%;" class="user-phnew" id="user_img" src="{{ $user->image }}">
                                         <input type="file" class="filestyle form-control" data-input="false" data-buttonname="btn-secondary" name="image" onchange='encodeImageFileAsURL(this);' accept="image/x-png,image/jpeg,image/jpg">
@@ -106,7 +106,7 @@
 						<div class="col-6">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
+                                    <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
 
                                         <div class="form-group row">                                            
                                             <div class="col-sm-6">
@@ -186,7 +186,7 @@
                         </div>
                         <div class="col-3">
                             <div class="card">
-                                <div class="card-body" style="min-height: 200px;"><h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Additional info</h5>  
+                                <div class="card-body" style="min-height: 200px;"><h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Additional info</h5>
                                         
                                 <div class="row user-phnew2">
                                         <div class="col-12">

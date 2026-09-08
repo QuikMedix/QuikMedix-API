@@ -10,7 +10,7 @@
                     <div class="card overflow-hidden">
                         <div class="card-body pt-0">                            
                             <div class="text-center mt-1">
-                                <a href="/" class="logo logo-admin"><img src="https://cp.a2brx.com/images/logo.svg" height="120" alt="logo"></a>
+                                <a href="/" class="logo logo-admin"><img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" width="260" height="191" style="max-width: 100%; height: auto;" alt="QuikMedix — Your Health - Our Priority"></a>
                             </div>                           
                             <h4 class="text-center text-dark font-size-18 mb-1">Welcome!</h4>
                             <p class="text-center text-dark">Sign in to continue.</p>
@@ -59,7 +59,7 @@
                     </div>
                     <div class="mt-5 text-center">
                         <!--<p>Don't have an account ? <a href="/register" class="text-primary"> Signup Now </a></p>-->
-                        <p>© 2025 All Rights Reserved - A2B RX Inc</p>
+                        <p>© {{ date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>
             </div>

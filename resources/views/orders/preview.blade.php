@@ -2,7 +2,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-body">
-                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Order Details</h5>
+                <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Order Details</h5>
                 <div class="row">							
                     <div class="col-6">							
                         <b>Order:</b> {{$order->id}} - <span style="font-size: 11px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span><br>
@@ -131,7 +131,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-body">
-                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Order Items</h5>
+                <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Order Items</h5>
                 <table class="table table-striped" style="table-layout: fixed;">
                     <thead>
                         <tr>
@@ -160,12 +160,12 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-body">
-                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Order Instructions</h5>
+                <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Order Instructions</h5>
                 <div class="row">
                     <div class="col-4">
                         <div class="card">
                             <div class="card-body" style="min-height: 220px;">
-                                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Special instructions</h5> 	
+                                <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Special instructions</h5>
                                 <div style="margin: 10px">  {{$order->special_instructions}}</div>							
                             </div>
                         </div>
@@ -173,7 +173,7 @@
                     <div class="col-4">
                         <div class="card">
                             <div class="card-body" style="min-height: 220px;">
-                                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Dispatcher Notes</h5> 	
+                                <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Dispatcher Notes</h5>
                                 <div style="margin: 10px"> 
                                     @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist'))
                                     <div style="min-height: 30px;"><a href="#" id="ajax-alert" class="btn btn-sm btn-primary float-right">Add Note</a></div>
@@ -195,7 +195,7 @@
                     <div class="col-4">
                         <div class="card">
                             <div class="card-body" style="min-height: 220px;">
-                                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Customer Notes</h5> 	
+                                <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Customer Notes</h5>
                                 <div style="margin: 10px">
                                     <ol class="activity-feed mb-0">
                                     @foreach($customer_notes as $customer_note)
@@ -228,7 +228,7 @@
             showCancelButton:!0,
             confirmButtonText:"Submit",
             showLoaderOnConfirm:!0,
-            confirmButtonColor:"#7a6fbe",
+            confirmButtonColor:"#c90016",
             cancelButtonColor:"#f46a6a",
             preConfirm:function(n){
                 if(n==="" || n.length<2) {
@@ -245,7 +245,7 @@
                                 icon:"success",
                                 title:"Add Dispatcher Note",
                                 html:"Success added.",
-                                confirmButtonColor:"#7a6fbe"
+                                confirmButtonColor:"#c90016"
                             });
                         } else {
                             Swal.fire({

@@ -14,13 +14,13 @@
                     <div class="card overflow-hidden">
                         <div class="card-body pt-0">
                             <h3 class="text-center mt-4">
-                                <a href="/" class="logo logo-admin"><img src="{{ URL::asset('/images/logo-cp.png')}}"  height="80" alt="logo"></a>
+                                <a href="/" class="logo logo-admin"><img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" width="260" height="191" style="max-width: 100%; height: auto;" alt="QuikMedix — Your Health - Our Priority"></a>
                             </h3>
                             <div class="p-3">
                                 <h2 class="text-muted mb-1 text-center">Registration</h2>                                
                                 <div class="row">
                                 <div class="col-md-6">
-                                <h5 style="background: #7a6fbe;color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">Pharmacy information</h5>
+                                <h5 style="background: #c90016;color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">Pharmacy information</h5>
                                     <form class="form-horizontal" method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
                                     @csrf
 
@@ -89,7 +89,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <h5 style="background: #7a6fbe;color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">User Information</h5>
+                                    <h5 style="background: #c90016;color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">User Information</h5>
                                     <div class="form-group">
                                         <label for="name">First Name *</label>
                                         <input type="text" name="name" value="{{ old('name') }}" required autocomplete="name" class="form-control @error('name') is-invalid @enderror" autofocus id="name" placeholder="">
@@ -167,7 +167,7 @@
                     </div>
                     <div class="mt-5 text-center">
                         
-                        <p>© 2025 All Rights Reserved - A2B RX Inc</p>
+                        <p>© {{ date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>
             </div>

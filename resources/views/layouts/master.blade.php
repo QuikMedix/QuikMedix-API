@@ -6,23 +6,23 @@
     <meta charset="utf-8" />
     <title> @yield('title')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="A2BRx Control Panel" name="description" />
+    <meta content="QuikMedix Control Panel" name="description" />
     <!-- App favicon -->
-    <link rel="shortcut icon" href="{{ URL::asset('/images/favicon.ico')}}">
+    @include('layouts.partials.brand-icons')
     <!-- Bootstrap Css -->
-    <link href="{{ URL::asset('/css/bootstrap.min.css?ver=4') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/bootstrap.min.css?v=quikmedix-1') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
     <!-- Icons Css -->
     <link href="{{ URL::asset('/css/icons.min.css')}}" rel="stylesheet" type="text/css" />
     <!-- App Css-->
-    <link href="{{ URL::asset('/css/app.min.css')}}" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/app.min.css?v=quikmedix-1')}}" id="app-style" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.bootstrap3.min.css" integrity="sha256-ze/OEYGcFbPRmvCnrSeKbRTtjG4vGLHXgOqsyLFTRjg=" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">   
-    <link rel="stylesheet" href="https://cp.a2brx.com/public/libs/magnific-popup/magnific-popup.min.css" type="text/css" />   
+    <link rel="stylesheet" href="{{ URL::asset('/libs/magnific-popup/magnific-popup.min.css') }}" type="text/css" />
     <link rel="stylesheet" href="/css/sweetalert2.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css')}}">
+<link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1')}}">
 <style>
     .newmodal {
     width: 100vw;
@@ -62,7 +62,7 @@
     color: black;
     }
     .bgmodal .orderm .badge {
-    color: #7a6fbe;
+    color: #c90016;
     }
     .bgmodal .patientm .badge {
     color: #00ac22;
@@ -92,7 +92,7 @@
    }
    .bgmodal .btnm {
     color: white;
-    background: #7a6fbe;
+    background: #c90016;
     box-shadow: 5px 5px 15px #d7d0ff, -5px -5px 15px #ffffff;
     padding: 10px;
     border-radius: 0.25rem;
@@ -101,7 +101,7 @@
 }
 .toast-info  {
     color: white;
-    background: #7a6fbe;
+    background: #c90016;
 }
 </style>
 </head>
@@ -141,7 +141,7 @@
     </div>
     @if(Auth::user()->role=='superadmin' || Auth::user()->role=='admin' || Auth::user()->role=='medic')
     <div class="scan-qr">
-        <img src="https://cp.a2brx.com/images/qr_new.svg" alt="qr scan">
+        <img src="{{ URL::asset('/images/qr_new.svg') }}" alt="qr scan">
     </div>    
 
     <div class="scan-preload">
@@ -201,8 +201,8 @@
         <!-- footerScript -->
         @yield('footerScript')
     </div>
-    @if(Auth::user()->role=='medic')
-    <script src="//code.tidio.co/jg7oyyyf1zpapjdhljgujy02dosvy60t.js" async></script>
+    @if(Auth::user()->role=='medic' && config('services.tidio.widget_key'))
+    <script src="https://code.tidio.co/{{ config('services.tidio.widget_key') }}.js" async></script>
     <script>
         document.tidioIdentify = {
             distinct_id: "{{Auth::user()->id}}",
@@ -212,10 +212,11 @@
         };
     </script>
     @endif
+    @if(config('services.beams.instance_id'))
     <script src="https://js.pusher.com/beams/1.0/push-notifications-cdn.js"></script>
     <script>
         const beamsClient = new PusherPushNotifications.Client({
-            instanceId: '686711de-e011-415d-9a38-c8a05adfaae2',
+            instanceId: @json(config('services.beams.instance_id')),
         });
         const beamsTokenProvider = new PusherPushNotifications.TokenProvider({
             url: "/pusher/beams-auth",
@@ -224,6 +225,7 @@
         .then(() => beamsClient.setUserId("{{Auth::user()->id}}", beamsTokenProvider))
         .catch(console.error);
     </script>
+    @endif
     <!-- App js -->
     <script src="{{ URL::asset('/js/app.min.js?ver=3')}}"></script>
     <script src="{{ URL::asset('/js/jquery.maskedinput.min.js')}}" type="text/javascript"></script>
@@ -244,7 +246,7 @@
             @if((Auth::user()->pharmacy_balance()<0 && session()->has('flash_show_popup')) || Auth::user()->pharmacy_balance_ban())
             Swal.fire({
                 title:"Couldn't process your last payment",
-                html:"<p>Payment failed—please update ASAP.</p><p>We appreciate your attention and are happy to speak with you if you have any questions regarding your account.</p><p>Just call us at (855) 657-9595.</p>",
+                html: @json('<p>Payment failed—please update your payment details.</p><p>For questions about your account, contact '.e(\App\Support\Branding::supportContact()).'.</p>'),
                 icon:"warning",
                 showCancelButton:!0,
                 confirmButtonColor:"#29bbe3",

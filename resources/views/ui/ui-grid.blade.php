@@ -7,7 +7,7 @@
                     <div class="row">
                          @component('common-components.breadcrumb')
                      @slot('title') Grid @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') UI Elements @endslot
                      @slot('li3') Grid  @endslot
                 @endcomponent

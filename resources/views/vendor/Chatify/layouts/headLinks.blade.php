@@ -1,4 +1,4 @@
-<title>Chat Support A2b Rx</title>
+<title>Chat Support QuikMedix</title>
 
 {{-- Meta tags --}}
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,7 +19,7 @@
 <link rel='stylesheet' href='https://unpkg.com/nprogress@0.2.0/nprogress.css'/>
 <link href="{{ asset('css/chatify/style.css') }}" rel="stylesheet" />
 <link href="{{ asset('css/chatify/'.$dark_mode.'.mode.css') }}" rel="stylesheet" />
-<link href="{{ asset('css/app.css') }}" rel="stylesheet" />
+<link href="{{ asset('css/app.css?v=quikmedix-1') }}" rel="stylesheet" />
 
 {{-- Setting messenger primary color to css --}}
 <style>

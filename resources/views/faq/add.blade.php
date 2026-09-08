@@ -3,7 +3,6 @@
 @section('title') Add FAQ @endsection
 
 @section('headerCss')
-<link rel="stylesheet" type="text/css" id="mce-u0" href="https://themesbrand.com/lexa/layouts/purple/assets/libs/tinymce/skins/ui/oxide/skin.min.css">
 @endsection
 
 @section('content')

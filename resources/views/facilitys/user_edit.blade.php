@@ -66,7 +66,7 @@
                         <div class="col-6">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
+                                    <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
                                     <form method="post" enctype="multipart/form-data">
                                         @csrf
                                         <input type="hidden" name="save" value="1">
@@ -144,7 +144,7 @@
                         <div class="col-6">
                             <div class="card">
                                 <div class="card-body" style="min-height: 200px;">
-                                    <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Facility patients</h5>
+                                    <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Facility patients</h5>
                                     <div style="padding: 10px;background: #efefef;border-radius: 5px;margin: 5px;">  
                                     <h5 class="my-3 text-black">Select from database</h5>
                                     <form method="post" enctype="multipart/form-data">
