@@ -212,5 +212,5 @@
             <script src="{{ URL::asset('/libs/c3/c3.min.js')}}"></script>
 
             <!-- Init js -->
-            <script src="{{ URL::asset('/js/pages/c3-chart.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/c3-chart.init.js?v=quikmedix-1')}}"></script>
 @endsection

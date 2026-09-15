@@ -103,6 +103,6 @@
             <script src="{{ URL::asset('/libs/sweetalert2/sweetalert2.min.js')}}"></script>
 
             <!-- Sweet alert init js-->
-            <script src="{{ URL::asset('/js/pages/sweet-alerts.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/sweet-alerts.init.js?v=quikmedix-1')}}"></script>
 
 @endsection

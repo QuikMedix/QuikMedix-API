@@ -178,7 +178,7 @@ File: Main Css File
 }
 
 body[data-topbar=dark] #page-topbar {
-  background-color: #2b3a4a;
+  background-color: #242424;
 }
 
 body[data-topbar=dark] .navbar-header .dropdown.show .header-item {
@@ -224,7 +224,7 @@ body[data-topbar=dark] .app-search input.form-control::-webkit-input-placeholder
 }
 
 body[data-sidebar=dark] .navbar-brand-box {
-  background: #2b3a4a;
+  background: #242424;
 }
 
 body[data-sidebar=dark] .logo-dark {
@@ -249,7 +249,7 @@ body[data-sidebar=dark] .logo-light {
     position: absolute;
     left: 0;
     right: 0;
-    background-color: #2b3a4a;
+    background-color: #242424;
   }
 }
 
@@ -736,7 +736,7 @@ body[data-layout=horizontal] .footer {
 }
 
 body[data-sidebar=dark] .vertical-menu {
-  background: #2b3a4a;
+  background: #242424;
 }
 
 body[data-sidebar=dark] #sidebar-menu ul li a {
@@ -766,7 +766,7 @@ body[data-sidebar=dark] #sidebar-menu ul li ul.sub-menu li a:hover {
 }
 
 body[data-sidebar=dark] #sidebar-menu ul > li > a.mm-active {
-  background-color: #263442;
+  background-color: #181818;
 }
 
 body[data-sidebar=dark].vertical-collpsed {
@@ -791,7 +791,7 @@ body[data-sidebar=dark].vertical-collpsed .vertical-menu #sidebar-menu > ul > li
 }
 
 body[data-sidebar=dark].vertical-collpsed .vertical-menu #sidebar-menu > ul ul {
-  background-color: #2b3a4a;
+  background-color: #242424;
 }
 
 body[data-sidebar=dark].vertical-collpsed .vertical-menu #sidebar-menu ul li.mm-active .active {
@@ -812,7 +812,7 @@ body[data-sidebar=dark] .mm-active > i {
 
 body[data-sidebar=dark] .mm-active .active {
   color: #ffffff !important;
-  background-color: #263442;
+  background-color: #181818;
 }
 
 body[data-sidebar=dark] .mm-active .active i {
@@ -975,11 +975,11 @@ body[data-sidebar=colored].vertical-collpsed .vertical-menu #sidebar-menu ul li.
 
 .topnav .navbar-nav .nav-item .nav-link.active {
   color: #ffffff !important;
-  background: #5c50a3;
+  background: #c90016;
 }
 .topnav .navbar-nav .nav-item .nav-link:hover {
   color: #ffffff !important;
-  background: #5c50a3;
+  background: #c90016;
 }
 .topnav .navbar-nav .nav-item .nav-link i {
   transform: scale3d(1, 1, 1);
@@ -994,12 +994,12 @@ body[data-sidebar=colored].vertical-collpsed .vertical-menu #sidebar-menu ul li.
 }
 .topnav .navbar-nav .dropdown.active > a {
   color: #ffffff !important;
-  background: #5c50a3;
+  background: #c90016;
 }
 
 body[data-layout=horizontal] #page-topbar {
-  /*background-color: #2b3a4a;*/
-  background: linear-gradient(148deg, #2b3a4a 0%, #4d4197 55%, #8177c2 100%);
+  /*background-color: #242424;*/
+  background: #242424;
 }
 
 body[data-layout=horizontal] .navbar-header {
@@ -1775,7 +1775,7 @@ body[data-layout=horizontal][data-layout-size=boxed] .navbar-header {
   box-shadow: 0 -3px 31px 0 rgb(0 0 0 / 5%), 0 6px 20px 0 rgb(0 0 0 / 2%);
 }
 .card-title-3 {
-  background: linear-gradient(148deg, #2b3a4a 0%, #4d4197 55%, #8177c2 100%);
+  background: #242424;
   color: white;
   padding: 10px;
   font-weight: 100;
@@ -1786,7 +1786,7 @@ body[data-layout=horizontal][data-layout-size=boxed] .navbar-header {
 .card-title {
   font-size: 14px;
   margin: 0 0 7px 0;
-  background: linear-gradient(148deg, #2b3a4a 0%, #4d4197 55%, #8177c2 100%);
+  background: #242424;
   color: white;
   font-weight: 100;
   padding: 5px 15px;
@@ -1794,7 +1794,7 @@ body[data-layout=horizontal][data-layout-size=boxed] .navbar-header {
 }
 
 .border-billing:hover {
-  box-shadow: 0 -3px 31px 0 rgb(122 111 190 / 20%), 0 6px 20px 0 rgb(0 0 0 / 2%);
+  box-shadow: 0 -3px 31px 0 rgb(201 0 22 / 20%), 0 6px 20px 0 rgb(0 0 0 / 2%);
 }
 .billing-stat {
   font-size: 0.9rem;
@@ -1961,7 +1961,7 @@ body[data-layout=horizontal][data-layout-size=boxed] .navbar-header {
     border: none;
 }
 .modal-header {
-    background: #2b3a4a;
+    background: #242424;
     color: #ffffff;
 }
 .header-warning {
@@ -4058,7 +4058,7 @@ input[switch=dark]:checked + label {
 }
 .chat-conversation .conversation-list .ctext-wrap-content {
   padding: 15px 20px;
-  background-color: #f9f8ff;
+  background-color: #f7f7f7;
   border-radius: 0 10px 10px 10px;
   color: #6c757d;
   position: relative;

@@ -93,7 +93,7 @@
    .bgmodal .btnm {
     color: white;
     background: #c90016;
-    box-shadow: 5px 5px 15px #d7d0ff, -5px -5px 15px #ffffff;
+    box-shadow: 5px 5px 15px #f4ccd0, -5px -5px 15px #ffffff;
     padding: 10px;
     border-radius: 0.25rem;
     text-align: right;
@@ -104,6 +104,7 @@
     background: #c90016;
 }
 </style>
+    @include('layouts.partials.brand-colors')
 </head>
 <body  data-topbar="light" data-layout="horizontal">
     <div id="headerCss">
@@ -227,7 +228,7 @@
     </script>
     @endif
     <!-- App js -->
-    <script src="{{ URL::asset('/js/app.min.js?ver=3')}}"></script>
+    <script src="{{ URL::asset('/js/app.min.js?v=quikmedix-1')}}"></script>
     <script src="{{ URL::asset('/js/jquery.maskedinput.min.js')}}" type="text/javascript"></script>
     <script>
         const synth = window.speechSynthesis;

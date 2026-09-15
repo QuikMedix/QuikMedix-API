@@ -33,7 +33,7 @@ class LexaAdmin extends Controller
     public static $err_perm = 'Permision error.';
 
     public function home() {
-        return redirect('dashboard/index');
+        return redirect()->route('home');
     }
 
     public function index($folderName, $fileName) {
@@ -5363,13 +5363,14 @@ class LexaAdmin extends Controller
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }
         if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
+            abort_unless($pharmacy, 404, 'Pharmacy not found.');
             $users = DB::table('users')->where('role', 'user')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
             $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
             $medicines = DB::table('medicines')->get();
             $drivers = DB::table('users')->where('role', 'driver')->where("pharmacy_id",$pharmacy_id)->get();
             $delivery_methods = DB::table('delivery_methods')->get();
             $delivery_times = DB::table('delivery_times')->get();
-            $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
             $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
             $res_view = view('orders.add',['users'=>$users,'facilitys'=>$facilitys,'medicines'=>$medicines,'drivers'=>$drivers,'pharmacy'=>$pharmacy,'time_ranges'=>$time_ranges,'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times,'title'=>'Order Add','br1'=>'Orders','br2'=>'Order Add','alert'=>'']);
             if(isset($_GET['ajax'])) {
@@ -5514,10 +5515,11 @@ class LexaAdmin extends Controller
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }
         if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
+            abort_unless($pharmacy, 404, 'Pharmacy not found.');
             $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->get();
             $delivery_methods = DB::table('delivery_methods')->get();
             $delivery_times = DB::table('delivery_times')->get();
-            $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
             $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
             $res_view = view('facilitys.add',['facilitys'=>$facilitys,'pharmacy'=>$pharmacy,'time_ranges'=>$time_ranges,'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times,'title'=>'Order Facilitys Add','br1'=>'Orders','br2'=>'Order Facilitys Add','alert'=>'']);
             if(isset($_GET['ajax'])) {

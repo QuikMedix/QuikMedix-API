@@ -164,7 +164,7 @@
                                 <div class="card-body">
 									<div class="row">
                                         <div class="col-12">
-                                            <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Edit Order</h5>
+                                            <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Edit Order</h5>
                                         </div>
                                     </div>									
                                     <form method="post" enctype="multipart/form-data" id="form">
@@ -175,7 +175,7 @@
                                         @endif
                                         <div class="row">
                                             <div class="col-5">
-                                                    <h5 style="background: #2b3a4a;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
+                                                    <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
                                                     <div class="row">
                                                         <div class="col-12">
                                                             <div id="facilitys-b">
@@ -295,13 +295,13 @@
                                                         </div>  
                                                         
                                                         <div class="col-sm-12 mt-5" >
-                                                            <h5 style="background: #2b3a4a;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
+                                                            <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
                                                             <textarea class="form-control" name="special_instructions" rows="3">{{ $order->special_instructions }}</textarea>
                                                         </div>                                        
                                                 </div>
                                             </div>
                                             <div class="col-7">
-                                                <h5 style="background: #2b3a4a;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Recipients</h5>
+                                                <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Recipients</h5>
                                                 <div class="row">  
                                                     <div class="col-12">
                                                         <select name="rx_recipients[]" class="form-control rx_recipient float-left" style="width:290px;">

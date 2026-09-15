@@ -150,5 +150,5 @@
             <script src="{{ URL::asset('/libs/flot.curvedLines/flot.curvedLines.min.js')}}"></script>
 
             <!-- flot init -->
-            <script src="{{ URL::asset('/js/pages/flot.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/flot.init.js?v=quikmedix-1')}}"></script>
 @endsection

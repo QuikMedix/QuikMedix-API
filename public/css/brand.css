@@ -1,0 +1,91 @@
+:root {
+  --qm-primary: #c90016;
+  --qm-primary-hover: #a30012;
+  --qm-primary-active: #960010;
+  --qm-primary-soft: #fff0f2;
+  --qm-charcoal: #242424;
+  --qm-charcoal-dark: #181818;
+  --qm-surface: #ffffff;
+  --qm-canvas: #f5f5f5;
+  --qm-text: #333333;
+  --qm-border: #dedede;
+  --qm-delivered: #198754;
+  --qm-in-transit: #2463a0;
+  --qm-pending: #946200;
+  --qm-unavailable: #ad2d3a;
+  --qm-scheduled: #176b82;
+  --qm-office: #4a4a4a;
+}
+
+body[data-layout=horizontal] #page-topbar,
+.card-title,
+.card-title-3,
+.mini-stat2 h6 {
+  background: var(--qm-charcoal);
+  color: var(--qm-surface);
+}
+
+.topnav .navbar-nav .nav-item .nav-link.active,
+.topnav .navbar-nav .dropdown.active > .nav-link {
+  background: var(--qm-primary);
+  color: var(--qm-surface) !important;
+}
+
+.topnav .navbar-nav .nav-item .nav-link:hover,
+.topnav .navbar-nav .nav-item .nav-link:focus-visible {
+  background: var(--qm-primary-hover);
+  color: var(--qm-surface) !important;
+}
+
+.topnav .navbar-nav .dropdown-item:hover,
+.topnav .navbar-nav .dropdown-item:focus,
+.topnav .navbar-nav .dropdown-item.active {
+  background: var(--qm-primary-soft);
+  color: var(--qm-primary);
+}
+
+.mini-stat.bg-primary {
+  background: var(--qm-charcoal) !important;
+}
+
+.status-home-new.status-delivered {
+  background: var(--qm-delivered);
+}
+
+.status-home-new.status-in-transit {
+  background: var(--qm-in-transit);
+}
+
+.status-home-new.status-pending {
+  background: var(--qm-pending);
+}
+
+.status-home-new.status-unavailable {
+  background: var(--qm-unavailable);
+}
+
+.status-home-new.status-scheduled {
+  background: var(--qm-scheduled);
+}
+
+.status-home-new.status-office {
+  background: var(--qm-office);
+}
+
+.status-home-new:hover,
+.status-home-new:focus-visible {
+  color: var(--qm-surface);
+  box-shadow: 0 0 0 3px rgba(36, 36, 36, 0.2);
+}
+
+.swal2-styled.swal2-confirm {
+  background-color: var(--qm-primary) !important;
+}
+
+.swal2-styled.swal2-confirm:hover {
+  background-color: var(--qm-primary-hover) !important;
+}
+
+.swal2-styled.swal2-confirm:focus {
+  box-shadow: 0 0 0 3px rgba(201, 0, 22, 0.25) !important;
+}

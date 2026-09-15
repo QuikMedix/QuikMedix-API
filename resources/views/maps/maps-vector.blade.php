@@ -94,5 +94,5 @@
             <script src="{{ URL::asset('/libs/jquery-vectormap/jquery-vectormap.min.js')}}"></script>
 
             <!-- Init js-->
-            <script src="{{ URL::asset('/js/pages/vector-maps.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/vector-maps.init.js?v=quikmedix-1')}}"></script>
 @endsection

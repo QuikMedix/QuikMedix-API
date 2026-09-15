@@ -414,7 +414,7 @@
                                                 <textarea class="form-control" name="special_instructions" rows="3">{{ $order->special_instructions }}</textarea>
                                             </div>
                                         </div>
-                                        <div class="mb-3 mt-3 float-right text-center text-black" style="background: #deeeff;width: 170px;padding: 5px 25px 5px 25px;border-radius: 8px;box-shadow: 0 -3px 31px 0 rgb(0 0 0 / 5%), 0 6px 20px 0 rgb(122 111 190 / 20%);border: solid 1px #ffffff;">
+                                        <div class="mb-3 mt-3 float-right text-center text-black" style="background: #deeeff;width: 170px;padding: 5px 25px 5px 25px;border-radius: 8px;box-shadow: 0 -3px 31px 0 rgb(0 0 0 / 5%), 0 6px 20px 0 rgb(201 0 22 / 20%);border: solid 1px #ffffff;">
                                             <h5 class="mb-0">Cost <span class="badge bg-dark text-light"><b id="tariff">$<b>0.00</b></b></span></h5> 
                                                 @if($order->statuse_id!=4) 
                                                 <div class="extra_charge" style="display:none;"> 

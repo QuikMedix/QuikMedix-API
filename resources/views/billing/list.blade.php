@@ -18,7 +18,7 @@
             padding: 10px 15px 10px 25px;
             border-radius: 10px;
             background: #ffffff;
-            box-shadow: 0 -3px 21px 0 rgb(122 111 190 / 5%), 0 6px 10px 0 rgb(122 111 190 / 20%);
+            box-shadow: 0 -3px 21px 0 rgb(201 0 22 / 5%), 0 6px 10px 0 rgb(201 0 22 / 20%);
         }
         .offcanvas-orders:hover {
             background: #f2fbf6;
@@ -95,7 +95,7 @@
                             </div>
                         </div>
                         <div class="col-xl-4 col-sm-6">
-                                <div class="card mini-stat bg-primary" style="background-color: #2b3a4a !important;">
+                                <div class="card mini-stat bg-primary" style="background-color: #242424 !important;">
                                     <div class="card-body mini-stat-img">
                                         <div class="mini-stat-icon">
                                             <i class="mdi mdi-credit-card-multiple-outline float-right"></i>
@@ -117,7 +117,7 @@
                                 </div>
                         </div>                       
                         <div class="col-xl-4 col-sm-6">
-                                <div class="card mini-stat bg-primary" style="background-color: #2b3a4a !important;">
+                                <div class="card mini-stat bg-primary" style="background-color: #242424 !important;">
                                     <div class="card-body mini-stat-img">
                                         <div class="mini-stat-icon">
                                             <i class="mdi mdi-map-marker-distance float-right"></i>
@@ -263,7 +263,7 @@
             <script src="{{ URL::asset('/libs/rwd-table/rwd-table.min.js')}}"></script>
 
             <!-- Init js -->
-            <script src="{{ URL::asset('/js/pages/table-responsive.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/table-responsive.init.js?v=page-routes-2')}}"></script>
             <script>
                 $(document).ready(function(){
                     @if(Auth::user()->role=='medic')

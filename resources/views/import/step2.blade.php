@@ -151,7 +151,7 @@
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-12">
-                                            <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Order Data</h5>
+                                            <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Data</h5>
                                         </div>
                                     </div>									
                                     @if($alert!='') 
@@ -159,7 +159,7 @@
                                     @endif
 									<div class="row">
                                         <div class="col-5">
-										    <h5 style="background: #2b3a4a;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
+										    <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
 									        <div class="row">
                                                 <div class="col-sm-4" style="margin-bottom: 20px;">
                                                     <small>Count bags</small>
@@ -217,7 +217,7 @@
                                             </div>                                          
 									    </div>
 										<div class="col-3">
-											<h5 style="background: #2b3a4a;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Order Items</h5>
+											<h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Order Items</h5>
 									        <div class="form-group row">                                            
                                                 <div class="col-sm-12 rx-list">
                                                     @if(!empty($rxs))
@@ -264,7 +264,7 @@
                                             </div>										
                                         </div>	
 										<div class="col-4">
-											<h5 style="background: #2b3a4a;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
+											<h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
                                             <div class="col-sm-12" >
                                                 <textarea class="form-control" name="special_instructions" rows="3"></textarea>
                                             </div>
@@ -284,7 +284,7 @@
                                             </div>
 										</div>
 					                </div>
-                                    <div class="mb-3 mt-3 float-right text-center text-black" style="background: #deeeff;width: 170px;padding: 5px 25px 5px 25px;border-radius: 8px;box-shadow: 0 -3px 31px 0 rgb(0 0 0 / 5%), 0 6px 20px 0 rgb(122 111 190 / 20%);border: solid 1px #ffffff;">
+                                    <div class="mb-3 mt-3 float-right text-center text-black" style="background: #deeeff;width: 170px;padding: 5px 25px 5px 25px;border-radius: 8px;box-shadow: 0 -3px 31px 0 rgb(0 0 0 / 5%), 0 6px 20px 0 rgb(201 0 22 / 20%);border: solid 1px #ffffff;">
                                         <h5 class="mb-0">Cost <span class="badge bg-dark text-light"><b id="tariff">$<b>0.00</b></b></span></h5> 
                                         <div class="extra_charge" style="display:none;"> 
                                             <span class="badge bg-warning text-black">Custom tariff</span>
@@ -303,7 +303,7 @@
                         <div class="col-4">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 style="background: #c90016;color: #ffffff;padding: 5px;text-align: center;">Patient Profile</h5>
+                                    <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Patient Profile</h5>
                                     <input type="hidden" name="save" value="1">
                                     @if($alert!='') 
                                         <div class="alert alert-danger" role="alert">{{ $alert }}</div>

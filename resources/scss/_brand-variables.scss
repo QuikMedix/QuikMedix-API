@@ -1,0 +1,19 @@
+// QuikMedix palette. The primary red matches the existing logo branding.
+$brand-primary: #c90016;
+$brand-primary-hover: #a30012;
+$brand-primary-active: #960010;
+$brand-primary-soft: #fff0f2;
+$brand-charcoal: #242424;
+$brand-charcoal-dark: #181818;
+$brand-surface: #ffffff;
+$brand-canvas: #f5f5f5;
+$brand-text: #333333;
+$brand-border: #dedede;
+
+// Operational statuses stay distinct from primary actions.
+$brand-delivered: #198754;
+$brand-in-transit: #2463a0;
+$brand-pending: #946200;
+$brand-unavailable: #ad2d3a;
+$brand-scheduled: #176b82;
+$brand-office: #4a4a4a;

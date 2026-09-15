@@ -20,7 +20,7 @@
                                 <h2 class="text-muted mb-1 text-center">Registration</h2>                                
                                 <div class="row">
                                 <div class="col-md-6">
-                                <h5 style="background: #c90016;color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">Pharmacy information</h5>
+                                <h5 style="background: var(--qm-charcoal);color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">Pharmacy information</h5>
                                     <form class="form-horizontal" method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
                                     @csrf
 
@@ -89,7 +89,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <h5 style="background: #c90016;color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">User Information</h5>
+                                    <h5 style="background: var(--qm-charcoal);color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">User Information</h5>
                                     <div class="form-group">
                                         <label for="name">First Name *</label>
                                         <input type="text" name="name" value="{{ old('name') }}" required autocomplete="name" class="form-control @error('name') is-invalid @enderror" autofocus id="name" placeholder="">

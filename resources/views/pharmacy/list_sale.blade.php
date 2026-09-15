@@ -52,7 +52,7 @@
                                                             <span class="badge badge-info float-right">Active</span>
                                                         @endif                                     
                                                         <div style="padding: 0 10px;"> 
-                                                            <p class=" mt-4" style="margin-bottom: 0.4rem;font-weight: bold;background: #2b3a4a;color: #ffffff;border-radius: 5px;">{{$pharmacy->name}}</p>                                     
+                                                            <p class=" mt-4" style="margin-bottom: 0.4rem;font-weight: bold;background: #242424;color: #ffffff;border-radius: 5px;">{{$pharmacy->name}}</p>
                                                             <p class="text-muted" style="margin-bottom: 0.2rem;"><i class="mdi mdi-google-maps"></i> {{$pharmacy->address}}</p>
                                                             <p class="text-muted" style="margin-bottom: 0.2rem;"><i class="mdi mdi-phone-in-talk-outline"></i> {{$pharmacy->phone}}</p>
                                                             <p class="text-muted" style="margin-bottom: 0.2rem;"><i class="mdi mdi-gmail"></i> {{$pharmacy->email}}</p>
@@ -97,7 +97,7 @@
             <script src="{{ URL::asset('/libs/rwd-table/rwd-table.min.js')}}"></script>
 
             <!-- Init js -->
-            <script src="{{ URL::asset('/js/pages/table-responsive.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/table-responsive.init.js?v=page-routes-2')}}"></script>
             <script>
                 $(document).ready(function(){
                     

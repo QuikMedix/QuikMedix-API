@@ -528,5 +528,5 @@
             <script src="{{ URL::asset('/libs/morris.js/morris.js.min.js')}}"></script>
             <script src="{{ URL::asset('/libs/raphael/raphael.min.js')}}"></script>
 
-            <script src="{{ URL::asset('/js/pages/dashboard.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/dashboard.init.js?v=quikmedix-1')}}"></script>
 @endsection

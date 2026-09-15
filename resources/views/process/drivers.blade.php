@@ -65,7 +65,7 @@
                                                                                 <span class="badge badge-info float-right">Active</span>
                                                             @endif                                     
                                                             <div style="padding: 0 10px;"> 
-                                                                <p class=" mt-4" style="margin-bottom: 0.4rem;font-weight: bold;background: #2b3a4a;color: #ffffff;border-radius: 5px;">{{$user->name}} {{$user->last_name}}</p>
+                                                                <p class=" mt-4" style="margin-bottom: 0.4rem;font-weight: bold;background: #242424;color: #ffffff;border-radius: 5px;">{{$user->name}} {{$user->last_name}}</p>
                                                                 <p class="text-muted" style="margin-bottom: 0.2rem;"><i class="mdi mdi-phone-in-talk-outline"></i> {{$user->phone}}</p>
                                                             </div> 
                                                             <p class="text-muted mt-2" style="margin-bottom: 0.2rem;">Progress</p> <hr style="margin-top: 0rem;">
@@ -100,7 +100,7 @@
             <script src="{{ URL::asset('/libs/rwd-table/rwd-table.min.js')}}"></script>
 
             <!-- Init js -->
-            <script src="{{ URL::asset('/js/pages/table-responsive.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/table-responsive.init.js?v=page-routes-2')}}"></script>
             <script>
                 var page = "{{ $page0 }}";
                 $(document).ready(function(){

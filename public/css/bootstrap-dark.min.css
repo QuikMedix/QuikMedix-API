@@ -186,7 +186,7 @@ a {
 }
 
 a:hover {
-  color: #52469b;
+  color: #7d000e;
   text-decoration: underline;
 }
 
@@ -1873,23 +1873,23 @@ pre code {
 .table-primary,
 .table-primary > th,
 .table-primary > td {
-  background-color: #dad7ed;
+  background-color: #f0b8be;
 }
 
 .table-primary th,
 .table-primary td,
 .table-primary thead th,
 .table-primary tbody + tbody {
-  border-color: #bab4dd;
+  border-color: #e37a86;
 }
 
 .table-hover .table-primary:hover {
-  background-color: #cac5e5;
+  background-color: #eca3ab;
 }
 
 .table-hover .table-primary:hover > td,
 .table-hover .table-primary:hover > th {
-  background-color: #cac5e5;
+  background-color: #eca3ab;
 }
 
 .table-secondary,
@@ -2749,16 +2749,16 @@ fieldset:disabled a.btn {
 
 .btn-primary:hover {
   color: #fff;
-  background-color: #aa0013;
-  border-color: #970010;
+  background-color: #a30012;
+  border-color: #960010;
 }
 
 .btn-primary:focus,
 .btn-primary.focus {
   color: #fff;
-  background-color: #aa0013;
-  border-color: #970010;
-  box-shadow: 0 0 0 0.15rem rgba(201, 0, 22, 0.5);
+  background-color: #a30012;
+  border-color: #960010;
+  box-shadow: 0 0 0 0.15rem rgba(209, 38, 57, 0.5);
 }
 
 .btn-primary.disabled,
@@ -2772,14 +2772,14 @@ fieldset:disabled a.btn {
 .btn-primary:not(:disabled):not(.disabled).active,
 .show > .btn-primary.dropdown-toggle {
   color: #fff;
-  background-color: #970010;
-  border-color: #87000f;
+  background-color: #960010;
+  border-color: #89000f;
 }
 
 .btn-primary:not(:disabled):not(.disabled):active:focus,
 .btn-primary:not(:disabled):not(.disabled).active:focus,
 .show > .btn-primary.dropdown-toggle:focus {
-  box-shadow: 0 0 0 0.15rem rgba(201, 0, 22, 0.5);
+  box-shadow: 0 0 0 0.15rem rgba(209, 38, 57, 0.5);
 }
 
 .btn-secondary {
@@ -3441,7 +3441,7 @@ fieldset:disabled a.btn {
 }
 
 .btn-link:hover {
-  color: #52469b;
+  color: #7d000e;
   text-decoration: underline;
 }
 
@@ -4355,7 +4355,7 @@ input[type=button].btn-block {
 }
 
 .custom-range::-webkit-slider-thumb:active {
-  background-color: #eceaf6;
+  background-color: #ff7d8b;
 }
 
 .custom-range::-webkit-slider-runnable-track {
@@ -4388,7 +4388,7 @@ input[type=button].btn-block {
 }
 
 .custom-range::-moz-range-thumb:active {
-  background-color: #eceaf6;
+  background-color: #ff7d8b;
 }
 
 .custom-range::-moz-range-track {
@@ -4423,7 +4423,7 @@ input[type=button].btn-block {
 }
 
 .custom-range::-ms-thumb:active {
-  background-color: #eceaf6;
+  background-color: #ff7d8b;
 }
 
 .custom-range::-ms-track {
@@ -5304,7 +5304,7 @@ input[type=button].btn-block {
 
 .page-link:hover {
   z-index: 2;
-  color: #52469b;
+  color: #7d000e;
   text-decoration: none;
   background-color: #363f55;
   border-color: #353c4c;
@@ -5421,7 +5421,7 @@ a.badge:focus {
 a.badge-primary:hover,
 a.badge-primary:focus {
   color: #fff;
-  background-color: #970010;
+  background-color: #960010;
 }
 
 a.badge-primary:focus,
@@ -5614,17 +5614,17 @@ a.badge-pink.focus {
 }
 
 .alert-primary {
-  color: #3f3a63;
-  background-color: #e4e2f2;
-  border-color: #dad7ed;
+  color: #69000b;
+  background-color: #f4ccd0;
+  border-color: #f0b8be;
 }
 
 .alert-primary hr {
-  border-top-color: #cac5e5;
+  border-top-color: #eca3ab;
 }
 
 .alert-primary .alert-link {
-  color: #2b2743;
+  color: #360006;
 }
 
 .alert-secondary {
@@ -6042,20 +6042,20 @@ a.badge-pink.focus {
 }
 
 .list-group-item-primary {
-  color: #3f3a63;
-  background-color: #dad7ed;
+  color: #69000b;
+  background-color: #f0b8be;
 }
 
 .list-group-item-primary.list-group-item-action:hover,
 .list-group-item-primary.list-group-item-action:focus {
-  color: #3f3a63;
-  background-color: #cac5e5;
+  color: #69000b;
+  background-color: #eca3ab;
 }
 
 .list-group-item-primary.list-group-item-action.active {
   color: #fff;
-  background-color: #3f3a63;
-  border-color: #3f3a63;
+  background-color: #69000b;
+  border-color: #69000b;
 }
 
 .list-group-item-secondary {
@@ -7081,7 +7081,7 @@ a.bg-primary:hover,
 a.bg-primary:focus,
 button.bg-primary:hover,
 button.bg-primary:focus {
-  background-color: #970010 !important;
+  background-color: #960010 !important;
 }
 
 .bg-secondary {
@@ -10844,7 +10844,7 @@ button.bg-pink:focus {
 
 a.text-primary:hover,
 a.text-primary:focus {
-  color: #52469b !important;
+  color: #7d000e !important;
 }
 
 .text-secondary {

@@ -175,7 +175,7 @@ File: Main RTL Css File
 }
 
 body[data-topbar=dark] #page-topbar {
-  background-color: #2b3a4a;
+  background-color: #242424;
 }
 
 body[data-topbar=dark] .navbar-header .dropdown.show .header-item {
@@ -221,7 +221,7 @@ body[data-topbar=dark] .app-search input.form-control::-webkit-input-placeholder
 }
 
 body[data-sidebar=dark] .navbar-brand-box {
-  background: #2b3a4a;
+  background: #242424;
 }
 
 body[data-sidebar=dark] .logo-dark {
@@ -246,7 +246,7 @@ body[data-sidebar=dark] .logo-light {
     position: absolute;
     left: 0;
     right: 0;
-    background-color: #2b3a4a;
+    background-color: #242424;
   }
 }
 
@@ -733,7 +733,7 @@ body[data-layout=horizontal] .footer {
 }
 
 body[data-sidebar=dark] .vertical-menu {
-  background: #2b3a4a;
+  background: #242424;
 }
 
 body[data-sidebar=dark] #sidebar-menu ul li a {
@@ -763,7 +763,7 @@ body[data-sidebar=dark] #sidebar-menu ul li ul.sub-menu li a:hover {
 }
 
 body[data-sidebar=dark] #sidebar-menu ul > li > a.mm-active {
-  background-color: #263442;
+  background-color: #181818;
 }
 
 body[data-sidebar=dark].vertical-collpsed {
@@ -788,7 +788,7 @@ body[data-sidebar=dark].vertical-collpsed .vertical-menu #sidebar-menu > ul > li
 }
 
 body[data-sidebar=dark].vertical-collpsed .vertical-menu #sidebar-menu > ul ul {
-  background-color: #2b3a4a;
+  background-color: #242424;
 }
 
 body[data-sidebar=dark].vertical-collpsed .vertical-menu #sidebar-menu ul li.mm-active .active {
@@ -809,7 +809,7 @@ body[data-sidebar=dark] .mm-active > i {
 
 body[data-sidebar=dark] .mm-active .active {
   color: #ffffff !important;
-  background-color: #263442;
+  background-color: #181818;
 }
 
 body[data-sidebar=dark] .mm-active .active i {
@@ -980,7 +980,7 @@ body[data-sidebar=colored].vertical-collpsed .vertical-menu #sidebar-menu ul li.
 }
 
 body[data-layout=horizontal] #page-topbar {
-  background-color: #2b3a4a;
+  background-color: #242424;
 }
 
 body[data-layout=horizontal] .navbar-header {

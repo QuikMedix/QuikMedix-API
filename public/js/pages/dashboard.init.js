@@ -85,16 +85,16 @@ function initAll () {
             {label: "Android Customer", value: app_android_users}
         ];
         if(document.getElementById('morris-donut-example')!==null) {
-            this.createDonutChart('morris-donut-example', $donutData, ['#30898b', '#c90016', '#28bbe3', '#262649']);
+            this.createDonutChart('morris-donut-example', $donutData, ['#30898b', '#c90016', '#28bbe3', '#4a4a4a']);
         }
 
         var $stckedData  = dataForChartDelivered;
         if(document.getElementById('morris-bar-stacked')!==null) {
-            this.createStackedChart('morris-bar-stacked', $stckedData, 'y', ['a'], ['Delivered'], ['#7c7cb4']);
+            this.createStackedChart('morris-bar-stacked', $stckedData, 'y', ['a'], ['Delivered'], ['#242424']);
         }
         var lineDataDelivered = lineDataDelivered7days;
         if(document.getElementById('morris-line-example')!==null) {
-            this.createBarChart('morris-line-example', lineDataDelivered,'y',['a','b'],['Created','Delivered'],['#7c7cb4','#30898b']);
+            this.createBarChart('morris-line-example', lineDataDelivered,'y',['a','b'],['Created','Delivered'],['#242424','#30898b']);
         }
     },
     //init

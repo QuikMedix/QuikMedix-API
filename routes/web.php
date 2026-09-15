@@ -122,8 +122,12 @@ Route::post('/routes-list/show/{order_id}', "LexaAdmin@routesShowHandler");
 Route::get('/routes-list/driver/{driver_id}', "LexaAdmin@routesDriver");
 Route::post('/routes-list/driver/{driver_id}', "LexaAdmin@routesDriverHandler");
 
-Route::get('/orders/{pharmacy_id}', "LexaAdmin@orders");
-Route::post('/orders/{pharmacy_id}', "LexaAdmin@ordersHandler");
+// Global creation links need a pharmacy before opening the scoped form.
+Route::get('/orders/add', 'OrderCreationController@create')->name('orders.create');
+Route::get('/orders/facilitys_add', 'OrderCreationController@createFacility')->name('orders.facility.create');
+
+Route::get('/orders/{pharmacy_id}', "LexaAdmin@orders")->whereNumber('pharmacy_id');
+Route::post('/orders/{pharmacy_id}', "LexaAdmin@ordersHandler")->whereNumber('pharmacy_id');
 
 Route::get('/search/json', "LexaAdmin@searchJson");
 
@@ -165,11 +169,11 @@ Route::post('/orders/{pharmacy_id}/facilitys_edit/{order_id}', "LexaAdmin@orders
 Route::get('/orders/{pharmacy_id}/show/{order_id}', "LexaAdmin@ordersShow");
 Route::post('/orders/{pharmacy_id}/show/{order_id}', "LexaAdmin@ordersShowHandler");
 
-Route::get('/orders/{pharmacy_id}/add', "LexaAdmin@ordersAdd");
-Route::post('/orders/{pharmacy_id}/add', "LexaAdmin@ordersAddHandler");
+Route::get('/orders/{pharmacy_id}/add', "LexaAdmin@ordersAdd")->whereNumber('pharmacy_id')->name('orders.pharmacy.create');
+Route::post('/orders/{pharmacy_id}/add', "LexaAdmin@ordersAddHandler")->whereNumber('pharmacy_id')->name('orders.pharmacy.store');
 
-Route::get('/orders/{pharmacy_id}/facilitys_add', "LexaAdmin@ordersFacilitysAdd");
-Route::post('/orders/{pharmacy_id}/facilitys_add', "LexaAdmin@ordersFacilitysAddHandler");
+Route::get('/orders/{pharmacy_id}/facilitys_add', "LexaAdmin@ordersFacilitysAdd")->whereNumber('pharmacy_id')->name('orders.pharmacy.facility.create');
+Route::post('/orders/{pharmacy_id}/facilitys_add', "LexaAdmin@ordersFacilitysAddHandler")->whereNumber('pharmacy_id')->name('orders.pharmacy.facility.store');
 
 Route::get('/orders/{pharmacy_id}/statistic', "LexaAdmin@ordersStatistic");
 Route::post('/orders/{pharmacy_id}/statistic', "LexaAdmin@ordersStatisticHandler");
@@ -255,7 +259,7 @@ Route::post('/settings/area/{area_id}/edit', "LexaAdmin@settingsStatesEditHandle
 Route::get('/settings/wishes/{wish_id}/list', "LexaAdmin@settingsWishes");
 Route::post('/settings/wishes/{wish_id}/list', "LexaAdmin@settingsWishesHandler");
 
-Route::get('/settings/wishes/{wish_id}/add', "LexaAdmin@ssettingsWishesAdd");
+Route::get('/settings/wishes/{wish_id}/add', "LexaAdmin@settingsWishesAdd");
 Route::post('/settings/wishes/{wish_id}/add', "LexaAdmin@settingsWishesAddHandler");
 
 Route::get('/settings/plans', "LexaAdmin@settingsPlans");

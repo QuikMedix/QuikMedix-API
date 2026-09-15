@@ -140,7 +140,7 @@
             <script src="{{ URL::asset('/libs/rwd-table/rwd-table.min.js')}}"></script>
 
             <!-- Init js -->
-            <script src="{{ URL::asset('/js/pages/table-responsive.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/table-responsive.init.js?v=page-routes-2')}}"></script>
             <script>
                 var page = "{{ $page0 }}";
                 $(document).ready(function(){

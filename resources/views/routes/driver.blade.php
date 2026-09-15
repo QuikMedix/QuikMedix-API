@@ -634,7 +634,7 @@ label {
                                         <form method="POST" id="auto_route">
                                             @csrf
                                             <input type="hidden" name="auto_route" value="1">
-                                            <span style="background: #2b3a4a;color: #ffffff;padding: 7px 10px;margin: 1px 8px 0 0;cursor:pointer;" onclick="if(confirm('Are you sure?')){$('#auto_route').submit();}">Automate route</span> 
+                                            <span style="background: #242424;color: #ffffff;padding: 7px 10px;margin: 1px 8px 0 0;cursor:pointer;" onclick="if(confirm('Are you sure?')){$('#auto_route').submit();}">Automate route</span>
                                             <input type="radio" class="btn-check" name="type" value="driver" id="outlined2" autocomplete="off" checked>
                                             <label class="btn btn-outline-secondary" style="margin-right: 0px !important;border-top-right-radius: 0px;border-bottom-right-radius: 0px;" for="outlined2">Driver</label>
                                             <input type="radio" class="btn-check" name="type" value="first" id="outlined3" autocomplete="off">

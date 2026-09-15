@@ -20,6 +20,7 @@
 
     <!-- Styles -->
     <link href="{{ asset('css/app.css?v=quikmedix-1') }}" rel="stylesheet">
+    @include('layouts.partials.brand-colors')
 </head>
 <body>
     <div id="app">
