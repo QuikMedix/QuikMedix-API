@@ -15,14 +15,15 @@
     @yield('headerCss')
 
     <!-- Bootstrap Css -->
-    <link href="{{ URL::asset('/css/bootstrap.min.css') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/bootstrap.min.css?v=quikmedix-1') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
     <!-- Icons Css -->
     <link href="{{ URL::asset('/css/icons.min.css')}}" rel="stylesheet" type="text/css" />
     <!-- App Css-->
-    <link href="{{ URL::asset('/css/app.min.css')}}" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/app.min.css?v=quikmedix-1')}}" id="app-style" rel="stylesheet" type="text/css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500&display=swap" rel="stylesheet">
+    @include('layouts.partials.brand-colors')
 </head>
 
 <body data-sidebar="dark">
@@ -79,7 +80,7 @@
              @yield('footerScript')
 
             <!-- App js -->
-            <script src="{{ URL::asset('/js/app.min.js')}}"></script>
+            <script src="{{ URL::asset('/js/app.min.js?v=quikmedix-1')}}"></script>
 </body>
 
 </html>

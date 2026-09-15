@@ -7,13 +7,17 @@ check-php:
 	@php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 4 ? 0 : 1);' \
 		|| { echo "PHP 8.4.x is required. Current version: $$(php -r 'echo PHP_VERSION;')"; exit 1; }
 
-run: check-php prepare-storage
-
-# Starts Laravel's local development server.
+# Frees the configured TCP port and starts Laravel's local development server.
 # Override the address when needed, for example: make run HOST=0.0.0.0 PORT=8080
-run: prepare-storage
+run: check-php prepare-storage
 	@test -f .env || { echo "Missing .env file. Create and configure it before running the application."; exit 1; }
 	@test -f vendor/autoload.php || { echo "Missing Composer dependencies. Run 'composer install' first."; exit 1; }
+	@command -v lsof >/dev/null || { echo "lsof is required to free port $(PORT)."; exit 1; }
+	@pids=$$(lsof -tiTCP:$(PORT) -sTCP:LISTEN); \
+		if [ -n "$$pids" ]; then \
+			echo "Stopping processes listening on port $(PORT): $$pids"; \
+			kill -9 $$pids; \
+		fi
 	@php artisan serve --host=$(HOST) --port=$(PORT)
 
 # Recreates the Laravel files that were omitted from the downloaded project.

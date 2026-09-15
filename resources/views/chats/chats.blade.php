@@ -7,7 +7,7 @@
 <style>
   .chats .chat:hover {
     display:block;
-    background-color:rgba(122, 111, 190, 0.6);
+    background-color:rgba(201, 0, 22, 0.6);
     transition: 0.3s;
   }
   .row {
@@ -27,7 +27,7 @@
   }
   .havemes {
     display:block;
-    background-color:rgba(122, 111, 190, 0.4);
+    background-color:rgba(201, 0, 22, 0.4);
   }
 </style>
 @endsection

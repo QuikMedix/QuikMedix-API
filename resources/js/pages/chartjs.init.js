@@ -62,17 +62,17 @@ File: Chartist
                     label: "Sales Analytics",
                     fill: true,
                     lineTension: 0.5,
-                    backgroundColor: "rgba(122, 111, 190, 0.2)",
-                    borderColor: "#7a6fbe",
+                    backgroundColor: "rgba(201, 0, 22, 0.2)",
+                    borderColor: "#c90016",
                     borderCapStyle: 'butt',
                     borderDash: [],
                     borderDashOffset: 0.0,
                     borderJoinStyle: 'miter',
-                    pointBorderColor: "#7a6fbe",
+                    pointBorderColor: "#c90016",
                     pointBackgroundColor: "#fff",
                     pointBorderWidth: 1,
                     pointHoverRadius: 5,
-                    pointHoverBackgroundColor: "#7a6fbe",
+                    pointHoverBackgroundColor: "#c90016",
                     pointHoverBorderColor: "#fff",
                     pointHoverBorderWidth: 2,
                     pointRadius: 1,
@@ -127,11 +127,11 @@ File: Chartist
                 {
                     data: [300, 210],
                     backgroundColor: [
-                        "#7a6fbe",
+                        "#c90016",
                         "#ebeff2"
                     ],
                     hoverBackgroundColor: [
-                        "#7a6fbe",
+                        "#c90016",
                         "#ebeff2"
                     ],
                     hoverBorderColor: "#fff"
@@ -197,12 +197,12 @@ File: Chartist
                 },
                 {
                     label: "Tablets",
-                    backgroundColor: "rgba(122, 111, 190, 0.2)",
-                    borderColor: "#7a6fbe",
-                    pointBackgroundColor: "#7a6fbe",
+                    backgroundColor: "rgba(201, 0, 22, 0.2)",
+                    borderColor: "#c90016",
+                    pointBackgroundColor: "#c90016",
                     pointBorderColor: "#fff",
                     pointHoverBackgroundColor: "#fff",
-                    pointHoverBorderColor: "#7a6fbe",
+                    pointHoverBorderColor: "#c90016",
                     data: [28, 48, 40, 19, 96, 27, 100]
                 }
             ]
@@ -222,7 +222,7 @@ File: Chartist
                     "#ffbb44",
                     "#28bbe3",
                     "#ebeff2",
-                    "#7a6fbe"
+                    "#c90016"
                 ],
                 label: 'My dataset', // for legend
                 hoverBorderColor: "#fff"

@@ -10,12 +10,12 @@
     color: black;
     padding: 5px 0px;
     display: block;
-    border: solid 1px #2b3a4a;
+    border: solid 1px #242424;
 }
 .stat-1-4:hover {
-    background: #2b3a4a;
+    background: #242424;
     color: #d9ffe1;
-    box-shadow: 0 -3px 21px 0 rgb(43 58 74 / 20%), 0 6px 15px 0 rgb(43 58 74 / 20%);
+    box-shadow: 0 -3px 21px 0 rgb(36 36 36 / 20%), 0 6px 15px 0 rgb(36 36 36 / 20%);
 }
 .stat-3 {
     font-size: 14px;
@@ -23,12 +23,12 @@
     color: black;
     padding: 5px 0px;
     display: block;
-    border: solid 1px #2b3a4a;
+    border: solid 1px #242424;
 }
 .stat-3:hover {
-    background: #2b3a4a;
+    background: #242424;
     color: #ffd356;
-    box-shadow: 0 -3px 21px 0 rgb(43 58 74 / 20%), 0 6px 15px 0 rgb(43 58 74 / 20%);
+    box-shadow: 0 -3px 21px 0 rgb(36 36 36 / 20%), 0 6px 15px 0 rgb(36 36 36 / 20%);
 }
 .stat-7 {
     font-size: 14px;
@@ -36,12 +36,12 @@
     color: black;
     padding: 5px 0px;
     display: block;
-    border: solid 1px #2b3a4a;
+    border: solid 1px #242424;
 }
 .stat-7:hover {
-    background: #2b3a4a;
+    background: #242424;
     color: #f1f1f1;
-    box-shadow: 0 -3px 21px 0 rgb(43 58 74 / 20%), 0 6px 15px 0 rgb(43 58 74 / 20%);
+    box-shadow: 0 -3px 21px 0 rgb(36 36 36 / 20%), 0 6px 15px 0 rgb(36 36 36 / 20%);
 }
 .stat-10-8 {
     font-size: 14px;
@@ -49,19 +49,19 @@
     color: black;
     padding: 5px 0px;
     display: block;
-    border: solid 1px #2b3a4a;
+    border: solid 1px #242424;
 }
 .stat-10-8:hover {
-    background: #2b3a4a;
+    background: #242424;
     color: #ffdddd;
-    box-shadow: 0 -3px 21px 0 rgb(43 58 74 / 20%), 0 6px 15px 0 rgb(43 58 74 / 20%);
+    box-shadow: 0 -3px 21px 0 rgb(36 36 36 / 20%), 0 6px 15px 0 rgb(36 36 36 / 20%);
 }
 .table th, .table td {
     vertical-align: middle !important;
 }
 /*.status-home {
     background: white;
-    color: #2b3a4a;
+    color: #242424;
     font-size: 14px;
     padding: 8px 11px 7px 11px;
     border-radius: 2px;
@@ -84,12 +84,12 @@
     margin: 0 5px;
 }
 .status-home:hover {
-    box-shadow: 0 -3px 31px 0 rgb(43 58 74 / 20%), 0 6px 20px 0 rgb(122 111 190 / 40%);
+    box-shadow: 0 -3px 31px 0 rgb(36 36 36 / 20%), 0 6px 20px 0 rgb(201 0 22 / 40%);
 }
 
 .status-home i {
     font-size: 16px;
-    color: #2b3a4a;
+    color: #242424;
     margin-left: 5px;
 }
 
@@ -132,7 +132,7 @@
 
 .hover {
   border: 3px solid;
-  border-image: repeating-linear-gradient(135deg,#2b3a4a 0 10px,#2b3a4a 0 20px,#2b3a4a 0 30px) 8;
+  border-image: repeating-linear-gradient(135deg,#242424 0 10px,#242424 0 20px,#242424 0 30px) 8;
   -webkit-mask: 
     conic-gradient(from 180deg at top 3px right 3px, #0000 90deg,#000 0)
      var(--_i,200%) 0  /200% var(--_i,3px) border-box no-repeat,
@@ -184,32 +184,32 @@
                                         <h4 class="card-title mb-4">Current Statistics <i class="mdi mdi-chart-bar"></i></h4>  
                                         <div class="row my-3"> 
                                             <div class="col-6 col-sm-6 status-home-box"> 
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=4" class="status-home-new hover" style="background: linear-gradient(148deg, #77e1c1 0%, #2b8b63 55%, #3587b7 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=4" class="status-home-new hover status-delivered">
                                             <i class="mdi mdi-thumb-up-outline"></i>
                                             <span>{{(isset($count_orders_today[4]))?$count_orders_today[4]:0}}</span> Delivered </a> 
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=3" class="status-home-new hover" style="background: linear-gradient(148deg, #8177c2 0%, #4d4197 55%, #8177c2 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=3" class="status-home-new hover status-in-transit">
                                             <i class="mdi mdi-highway"></i>
                                             <span class="font-size-16">{{(isset($count_orders_all[3]))?$count_orders_all[3]:0}}</span> On the way </a>
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=10" class="status-home-new hover" style="background: linear-gradient(148deg, #ff5e5e 0%, #7a1010 55%, #621111 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=10" class="status-home-new hover status-unavailable">
                                             <i class="mdi mdi-pharmacy"></i>
                                             <span class="font-size-16">{{(isset($count_orders_today[10]))?$count_orders_today[10]:0}}</span> Back to Pharmacy </a>
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?same_day=1" class="status-home-new hover" style="background: linear-gradient(148deg, #81dcff 0%, #136281 55%, #1b7193 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?same_day=1" class="status-home-new hover status-scheduled">
                                             <i class="mdi mdi-calendar-today"></i>
                                             <span class="font-size-16">{{(isset($count_orders_today[201]))?$count_orders_today[202]:0}}</span> Same day 
                                             </a>
                                             </div>  
                                             
                                             <div class="col-6 col-sm-6"> 
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=1"class="status-home-new hover" style="background: linear-gradient(148deg, #ff9100 0%, #b96f01 55%, #cd9a0c 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=1"class="status-home-new hover status-pending">
                                             <i class="mdi mdi-truck-check"></i>
                                             <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pick up </a>
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=7"  class="status-home-new hover" style="background: linear-gradient(148deg, #8177c2 0%, #4d4197 55%, #8177c2 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=7"  class="status-home-new hover status-office">
                                             <i class="mdi mdi-office-building"></i>
                                             <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Office </a>
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=8" class="status-home-new hover" style="background: linear-gradient(148deg, #ff5e5e 0%, #7a1010 55%, #621111 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=8" class="status-home-new hover status-unavailable">
                                             <i class="mdi mdi-alien-outline"></i>
                                             <span class="font-size-16">{{(isset($count_orders_today[8]))?$count_orders_today[8]:0}}</span> Unavailable </a>
-                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?asap=1" class="status-home-new hover" style="background: linear-gradient(148deg, #81dcff 0%, #136281 55%, #1b7193 100%);">
+                                            <a href="/orders/{{ Auth::user()->pharmacy_id }}?asap=1" class="status-home-new hover status-scheduled">
                                             <i class="mdi mdi-truck-fast"></i>
                                             <span class="font-size-16">{{(isset($count_orders_today[201]))?$count_orders_today[202]:0}}</span> ASAP </a>                                                        
                                             </div>                                                                                     
@@ -362,32 +362,32 @@
                                                     <h4 class="card-title mb-4">Current Statistics <i class="mdi mdi-chart-bar"></i></h4>  
                                                     <div class="row my-3"> 
                                                         <div class="col-6 col-sm-6 status-home-box"> 
-                                                        <a href="/orders?filter=1&status%5B%5D=4" class="status-home-new hover" style="background: linear-gradient(148deg, #77e1c1 0%, #2b8b63 55%, #3587b7 100%);">
+                                                        <a href="/orders?filter=1&status%5B%5D=4" class="status-home-new hover status-delivered">
                                                         <i class="mdi mdi-thumb-up-outline"></i>
                                                         <span>{{(isset($count_orders_today[4]))?$count_orders_today[4]:0}}</span> Delivered </a> 
-                                                        <a href="/orders?filter=1&status%5B%5D=3" class="status-home-new hover" style="background: linear-gradient(148deg, #8177c2 0%, #4d4197 55%, #8177c2 100%);">
+                                                        <a href="/orders?filter=1&status%5B%5D=3" class="status-home-new hover status-in-transit">
                                                         <i class="mdi mdi-highway"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_all[3]))?$count_orders_all[3]:0}}</span> On the way </a>
-                                                        <a href="/orders?filter=1&status%5B%5D=10" class="status-home-new hover" style="background: linear-gradient(148deg, #ff5e5e 0%, #7a1010 55%, #621111 100%);">
+                                                        <a href="/orders?filter=1&status%5B%5D=10" class="status-home-new hover status-unavailable">
                                                         <i class="mdi mdi-pharmacy"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_today[10]))?$count_orders_today[10]:0}}</span> Back to Pharmacy </a>
-                                                        <a href="/orders?same_day=1" class="status-home-new hover" style="background: linear-gradient(148deg, #81dcff 0%, #136281 55%, #1b7193 100%);">
+                                                        <a href="/orders?same_day=1" class="status-home-new hover status-scheduled">
                                                         <i class="mdi mdi-calendar-today"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_today[201]))?$count_orders_today[202]:0}}</span> Same day 
                                                         </a>
                                                         </div>  
                                                         
                                                         <div class="col-6 col-sm-6"> 
-                                                        <a href="/orders?filter=1&status%5B%5D=1"class="status-home-new hover" style="background: linear-gradient(148deg, #ff9100 0%, #b96f01 55%, #cd9a0c 100%);">
+                                                        <a href="/orders?filter=1&status%5B%5D=1"class="status-home-new hover status-pending">
                                                         <i class="mdi mdi-truck-check"></i>
                                                         <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pick up </a>
-                                                        <a href="/orders?filter=1&status%5B%5D=7"  class="status-home-new hover" style="background: linear-gradient(148deg, #8177c2 0%, #4d4197 55%, #8177c2 100%);">
+                                                        <a href="/orders?filter=1&status%5B%5D=7"  class="status-home-new hover status-office">
                                                         <i class="mdi mdi-office-building"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Office </a>
-                                                        <a href="/orders?filter=1&status%5B%5D=8" class="status-home-new hover" style="background: linear-gradient(148deg, #ff5e5e 0%, #7a1010 55%, #621111 100%);">
+                                                        <a href="/orders?filter=1&status%5B%5D=8" class="status-home-new hover status-unavailable">
                                                         <i class="mdi mdi-alien-outline"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_today[8]))?$count_orders_today[8]:0}}</span> Unavailable </a>
-                                                        <a href="/orders?asap=1" class="status-home-new hover" style="background: linear-gradient(148deg, #81dcff 0%, #136281 55%, #1b7193 100%);">
+                                                        <a href="/orders?asap=1" class="status-home-new hover status-scheduled">
                                                         <i class="mdi mdi-truck-fast"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_today[201]))?$count_orders_today[202]:0}}</span> ASAP </a>                                                        
                                                         </div>                                                                                     
@@ -572,27 +572,27 @@
                                          
 
 
-                                        <!--  <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <!--  <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-thumb-up-outline float-right" style="color: #00bf7f;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                           
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Delivered</span> {{(isset($count_orders_today[4]))?$count_orders_today[4]:0}}</h4>
                                             <a href="/orders?filter=1&status%5B%5D=4" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
-                                            <i class="mdi mdi-highway float-right" style="color: #7a6fbe;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                            
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
+                                            <i class="mdi mdi-highway float-right" style="color: #c90016;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">On the way</span> {{(isset($count_orders_all[3]))?$count_orders_all[3]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=3" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-office-building float-right" style="color: #ffa500;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                            
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Office</span> {{(isset($count_orders_all[7]))?$count_orders_all[7]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=7" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-alien-outline float-right" style="color: #007ce9;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                          
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Unavailable</span> {{(isset($count_orders_today[8]))?$count_orders_today[8]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=8" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
-                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #7a6fbe;text-align: center;">
+                                        <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-alert float-right" style="color: red;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                           
                                             <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Refused</span> {{(isset($count_orders_today[9]))?$count_orders_today[9]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=9" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
@@ -628,7 +628,7 @@
                                     <div class="card mini-stat2 text-black mb-2">
                                         <div class="card-body">
                                             <div class="mini-stat-icon2">
-                                                <i class="mdi mdi-highway float-right" style="color: #7a6fbe;"></i>
+                                                <i class="mdi mdi-highway float-right" style="color: #c90016;"></i>
                                             </div>
                                             <div class="">
                                                 <h6 class="text-uppercase mb-3 font-size-12">Today</h6>
@@ -1205,5 +1205,5 @@ $(document).ready(function() {
 <!--Morris Chart-->
 <script src="{{ URL::asset('/libs/morris.js/morris.js.min.js')}}"></script>
 <script src="{{ URL::asset('/libs/raphael/raphael.min.js')}}"></script>
-<script src="{{ URL::asset('/js/pages/dashboard.init.js')}}"></script>
+<script src="{{ URL::asset('/js/pages/dashboard.init.js?v=quikmedix-1')}}"></script>
 @endsection

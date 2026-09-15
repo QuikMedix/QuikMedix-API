@@ -14,7 +14,7 @@
 
 }
 .rep-menu a:hover {
-    background: #7a6fbe;
+    background: #c90016;
     color: #ffffff !important;
 }
 .rep-menu i {

@@ -217,5 +217,5 @@
 @section('footerScript')
  <!-- Chart JS -->
                 <script src="{{ URL::asset('/libs/chart-js/chart-js.min.js')}}"></script>
-                <script src="{{ URL::asset('/js/pages/chartjs.init.js')}}"></script>
+                <script src="{{ URL::asset('/js/pages/chartjs.init.js?v=quikmedix-1')}}"></script>
 @endsection

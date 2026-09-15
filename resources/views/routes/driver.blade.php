@@ -238,7 +238,7 @@
     color: #006311;
     padding: 5px 5px;
     font-size: 12px;
-    border: 1px solid #7a6fbe;
+    border: 1px solid #c90016;
     margin-bottom: 5px;
     -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none;   /* Chrome/Safari/Opera */
@@ -286,7 +286,7 @@
 {
 	border-radius: 10px;
 	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
-	background-color: #7a6fbe;
+	background-color: #c90016;
 }
 .office_block{
     cursor: move;
@@ -368,8 +368,8 @@
 }
 .btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
     color: #fff;
-    background-color: #7a6fbe;
-    border-color: #7a6fbe;
+    background-color: #c90016;
+    border-color: #c90016;
 }
 .btn-check {
     position: absolute;
@@ -634,7 +634,7 @@ label {
                                         <form method="POST" id="auto_route">
                                             @csrf
                                             <input type="hidden" name="auto_route" value="1">
-                                            <span style="background: #2b3a4a;color: #ffffff;padding: 7px 10px;margin: 1px 8px 0 0;cursor:pointer;" onclick="if(confirm('Are you sure?')){$('#auto_route').submit();}">Automate route</span> 
+                                            <span style="background: #242424;color: #ffffff;padding: 7px 10px;margin: 1px 8px 0 0;cursor:pointer;" onclick="if(confirm('Are you sure?')){$('#auto_route').submit();}">Automate route</span>
                                             <input type="radio" class="btn-check" name="type" value="driver" id="outlined2" autocomplete="off" checked>
                                             <label class="btn btn-outline-secondary" style="margin-right: 0px !important;border-top-right-radius: 0px;border-bottom-right-radius: 0px;" for="outlined2">Driver</label>
                                             <input type="radio" class="btn-check" name="type" value="first" id="outlined3" autocomplete="off">

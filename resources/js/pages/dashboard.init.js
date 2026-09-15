@@ -61,7 +61,7 @@ File: Dashboard
         height: '130',
         barWidth: '10',
         barSpacing: '7',
-        barColor: '#7A6FBE'
+        barColor: '#c90016'
     });
   
     
@@ -77,7 +77,7 @@ File: Dashboard
             {y: '2016', a: 75, b: 240, c:120},
             {y: '2017', a: 30, b: 30, c:30}
         ];
-        this.createAreaChart('morris-area-example', 0, 0, $areaData, 'y', ['a', 'b', 'c'], ['Series A', 'Series B', 'Series C'], ['#ccc', '#7a6fbe', '#28bbe3']);
+        this.createAreaChart('morris-area-example', 0, 0, $areaData, 'y', ['a', 'b', 'c'], ['Series A', 'Series B', 'Series C'], ['#ccc', '#c90016', '#28bbe3']);
 
         //creating donut chart
         var $donutData = [
@@ -85,7 +85,7 @@ File: Dashboard
             {label: "In-Store Sales", value: 30},
             {label: "Mail-Order Sales", value: 20}
         ];
-        this.createDonutChart('morris-donut-example', $donutData, ['#f0f1f4', '#7a6fbe', '#28bbe3']);
+        this.createDonutChart('morris-donut-example', $donutData, ['#f0f1f4', '#c90016', '#28bbe3']);
 
         var $stckedData  = [
             { y: '2005', a: 45, b: 180},

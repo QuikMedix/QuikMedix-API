@@ -71,7 +71,7 @@
   padding-top: 10px;
   height: 100%;
   width: 100%;
-  background-color: rgba(122, 111, 190, 0.4);
+  background-color: rgba(201, 0, 22, 0.4);
   color: #5C5153;
   font-weight: 300;
   border: 0;
@@ -110,7 +110,7 @@
   display: block;
 }
 .own-message {
-  background-color: rgba(122, 111, 190, 0.4);
+  background-color: rgba(201, 0, 22, 0.4);
 }
 .message-info-row {
   padding-top: 0.7vh;

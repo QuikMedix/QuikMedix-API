@@ -328,7 +328,7 @@ function time_elapsed_string($datetime, $full = false) {
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-left" aria-labelledby="topnav-email">
                                             <a href="/pharmacy/{{ Auth::user()->pharmacy_id }}/users/" class="dropdown-item">Pharmacists</a>
-                                            <a href="/pharmacy/{{ Auth::user()->pharmacy_id }}/invoices/" class="dropdown-item">Invoices</a>
+                                            <a href="/billing/{{ Auth::user()->pharmacy_id }}" class="dropdown-item">Invoices</a>
                                         </div>
                                     </li>
                                 @endif

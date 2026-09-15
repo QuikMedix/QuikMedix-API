@@ -10,11 +10,11 @@
     <!-- App favicon -->
     <link rel="shortcut icon" href="{{ URL::asset('/images/favicon.ico')}}">
     <!-- Bootstrap Css -->
-    <link href="{{ URL::asset('/css/bootstrap.min.css?ver=4') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/bootstrap.min.css?v=quikmedix-1') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
     <!-- Icons Css -->
     <link href="{{ URL::asset('/css/icons.min.css')}}" rel="stylesheet" type="text/css" />
     <!-- App Css-->
-    <link href="{{ URL::asset('/css/app.min.css')}}" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/app.min.css?v=quikmedix-1')}}" id="app-style" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.bootstrap3.min.css" integrity="sha256-ze/OEYGcFbPRmvCnrSeKbRTtjG4vGLHXgOqsyLFTRjg=" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">   
     <link rel="stylesheet" href="https://cp.a2brx.com/public/libs/magnific-popup/magnific-popup.min.css" type="text/css" />   
@@ -62,7 +62,7 @@
     color: black;
     }
     .bgmodal .orderm .badge {
-    color: #7a6fbe;
+    color: #c90016;
     }
     .bgmodal .patientm .badge {
     color: #00ac22;
@@ -92,8 +92,8 @@
    }
    .bgmodal .btnm {
     color: white;
-    background: #7a6fbe;
-    box-shadow: 5px 5px 15px #d7d0ff, -5px -5px 15px #ffffff;
+    background: #c90016;
+    box-shadow: 5px 5px 15px #f4ccd0, -5px -5px 15px #ffffff;
     padding: 10px;
     border-radius: 0.25rem;
     text-align: right;
@@ -101,9 +101,10 @@
 }
 .toast-info  {
     color: white;
-    background: #7a6fbe;
+    background: #c90016;
 }
 </style>
+    @include('layouts.partials.brand-colors')
 </head>
 <body  data-topbar="light" data-layout="horizontal">
     <div id="headerCss">
@@ -225,7 +226,7 @@
         .catch(console.error);
     </script>
     <!-- App js -->
-    <script src="{{ URL::asset('/js/app.min.js?ver=3')}}"></script>
+    <script src="{{ URL::asset('/js/app.min.js?v=quikmedix-1')}}"></script>
     <script src="{{ URL::asset('/js/jquery.maskedinput.min.js')}}" type="text/javascript"></script>
     <script>
         const synth = window.speechSynthesis;

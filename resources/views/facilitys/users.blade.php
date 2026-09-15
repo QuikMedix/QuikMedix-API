@@ -197,7 +197,7 @@
             <script src="{{ URL::asset('/js/jquery-ui.min.js')}}" type="text/javascript"></script>
 
             <!-- Init js -->
-            <script src="{{ URL::asset('/js/pages/table-responsive.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/table-responsive.init.js?v=page-routes-2')}}"></script>
             <script>
                 function initialize() {
                     var input = document.getElementById('searchTextField');

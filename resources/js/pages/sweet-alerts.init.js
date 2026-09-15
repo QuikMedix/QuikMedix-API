@@ -20,7 +20,7 @@ File: Sweetalert
             Swal.fire(
                 {
                     title: 'Any fool can use a computer',
-                    confirmButtonColor: '#7a6fbe',
+                    confirmButtonColor: '#c90016',
                 }
             )
         });
@@ -32,7 +32,7 @@ File: Sweetalert
                     title: "The Internet?",
                     text: 'That thing is still around?',
                     type: 'question',
-                    confirmButtonColor: '#7a6fbe'
+                    confirmButtonColor: '#c90016'
                 }
             )
         });
@@ -45,7 +45,7 @@ File: Sweetalert
                     text: 'You clicked the button!',
                     type: 'success',
                     showCancelButton: true,
-                    confirmButtonColor: '#7a6fbe',
+                    confirmButtonColor: '#c90016',
                     cancelButtonColor: "#f46a6a"
                 }
             )
@@ -107,7 +107,7 @@ File: Sweetalert
                 text: 'Modal with a custom image.',
                 imageUrl: 'assets/images/logo-dark.png',
                 imageHeight: 20,
-                confirmButtonColor: "#7a6fbe",
+                confirmButtonColor: "#c90016",
                 animation: false
             })
         });
@@ -177,7 +177,7 @@ File: Sweetalert
                 title: 'Custom width, padding, background.',
                 width: 600,
                 padding: 100,
-                confirmButtonColor: "#7a6fbe",
+                confirmButtonColor: "#c90016",
                 background: '#fff url(//subtlepatterns2015.subtlepatterns.netdna-cdn.com/patterns/geometry.png)'
             })
         });
@@ -190,7 +190,7 @@ File: Sweetalert
                 showCancelButton: true,
                 confirmButtonText: 'Submit',
                 showLoaderOnConfirm: true,
-                confirmButtonColor: "#7a6fbe",
+                confirmButtonColor: "#c90016",
                 cancelButtonColor: "#f46a6a",
                 preConfirm: function (email) {
                     return new Promise(function (resolve, reject) {
@@ -219,7 +219,7 @@ File: Sweetalert
                 input: 'text',
                 confirmButtonText: 'Next &rarr;',
                 showCancelButton: true,
-                confirmButtonColor: "#7a6fbe",
+                confirmButtonColor: "#c90016",
                 cancelButtonColor: "#74788d",
                 progressSteps: ['1', '2', '3']
               }).queue([
@@ -247,7 +247,7 @@ File: Sweetalert
         $('#dynamic-alert').click(function () {
             swal.queue([{
                 title: 'Your public IP',
-                confirmButtonColor: "#7a6fbe",
+                confirmButtonColor: "#c90016",
                 confirmButtonText: 'Show my public IP',
                 text: 'Your public IP will be received ' +
                 'via AJAX request',

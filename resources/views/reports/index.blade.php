@@ -14,7 +14,7 @@
 
 }
 .rep-menu a:hover {
-    background: #7a6fbe;
+    background: #c90016;
     color: #ffffff !important;
 }
 .rep-menu i {
@@ -39,7 +39,7 @@
                         <div class="card">
                             <div class="card-body">                                
                                 <div class="rep-menu">  
-                                    <a href="/reports" style="background: #7a6fbe;color: #ffffff !important;"> <i class="ti-stats-up"></i> Overview</a>
+                                    <a href="/reports" style="background: #c90016;color: #ffffff !important;"> <i class="ti-stats-up"></i> Overview</a>
                                     <a href="/reports/billing"> <i class="ti-credit-card"></i> Billing</a>
                                     
                                     <a href="/reports/apps"> <i class="ti-mobile"></i> Apps analytics </a>

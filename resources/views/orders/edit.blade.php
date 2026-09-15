@@ -49,8 +49,8 @@
 }
 .btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
     color: #fff;
-    background-color: #7a6fbe;
-    border-color: #7a6fbe;
+    background-color: #c90016;
+    border-color: #c90016;
 }
 .btn-check {
     position: absolute;
@@ -97,8 +97,8 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
 }
 .form-check-input:checked {
-    background-color: #7a6fbe;
-    border-color: #7a6fbe;
+    background-color: #c90016;
+    border-color: #c90016;
 }
 .form-switch .form-check-input {
     width: 2em;
@@ -133,15 +133,15 @@
 }
 .irs--square .irs-from, .irs--square .irs-to, .irs--square .irs-single {
     font-size: 12px;
-    background-color: #7a6fbe;
+    background-color: #c90016;
 }
 .irs--square .irs-bar {
     top: 29px;
     height: 8px;
-    background-color: #7a6fbe;
+    background-color: #c90016;
 }
 .irs--square .irs-handle {
-    border: 3px solid #7a6fbe;
+    border: 3px solid #c90016;
     border-radius: 50%;
 }
 .datepicker table tr td.disabled.day {
@@ -414,7 +414,7 @@
                                                 <textarea class="form-control" name="special_instructions" rows="3">{{ $order->special_instructions }}</textarea>
                                             </div>
                                         </div>
-                                        <div class="mb-3 mt-3 float-right text-center text-black" style="background: #deeeff;width: 170px;padding: 5px 25px 5px 25px;border-radius: 8px;box-shadow: 0 -3px 31px 0 rgb(0 0 0 / 5%), 0 6px 20px 0 rgb(122 111 190 / 20%);border: solid 1px #ffffff;">
+                                        <div class="mb-3 mt-3 float-right text-center text-black" style="background: #deeeff;width: 170px;padding: 5px 25px 5px 25px;border-radius: 8px;box-shadow: 0 -3px 31px 0 rgb(0 0 0 / 5%), 0 6px 20px 0 rgb(201 0 22 / 20%);border: solid 1px #ffffff;">
                                             <h5 class="mb-0">Cost <span class="badge bg-dark text-light"><b id="tariff">$<b>0.00</b></b></span></h5> 
                                                 @if($order->statuse_id!=4) 
                                                 <div class="extra_charge" style="display:none;"> 

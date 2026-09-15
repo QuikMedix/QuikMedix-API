@@ -19,7 +19,7 @@
     background: white;
 }
 	.mfp-title {   
-    background: #7a6fbe;
+    background: #c90016;
     padding: 5px;
 }
 	.nav-tabs > li > a, .nav-pills > li > a {
@@ -51,7 +51,7 @@ audio {
 }
 .facility {
     font-size: 10px !important;
-    background: linear-gradient(148deg, #7a6fbe 0%, #4d4197 55%, #8177c2 100%);
+    background: linear-gradient(148deg, #c90016 0%, #960010 55%, #e34152 100%);
 }
 .facility i {
     font-size: 14px;
@@ -109,7 +109,7 @@ audio {
 				 <div class="col-8">
 					 <div class="card">
                         <div class="card-body">
-							<h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Order Details</h5> 							
+							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Details</h5>
 							
 						<div class="row" style="min-height: 420px;">
 						<div class="col-6">							
@@ -1990,7 +1990,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Map</h5>
+                        <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Map</h5>
                         <div id="map" style="min-height: 420px;;width: 100%;"></div>
                         <div id="pano" style="min-height: 420px;;width: 100%;display:none;"></div>
                         <button id="toggle_map" class="btn btn-primary mt-2">Street View</button>
@@ -2055,7 +2055,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 				<div class="col-4">
 					 <div class="card">
                         <div class="card-body" style="min-height: 220px;">
-							<h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Special instructions</h5> 	
+							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Special instructions</h5>
 							<div style="margin: 10px">  {{$order->special_instructions}}</div>							
 						</div>
 					</div>
@@ -2063,7 +2063,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 				<div class="col-4">
 					 <div class="card">
                         <div class="card-body" style="min-height: 220px;">
-							<h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Dispatcher Notes</h5> 	
+							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Dispatcher Notes</h5>
 							<div style="margin: 10px"> 
                                 @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist'))
 								<div style="min-height: 30px;"><a href="#" id="ajax-alert" class="btn btn-sm btn-primary float-right">Add Note</a></div>
@@ -2085,7 +2085,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                 <div class="col-4">
 					 <div class="card">
                         <div class="card-body" style="min-height: 220px;">
-							<h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Customer Notes</h5> 	
+							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Customer Notes</h5>
 							<div style="margin: 10px">
 								<ol class="activity-feed mb-0">
                                 @foreach($customer_notes as $customer_note)
@@ -2108,7 +2108,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 				 <div class="col-12">
 					 <div class="card">
                         <div class="card-body">
-							<h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Order Items</h5> 
+							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Items</h5>
 							<table class="table table-striped" style="table-layout: fixed;">
                                 <thead>
                                     <tr>
@@ -2144,7 +2144,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body">
-                                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Call recording</h5>
+                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Call recording</h5>
                                 <img src="https://www.schoolwearinc.co.uk/wp-content/uploads/2018/04/preloader.gif" alt="loader" class="loader">
                                 <ol class="activity-feed mb-0">
                                 </ol>							
@@ -2158,7 +2158,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body" style="text-align: center;">
-                                <h5 style="background: #7a6fbe;color: #ffffff;padding: 5px;text-align: center;">Video</h5>
+                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Video</h5>
                                 <video width="640" height="360" controls poster="https://cp.a2brx.com/public/images/poster-video.jpg">
                                     <source src="https://cp.a2brx.com/public/images/logo-v.mp4" type="video/mp4">
                                 </video>							
@@ -2361,7 +2361,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function Popup(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>Delivery_Slip_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2374,7 +2374,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function Popup2(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>HIPAA_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2387,7 +2387,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function Popup3(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>AOB_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2400,7 +2400,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function Popup4(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>Provider_Lien_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2413,7 +2413,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function Popup5(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>integrapartners_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2426,7 +2426,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function Popup6(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>COVID-19_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2439,7 +2439,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function Popup7(data){
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>Print_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2463,7 +2463,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
             showCancelButton:!0,
             confirmButtonText:"Submit",
             showLoaderOnConfirm:!0,
-            confirmButtonColor:"#7a6fbe",
+            confirmButtonColor:"#c90016",
             cancelButtonColor:"#f46a6a",
             preConfirm:function(n){
                 if(n==="" || n.length<2) {
@@ -2480,7 +2480,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                                 icon:"success",
                                 title:"Add Dispatcher Note",
                                 html:"Success added.",
-                                confirmButtonColor:"#7a6fbe"
+                                confirmButtonColor:"#c90016"
                             });
                         } else {
                             Swal.fire({

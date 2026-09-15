@@ -13,12 +13,13 @@
     @yield('headerCss')
 
     <!-- Bootstrap Css -->
-    <link href="{{ URL::asset('/css/bootstrap.min.css') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/bootstrap.min.css?v=quikmedix-1') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
     <!-- Icons Css -->
     <link href="{{ URL::asset('/css/icons.min.css')}}" rel="stylesheet" type="text/css" />
     <!-- App Css-->
-    <link href="{{ URL::asset('/css/app.min.css')}}" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::asset('/css/app.min.css?v=quikmedix-1')}}" id="app-style" rel="stylesheet" type="text/css" />
 
+    @include('layouts.partials.brand-colors')
 </head>
 
 <body data-topbar="dark">
@@ -63,7 +64,7 @@
              @yield('footerScript')
 
             <!-- App js -->
-            <script src="{{ URL::asset('/js/app.min.js')}}"></script>
+            <script src="{{ URL::asset('/js/app.min.js?v=quikmedix-1')}}"></script>
 </body>
 
 </html>

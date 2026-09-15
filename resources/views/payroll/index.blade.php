@@ -14,7 +14,7 @@
 
 }
 .rep-menu a:hover {
-    background: #7a6fbe;
+    background: #c90016;
     color: #ffffff !important;
 }
 .rep-menu i {
@@ -45,7 +45,7 @@
                                 </div>
                         </div>
                         <div class="col-xl-6 col-sm-6">
-                                <div class="card mini-stat bg-primary" style="background-color: #2b3a4a !important;">
+                                <div class="card mini-stat bg-primary" style="background-color: #242424 !important;">
                                     <div class="card-body mini-stat-img">
                                         <div class="mini-stat-icon">
                                             <i class="mdi mdi-map-marker-multiple float-right"></i>

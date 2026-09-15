@@ -74,7 +74,7 @@
             font-size: 11px;
         }
         .start-ph { 
-            background-color: rgba(122, 111, 190, 1);
+            background-color: rgba(201, 0, 22, 1);
             padding: 11px 11px 11px 10px;
             border-top-right-radius: 10px;
             border-bottom-right-radius: 10px;
@@ -88,7 +88,7 @@
             cursor: pointer;
         }
         .filter-btn { 
-            background-color: rgba(122, 111, 190, 1);
+            background-color: rgba(201, 0, 22, 1);
             padding: 11px 11px 11px 10px;
             border-top-right-radius: 10px;
             border-bottom-right-radius: 10px;
@@ -158,20 +158,20 @@
         }
         a.repeat {
             font-size: 11px;
-            background: #5c50a3;
-            border: solid 1px #5c50a3;
+            background: #c90016;
+            border: solid 1px #c90016;
             color: white;
             padding: 1px 4px;
             border-radius: 5px;
         }
         a.repeat:hover {
             background: none;
-            border: solid 1px #5c50a3;
-            color: #5c50a3;
+            border: solid 1px #c90016;
+            color: #c90016;
         }  
 
         .printstick {
-            background: #7a6fbe;
+            background: #c90016;
             color: white;
             padding: 0px 11px 11px 7px;
             border-top-right-radius: 10px;
@@ -217,7 +217,7 @@
                                         <div class="table-responsive mb-0" data-pattern="priority-columns">
                                             <table id="mytable" class="table  table-striped pb-4 mb-5">
                                                 <thead>
-                                                    <tr style="background: linear-gradient(148deg, #2b3a4a 0%, #4d4197 55%, #8177c2 100%); color: white;">
+                                                    <tr style="background: #242424; color: white;">
                                                         <th class="text-center">Order</th>
                                                         <th class="created_filter text-center" data-priority="1">Date</th>
                                                         <th data-priority="1" class="statuse_filter text-center">Status</th>
@@ -369,7 +369,7 @@
                                                         </td>
                                                         <td class="action" style="vertical-align: middle;">
                                                             <div class="btn-group">
-                                                            <button class="btn btn-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                                 Action
                                                                 <i class="mdi mdi-chevron-down"></i>
                                                             </button>
@@ -599,7 +599,7 @@
 <script src="{{ URL::asset('/libs/rwd-table/rwd-table.min.js')}}"></script>
 
 <!-- Init js -->
-<script src="{{ URL::asset('/js/pages/table-responsive.init.js')}}"></script>
+<script src="{{ URL::asset('/js/pages/table-responsive.init.js?v=page-routes-2')}}"></script>
 <script>
     $(function() {
         $(".select2").selectize()

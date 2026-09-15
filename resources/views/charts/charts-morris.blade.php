@@ -172,6 +172,6 @@
             <script src="{{ URL::asset('/libs/raphael/raphael.min.js')}}"></script>
 
             <!-- Init js -->
-            <script src="{{ URL::asset('/js/pages/morris.init.js')}}"></script>
+            <script src="{{ URL::asset('/js/pages/morris.init.js?v=quikmedix-1')}}"></script>
 
 @endsection
