@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title') Add User @endsection
+@section('title') Add Pharmacy @endsection
 
 @section('headerCss')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -47,6 +47,26 @@
                                         @if($alert!='') 
                                             <div class="alert alert-danger" role="alert">{{ $alert }}</div>
                                         @endif
+                                        @if($errors->any())
+                                            <div class="alert alert-danger" role="alert">
+                                                <ul class="mb-0">
+                                                    @foreach($errors->all() as $error)
+                                                        <li>{{ $error }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+                                        @if(in_array(Auth::user()->role, ['superadmin', 'admin', 'dispadmin']) && ($plans->isEmpty() || $areas->isEmpty()))
+                                            <div class="alert alert-info" role="status">
+                                                @if($plans->isEmpty())
+                                                    A tariff plan is required. <a href="{{ url('/settings/plans/add') }}" target="_blank" rel="noopener">Create a tariff plan</a> with your delivery prices.
+                                                @endif
+                                                @if($areas->isEmpty())
+                                                    For pricing by coverage area, <a href="{{ url('/settings/area/add') }}" target="_blank" rel="noopener">create a tariff area</a>. Area selection is optional on this form.
+                                                @endif
+                                                Setup opens in a new tab. After saving, reload this form to see the new options.
+                                            </div>
+                                        @endif
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Logo</label>
                                             <div class="col-sm-10" style="margin-bottom: 5px;">
@@ -70,100 +90,114 @@
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Name</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" required type="text" name="name" value="{{ $input['name'] }}">
+                                                <input class="form-control" required type="text" name="name" value="{{ old('name', $input['name']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Email</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" required type="email" name="email" value="{{ $input['email'] }}">
+                                                <input class="form-control" required type="email" name="email" value="{{ old('email', $input['email']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Phone</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" required type="text" name="phone" id="phone" value="{{ $input['phone'] }}">
+                                                <input class="form-control" required type="text" name="phone" id="phone" value="{{ old('phone', $input['phone']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Address</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" required id="searchTextField" type="text" name="address" value="{{ $input['address'] }}">
+                                                <input class="form-control" required id="searchTextField" type="text" name="address" value="{{ old('address', $input['address']) }}">
+                                                @unless(config('app.googlemaps_apikey'))
+                                                    <small class="form-text text-danger">Address lookup is unavailable. An administrator needs to configure Google Maps before this pharmacy can be saved.</small>
+                                                @endunless
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Website</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" required type="text" name="site" value="{{ $input['site'] }}">
+                                                <input class="form-control" required type="text" name="site" value="{{ old('site', $input['site']) }}">
                                             </div>
                                         </div>
-                                        @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin'))
+                                        @if(in_array(Auth::user()->role, ['superadmin', 'admin', 'dispadmin']))
                                         <div class="form-group row">
                                             <label for="zone_id" class="col-sm-2 col-form-label">Admin Zone</label>
                                             <div class="col-sm-10">
                                                 <select name="zone_id" id="zone_id" class="form-control" required>
                                                     <option value="">Not Selected</option>
                                                     @foreach($admin_areas as $admin_area)
-                                                    <option value="{{$admin_area->id}}" @if($admin_area->id==$input['zone_id']){{'selected'}}@endif>{{$admin_area->name}}</option>
+                                                    <option value="{{$admin_area->id}}" @if($admin_area->id==old('zone_id', $input['zone_id'])){{'selected'}}@endif>{{$admin_area->name}}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Tariff Plan</label>
+                                            <label for="plan_id" class="col-sm-2 col-form-label">Tariff Plan</label>
                                             <div class="col-sm-10">
                                                 <select class="form-control" required name="plan_id" id="plan_id">
-                                                    <option value="">----</option>
+                                                    <option value="">Select a tariff plan</option>
                                                     @foreach($plans as $plan)
-                                                    <option value="{{$plan->id}}">{{$plan->name}}, Monthly Order Rate: {{$plan->order_rate}}, Default Tariff: {{$plan->tariff}} $</option>
+                                                    <option value="{{$plan->id}}" @if($plan->id == old('plan_id', $input['plan_id'] ?? '')) selected @endif>{{$plan->name}}, Monthly Order Rate: {{$plan->order_rate}}, Default Tariff: {{$plan->tariff}} $</option>
                                                     @endforeach
                                                 </select>
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Tariff Areas</label>
+                                            <label for="areas" class="col-sm-2 col-form-label">Tariff Areas</label>
                                             <div class="col-sm-10">
-                                                <select class="form-control" name="tariff_areas[]" multiple id="areas">
+                                                @php
+                                                    $selectedTariffAreas = old('tariff_areas', $input['tariff_areas'] ?? []);
+                                                    $selectedTariffAreas = is_array($selectedTariffAreas) ? $selectedTariffAreas : [];
+                                                @endphp
+                                                <select class="form-control" name="tariff_areas[]" multiple id="areas" @if($areas->isEmpty()) disabled @endif aria-describedby="tariff-areas-help">
                                                     @foreach($areas as $area)
-                                                    <option value="{{$area->id}}">{{$area->state}}, {{$area->name}}</option>
+                                                    <option value="{{$area->id}}" @if(in_array($area->id, $selectedTariffAreas)) selected @endif>{{$area->state}}, {{$area->name}}</option>
                                                     @endforeach
                                                 </select>
+                                                <small id="tariff-areas-help" class="form-text text-muted">
+                                                    @if($areas->isEmpty())
+                                                        No tariff areas exist yet. Create one using the setup link above.
+                                                    @else
+                                                        Select one or more areas covered by the default tariff. Other coverage tiers can be set after saving.
+                                                    @endif
+                                                </small>
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Default Tariff</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" type="number" step="0.01" min="0.5" name="tariff" value="{{ $input['tariff'] }}">
+                                                <input class="form-control" type="number" step="0.01" min="0.5" name="tariff" value="{{ old('tariff', $input['tariff']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - Next day delivery</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_next_day" value="{{ $input['tariff_next_day'] }}">
+                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_next_day" value="{{ old('tariff_next_day', $input['tariff_next_day']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - Same day delivery</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_same_day" value="{{ $input['tariff_same_day'] }}">
+                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_same_day" value="{{ old('tariff_same_day', $input['tariff_same_day']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - ASAP Delivery</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_asap" value="{{ $input['tariff_asap'] }}">
+                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_asap" value="{{ old('tariff_asap', $input['tariff_asap']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - After Hours Delivery</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_after_hours" value="{{ $input['tariff_after_hours'] }}">
+                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_after_hours" value="{{ old('tariff_after_hours', $input['tariff_after_hours']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Markup QuikMedix Driver - Delivery With Fridge</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_fridge" value="{{ $input['tariff_fridge'] }}">
+                                                <input class="form-control" type="number" step="0.01" min="0" name="tariff_fridge" value="{{ old('tariff_fridge', $input['tariff_fridge']) }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">
@@ -191,6 +225,7 @@
                         }
                     }
                     </script>
+                    @if(config('app.googlemaps_apikey'))
                     <script src="https://maps.googleapis.com/maps/api/js?key={{config('app.googlemaps_apikey')}}&region=US&language=en&libraries=places"></script>
                     <script>
                         var input = document.getElementById('searchTextField');
@@ -203,12 +238,13 @@
                         this.value = input.dataset.originalVal ? input.dataset.originalVal : this.value;
                         });
                     </script>
+                    @endif
                     
 @endsection
 
 @section('footerScript')
 <script src="{{ URL::asset('/js/select2.min.js')}}"></script>
 <script>
-    $('#areas').select2();
+    $('#areas').select2({ placeholder: 'Select tariff areas', width: '100%' });
 </script>
 @endsection
