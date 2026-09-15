@@ -12,7 +12,7 @@
                     <div class="row">
                          @component('common-components.breadcrumb')
                      @slot('title') Sweet-Alert @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') UI Elements  @endslot
                      @slot('li3') Sweet-Alert  @endslot
                 @endcomponent

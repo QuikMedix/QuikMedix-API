@@ -30,5 +30,5 @@ not replace these screen bundles with a plain Bootstrap build. Changes to base
 component colors must also be reflected in these served bundles.
 
 Dashboard status tiles use distinct status tokens and visible labels. They do
-not inherit the primary action color. This update changes colors only; the logo
-work on `rebrandbr` is separate from this checkout.
+not inherit the primary action color. The color layer works alongside the
+QuikMedix logos and branding configuration described in `REBRANDING.md`.

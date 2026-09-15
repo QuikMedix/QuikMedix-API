@@ -225,7 +225,7 @@ function time_elapsed_string0($datetime, $full = false) {
 								<div class="card-body">                                
                                     <div class="row">	                                                
                                         <div class="col-2">  
-                                            <img class="img-fluid" src="https://cp.a2brx.com/images/faq.jpg" alt="FAQ"> 
+                                            <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;">
                                         </div>  			
                                         <div class="col-10">  
                                         <h4><span class="badge bg-light">19.03.2023</span></h4>
@@ -479,7 +479,7 @@ function time_elapsed_string0($datetime, $full = false) {
 								<div class="card-body">                                
                                     <div class="row">	                                                
                                         <div class="col-4">  
-                                            <img class="img-fluid" src="https://cp.a2brx.com/images/news/05012023-2.jpg" alt="Delivery planning"> 
+                                            <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;">
                                         </div>  			
                                         <div class="col-8">  
                                         <h4><span class="badge bg-light">MAY 01, 2023</span></h4>
@@ -505,7 +505,7 @@ function time_elapsed_string0($datetime, $full = false) {
 								<div class="card-body">                                
                                     <div class="row">	                                                
                                         <div class="col-4">  
-                                            <img class="img-fluid" src="https://cp.a2brx.com/images/news/05012023-1.jpg" alt="New customer profile"> 
+                                            <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;">
                                         </div>  			
                                         <div class="col-8">  
                                         <h4><span class="badge bg-light">MAY 01, 2023</span></h4>
@@ -526,7 +526,7 @@ function time_elapsed_string0($datetime, $full = false) {
 								<div class="card-body">                                
                                     <div class="row">	                                                
                                         <div class="col-4">  
-                                            <img class="img-fluid" src="https://cp.a2brx.com/images/news/03262023.jpg" alt="FAQ"> 
+                                            <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;">
                                         </div>  			
                                         <div class="col-8">  
                                         <h4><span class="badge bg-light">MAR 26, 2023</span></h4>
@@ -549,7 +549,7 @@ function time_elapsed_string0($datetime, $full = false) {
 								<div class="card-body">                                
                                     <div class="row">	                                                
                                         <div class="col-4">  
-                                            <img class="img-fluid" src="https://cp.a2brx.com/images/news/03202023.jpg" alt="FAQ"> 
+                                            <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;">
                                         </div>  			
                                         <div class="col-8">  
                                         <h4><span class="badge bg-light">MAR 20, 2023</span></h4>

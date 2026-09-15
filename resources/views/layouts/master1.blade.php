@@ -6,10 +6,10 @@
     <meta charset="utf-8" />
     <title> @yield('title')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="Lexa Premium Multipurpose Admin & Dashboard Template" name="description" />
-    <meta content="Themesbrand" name="author" />
+    <meta content="QuikMedix pharmacy delivery platform" name="description" />
+    <meta content="QuikMedix" name="author" />
     <!-- App favicon -->
-    <link rel="shortcut icon" href="{{ URL::asset('/images/favicon.ico')}}">
+    @include('layouts.partials.brand-icons')
     
      <!-- headerCss -->
     @yield('headerCss')

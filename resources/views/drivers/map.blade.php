@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title') A2B Rx Drivers @endsection
+@section('title') QuikMedix Drivers @endsection
 
 @section('headerCss')
 <link href="/leaflet/leaflet.css" rel="stylesheet" type="text/css">

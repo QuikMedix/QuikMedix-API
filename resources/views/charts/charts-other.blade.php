@@ -7,7 +7,7 @@
                     <div class="row">
                 @component('common-components.breadcrumb')
                      @slot('title') Jquery Knob Chart  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Charts  @endslot
                      @slot('li3') Jquery Knob Chart  @endslot
                 @endcomponent

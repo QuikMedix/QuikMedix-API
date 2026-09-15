@@ -3,11 +3,11 @@
 
 <head>
     <meta charset="utf-8" />
-    <title> @yield('title')  | A2BRx</title>
+    <title> @yield('title')  | QuikMedix</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="A2BRx Auth Login" name="description" />
+    <meta content="QuikMedix Auth Login" name="description" />
     <!-- App favicon -->
-    <link rel="shortcut icon" href="{{ URL::asset('/images/favicon.ico')}}"> 
+    @include('layouts.partials.brand-icons')
      <!-- headerCss -->
      @yield('headerCss')
     <!-- Bootstrap Css -->

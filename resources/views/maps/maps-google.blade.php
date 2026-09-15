@@ -7,7 +7,7 @@
                     <div class="row">
                          @component('common-components.breadcrumb')
                      @slot('title') Google Map @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Maps  @endslot
                      @slot('li3') Google Map @endslot
                 @endcomponent

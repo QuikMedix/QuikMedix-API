@@ -9,7 +9,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') Light Sidebar @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Layouts  @endslot
                      @slot('li3') Light Sidebar @endslot
                 @endcomponent

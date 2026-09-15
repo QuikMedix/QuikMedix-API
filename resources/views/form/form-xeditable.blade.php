@@ -14,7 +14,7 @@
 
                @component('common-components.breadcrumb')
                      @slot('title') Form Xeditable @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Forms  @endslot
                      @slot('li3') Form Xeditable @endslot
                 @endcomponent

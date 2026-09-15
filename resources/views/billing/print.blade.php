@@ -7,9 +7,10 @@
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  @include('layouts.partials.brand-icons')
   <!-- Site Title -->
-  <title>General Purpose Invoice-{{$invoice->id}}</title>
-  <link rel="stylesheet" href="/css/print-style.css">
+  <title>QuikMedix Invoice #{{$invoice->id}}</title>
+  <link rel="stylesheet" href="/css/print-style.css?v=quikmedix-1">
 </head>
 
 <body>
@@ -19,7 +20,7 @@
         <div class="tm_invoice_in">
           <div class="tm_invoice_head tm_top_head tm_mb15 tm_align_center">
             <div class="tm_invoice_left">
-              <div class="tm_logo"><img src="https://a2brx.com/assets/media/logo-2.svg" alt="Logo"></div>
+              <div class="tm_logo"><img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix"></div>
             </div>
             <div class="tm_invoice_right tm_text_right tm_mobile_hide">
               <div class="tm_f50 tm_text_uppercase tm_white_color">Invoice</div>
@@ -47,10 +48,16 @@
             <div class="tm_invoice_right tm_text_right">
               <p class="tm_mb2"><b class="tm_primary_color">Pay To:</b></p>
               <p>
-                A2B RX Inc <br>
-                204 25th St Ste 203<br>
-				        Brooklyn, NY 11232 US<br>
-                billing@a2brx.com
+                {{ config('branding.legal_name') }}<br>
+                @if(config('branding.address'))
+                  {!! nl2br(e(config('branding.address'))) !!}<br>
+                @endif
+                @if(config('branding.billing_email'))
+                  {{ config('branding.billing_email') }}<br>
+                @endif
+                @if(config('branding.support_phone'))
+                  {{ config('branding.support_phone') }}
+                @endif
               </p>
             </div>
           </div>
@@ -68,7 +75,7 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <td class="tm_width_3">A2BRx Driver</td>
+                      <td class="tm_width_3">QuikMedix Driver</td>
                       <td class="tm_width_4"></td>
                       <td class="tm_width_1"></td>
                       <td class="tm_width_2 tm_text_right"></td>
@@ -190,9 +197,13 @@
               <div class="tm_left_footer"></div>
               <div class="tm_right_footer">
                 <div class="tm_sign tm_text_center">
-                  <img src="/images/sign.svg" alt="Sign">
-                  <p class="tm_m0 tm_ternary_color">Evgeny Shchukin</p>
-                  <p class="tm_m0 tm_f16 tm_primary_color">A2B Rx Inc.</p>
+                  @if(config('branding.invoice_signature'))
+                    <img src="{{ asset(config('branding.invoice_signature')) }}" alt="Authorized signature">
+                  @endif
+                  @if(config('branding.invoice_signatory'))
+                    <p class="tm_m0 tm_ternary_color">{{ config('branding.invoice_signatory') }}</p>
+                  @endif
+                  <p class="tm_m0 tm_f16 tm_primary_color">{{ config('branding.legal_name') }}</p>
                 </div>
               </div>
             </div>

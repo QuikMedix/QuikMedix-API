@@ -8,7 +8,7 @@
 
                           @component('common-components.breadcrumb')
                      @slot('title') Form Editors  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Forms  @endslot
                      @slot('li3') Form Editors @endslot
                 @endcomponent

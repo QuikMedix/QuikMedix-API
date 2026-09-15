@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat</title>
   <link href="{{ URL::asset('/css/icons.min.css')}}" rel="stylesheet" type="text/css" />
-  <link href="{{ URL::asset('/css/bootstrap-lib.min.css') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
-  <link rel="stylesheet" href="{{ asset('css/twiliochat.css') }}">
+  <link href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1') }}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="{{ asset('css/twiliochat.css?v=quikmedix-1') }}">
   <style>
     .header-profile-user {
         height: 36px;
@@ -38,10 +38,10 @@
                             <div class="row no-margin message-info-row" style="">
                               <div class="col-md-8 left-align">
                                 @if($message->from==Auth::user()->id)
-                                <img class="rounded-circle header-profile-user" src="https://cp.a2brx.com{{Auth::user()->image==''?'/images/users/Avatar.png':Auth::user()->image}}" style="float: left;margin-left: 15px;">
+                                <img class="rounded-circle header-profile-user" src="{{ url('/') }}{{Auth::user()->image==''?'/images/users/Avatar.png':Auth::user()->image}}" style="float: left;margin-left: 15px;">
                                 <p class="message-username">{{Auth::user()->name.' '.Auth::user()->last_name}}</p>
                                 @else
-                                <img class="rounded-circle header-profile-user" src="https://cp.a2brx.com{{$user->image==''?'/images/users/Avatar.png':$user->image}}" style="float: left;margin-left: 15px;">
+                                <img class="rounded-circle header-profile-user" src="{{ url('/') }}{{$user->image==''?'/images/users/Avatar.png':$user->image}}" style="float: left;margin-left: 15px;">
                                 <p class="message-username">{{$user->name.' '.$user->last_name}}</p>
                                 @endif
                               </div>

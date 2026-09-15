@@ -6,7 +6,7 @@
 
     <!-- Responsive Table css -->
     <link href="{{ URL::asset('/libs/rwd-table/rwd-table.min.css')}}" rel="stylesheet" type="text/css" /> <!-- Bootstrap Css -->
-    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css')}}">
+    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1')}}">
     <link href="{{ URL::asset('/css/bootstrap-datepicker.min.css')}}" rel="stylesheet">
     <style>
     .btn-group.pull-right {
@@ -60,9 +60,9 @@
                                                 <div class="directory-bg text-center" @if(!empty($pharmacy->image_front)) style="background-image:url('{{$pharmacy->image_front}}');" @endif>
                                                     <div class="directory-overlay">
                                                         @if(!empty($pharmacy->logo))
-                                                        <img class="rounded-circle avatar-lg img-thumbnail" src="{{$pharmacy->logo}}" alt="Logo">
+                                                        <img class="rounded-circle avatar-lg img-thumbnail" src="{{$pharmacy->logo}}" alt="QuikMedix">
                                                         @else
-                                                        <img class="rounded-circle avatar-lg img-thumbnail" src="https://test.a2brx.com/images/users/logo_ph.jpg" alt="Logo">
+                                                        <img class="rounded-circle avatar-lg img-thumbnail" src="{{ asset('images/branding/quikmedix-icon.png?v=transparent-1') }}" alt="QuikMedix">
                                                         @endif
                                                     </div>
                                                 </div>

@@ -76,7 +76,7 @@
                                                       
                                                       <div class="ads row">
                                                         <div class="col-lg-12 mt-2">
-                                                      <img src="https://cp.a2brx.com/public/images/ads/prev.png" width="100%" alt="Benner"></div>
+                                                      <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;"></div>
                                                       
                                                       <div class="col-lg-6 mt-4">
                                                             <div class="alert alert-info text-center" role="alert">

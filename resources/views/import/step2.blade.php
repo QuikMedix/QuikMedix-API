@@ -270,7 +270,7 @@
                                             </div>
 											<div class="col-sm-12" style="margin: 20px 0;text-align: center;">
                                                 <input type="radio" class="btn-check" value="1" name="type_driver" id="success-outlined" autocomplete="off" checked>
-                                                <label class="btn btn-outline-primary" for="success-outlined">A2B Rx driver</label>
+                                                <label class="btn btn-outline-primary" for="success-outlined">QuikMedix driver</label>
                                                 <input type="radio" class="btn-check" value="2" name="type_driver" id="danger-outlined" autocomplete="off">
                                                 <label class="btn btn-outline-primary" for="danger-outlined">Pharmacy driver</label>
                                             </div>

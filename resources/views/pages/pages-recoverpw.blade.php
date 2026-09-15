@@ -10,7 +10,7 @@
                     <div class="card overflow-hidden">
                         <div class="card-body pt-0">
                             <h3 class="text-center mt-4">
-                                <a href="/dashboard/index" class="logo logo-admin"><img src="{{ URL::asset('/images/logo-dark.png')}}" height="30" alt="logo"></a>
+                                <a href="/dashboard/index" class="logo logo-admin"><img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" width="260" height="191" style="max-width: 100%; height: auto;" alt="QuikMedix — Your Health - Our Priority"></a>
                             </h3>
                             <div class="p-3">
                                 <h4 class="text-muted font-size-18 mb-3 text-center">Reset Password</h4>
@@ -35,7 +35,7 @@
                     </div>
                     <div class="mt-5 text-center">
                         <p>Remember It ? <a href="/pages/pages-login" class="text-primary"> Sign In Here </a> </p>
-                        <p>© {{  date('Y', strtotime('-2 year')) }} - {{  date('Y') }} Lexa. Crafted with <i class="mdi mdi-heart text-danger"></i> by Themesbrand</p>
+                        <p>© {{  date('Y', strtotime('-2 year')) }} - {{  date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>
             </div>

@@ -8,7 +8,7 @@
 
             @component('common-components.breadcrumb')
                      @slot('title') Blank page @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Pages  @endslot
                      @slot('li3') Blank page @endslot
                 @endcomponent

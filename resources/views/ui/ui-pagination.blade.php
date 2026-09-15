@@ -8,7 +8,7 @@
                     <div class="row">
                          @component('common-components.breadcrumb')
                      @slot('title') Pagination @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') UI Elements @endslot
                      @slot('li3') Pagination @endslot
                 @endcomponent

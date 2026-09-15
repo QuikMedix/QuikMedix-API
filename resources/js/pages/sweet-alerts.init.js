@@ -1,7 +1,7 @@
 /*
 Template Name: Lexa - Responsive Bootstrap 4 Admin Dashboard
 Author: Themesbrand
-Website: https://themesbrand.com/
+Website: https:/
 Contact: themesbrand@gmail.com
 File: Sweetalert 
 */
@@ -105,7 +105,7 @@ File: Sweetalert
             Swal.fire({
                 title: 'Sweet!',
                 text: 'Modal with a custom image.',
-                imageUrl: 'assets/images/logo-dark.png',
+                imageUrl: '/images/branding/quikmedix-wordmark.png?v=transparent-1',
                 imageHeight: 20,
                 confirmButtonColor: "#c90016",
                 animation: false
@@ -147,7 +147,7 @@ File: Sweetalert
                 title: '<i>HTML</i> <u>example</u>',
                 type: 'info',
                 html: 'You can use <b>bold text</b>, ' +
-                '<a href="//Themesbrand.in/">links</a> ' +
+                '<a href="/">links</a> ' +
                 'and other HTML tags',
                 showCloseButton: true,
                 showCancelButton: true,

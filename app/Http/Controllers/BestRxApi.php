@@ -115,14 +115,14 @@ class BestRxApi extends Controller
                             $home_phone = '('.$matches[1].') '.$matches[2].'-'.$matches[3];
                         }
                         if(empty($response->recipient->email)){
-                            $email = 'patients'.DB::table('users')->max('id').'@cp.a2brx.com';
+                            $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
                         } else {
                             $email = $response->recipient->email;
                         }
                         DB::table('users')->insert(['isactive' => '1','name' => $response->recipient->first_name,'last_name' => $response->recipient->last_name,'email' => $email,'phone' => $patient_phone,'home_phone'=> $home_phone,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $response->recipient->address->zip_code,'pharmacy_id' => $pharmacy_auth->id]);
                         try {
                             $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                            if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->recipient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\nDownload the app https://a2brx.com/app \nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')])){
+                            if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->recipient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')])){
                                 
                             }
                         } catch (\Throwable $th) {
@@ -163,7 +163,7 @@ class BestRxApi extends Controller
                             $user_address = $patient->address;
                         }
                     }
-                    Notifications::send_push($request->input('user'),"A2BRx","A2B Rx is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact us phone number (855) 657-9595 or your pharmacy ASAP");
+                    Notifications::send_push($request->input('user'),"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
                     $dt = new \DateTime();
                     $dt->setTimeZone(new \DateTimeZone('UTC'));
                     return response()->json([

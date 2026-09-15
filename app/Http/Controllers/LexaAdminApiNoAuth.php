@@ -32,8 +32,9 @@ class LexaAdminApiNoAuth extends Controller
     }
 
     public function telegramAuth(Request $request) {
+        abort_unless(config('services.telegram.bot_token'), 503, 'Telegram authentication is not configured.');
         try {
-            $bot = new \TelegramBot\Api\Client('5714507992:AAE2bpWIf3yCpslfLAB23THKzo6T5lXqCIc');
+            $bot = new \TelegramBot\Api\Client(config('services.telegram.bot_token'));
             $bot->command('start', function ($message) use ($bot) {
                 $buttons = [[
                     ['text' => 'Send phone number', 'request_contact' => true]
@@ -78,18 +79,14 @@ class LexaAdminApiNoAuth extends Controller
             
             $bot->run();
         } catch (\Throwable $e) {
-            file_get_contents("https://api.telegram.org/bot1067998687:AAFrchkKqMoxkMBjSXovy7Qdc_rz8h_pgfc/sendMessage?chat_id=354637912&text=test ".json_encode($e->getMessage()));
+            report($e);
         }
         
         return true;
     }
 
-    public function livetex_hook(Request $request) {
-        file_get_contents("https://api.telegram.org/bot1067998687:AAFrchkKqMoxkMBjSXovy7Qdc_rz8h_pgfc/sendMessage?chat_id=354637912&text=test ".json_encode($request));
-        return true;
-    }
-    
     public static function pusher_auth(Request $request) {
+        abort_unless(config('services.beams.instance_id') && config('services.beams.secret_key'), 503, 'Web notifications are not configured.');
         if(!empty($request->user())) {
             $userID = $request->user()->id; // If you use a different auth system, do your checks here
             $userIDInQueryParam = $request->input('user_id');
@@ -99,8 +96,8 @@ class LexaAdminApiNoAuth extends Controller
             } else {
                 $beamsClient = new PushNotifications(
                     array(
-                    "instanceId" => "686711de-e011-415d-9a38-c8a05adfaae2",
-                    "secretKey" => "FDC16BE22D1C3F3F8E2595D8056231930FB856732BA999F99B577A5AD1944DD9",
+                    "instanceId" => config('services.beams.instance_id'),
+                    "secretKey" => config('services.beams.secret_key'),
                     )
                 );
                 $beamsToken = $beamsClient->generateToken((string)$userID);
@@ -109,28 +106,6 @@ class LexaAdminApiNoAuth extends Controller
         } else {
             return response('Inconsistent request', 401);
         }
-    }
-
-    public static function github_pull(Request $request) {
-        $ssh = new SSH2("50.21.190.242");
-        if (!$ssh->login("a2brx", "3H2o7G8p")) {
-            $output ='Login Failed';
-        } else {
-            $output = $ssh->exec("cd www/test.a2brx.com && git pull");
-        }
-        $ssh->disconnect();
-        return $output;
-    }
-
-    public static function github_pull_zoz(Request $request) {
-        $ssh = new SSH2("198.71.61.246");
-        if (!$ssh->login("zoz", "rE2fT1zM0ubN9e")) {
-            $output ='Login Failed';
-        } else {
-            $output = $ssh->exec("cd www/zozland.com && git pull");
-        }
-        $ssh->disconnect();
-        return $output;
     }
 
     public static function pharmacyList() {
@@ -241,7 +216,7 @@ class LexaAdminApiNoAuth extends Controller
                 } else {
                     $user_pharmacy=' ('.$user_pharmacy->name.')';
                 }
-                Notifications::send_push($user2->id,"A2BRx","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
+                Notifications::send_push($user2->id,"QuikMedix","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
                 DB::table('chats')->where('name',$chat_name)->update(['unread_user1'=>0,'unread_user2'=>$unread_user,'last_message_date'=>$created,'last_message_body'=>$body]);
             } else {
                 if($request->input('not_me_author')>0) {
@@ -263,7 +238,7 @@ class LexaAdminApiNoAuth extends Controller
                 } else {
                     $user_pharmacy=' ('.$user_pharmacy->name.')';
                 }
-                Notifications::send_push($user2->id,"A2BRx","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
+                Notifications::send_push($user2->id,"QuikMedix","You have a new incoming message from ".$user->name.' '.$user->last_name.$user_pharmacy);
                 DB::table('chats')->where('name',$chat_name)->update(['unread_user2'=>0,'unread_user1'=>$unread_user,'last_message_date'=>$created,'last_message_body'=>$body]);
             }
             
@@ -301,7 +276,7 @@ class LexaAdminApiNoAuth extends Controller
             DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user->id,'action_user_id'=>$user->id]);
             $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
             try {
-                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Password has been reset. \nLogin: ".$user->phone."\nPassword: ".$password."\nBest regards, A2B Rx Inc.", "from" => config('app.twilio_from_phone')]);
+                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Password has been reset. \nLogin: ".$user->phone."\nPassword: ".$password."\nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
                 return response()->json([
                     'message' => 'OK'
                 ], 200);

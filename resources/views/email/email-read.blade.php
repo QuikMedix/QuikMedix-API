@@ -10,7 +10,7 @@
 
                          @component('common-components.breadcrumb')
                      @slot('title') Email Read  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Email  @endslot
                      @slot('li3') Email Read @endslot
                 @endcomponent

@@ -172,7 +172,7 @@
                             <div class="col-lg-12">
                                 <div class="card">
                                     <div class="card-body text-center">
-                                    <img src="https://cp.a2brx.com/images/micromerchantsystem.png" alt="micromerchantsystem" class="mr-3" height="30">
+                                    <span class="font-weight-bold">Micro Merchant Systems</span>
                                     <span class="mb-1">New orders: {{$count_orders_merchant}} <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=1&micromerchant=1" class="btn btn-sm btn-outline-dark waves-effect waves-light ml-3"> Check <i class="mdi mdi-arrow-right-circle-outline"></i></a><span>
                                     </div>
                                 </div>
@@ -262,7 +262,7 @@
                                 <div class="card" >
                                     <div class="card-body">
                                         <div class="inbox-item-img float-start me-3"><img src="{{ URL::asset('/images/icon-d4.gif')}}" alt="icon-d4" class="ml-0 pr-4 float-left" height="75" style="margin-top: -15px;"> </div>
-                                        <h4 class="card-title-3 mb-4">News from A2B Rx</h4>                                         
+                                        <h4 class="card-title-3 mb-4">News from QuikMedix</h4>
                                         <ol class="activity-feed mb-3">
                                             <li class="feed-item">
                                                 <div class="feed-item-list">
@@ -741,8 +741,8 @@
                                                 <p>Total Orders</p>
                                             </div>
                                             <div class="col-6 p-0">
-                                                <h5 class="font-size-24">{{ $total_count_orders_a2brx }}</h5>
-                                                <p>Delivered via A2B Rx</p>
+                                                <h5 class="font-size-24">{{ $total_count_orders_quikmedix }}</h5>
+                                                <p>Delivered via QuikMedix</p>
                                             </div>
                                         </div>
                                     </div>

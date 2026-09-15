@@ -52588,7 +52588,7 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 window.Echo = new laravel_echo__WEBPACK_IMPORTED_MODULE_0__["default"]({
   broadcaster: larasocket_js__WEBPACK_IMPORTED_MODULE_1___default.a,
-  token: "3722|O6JA9OlHhPLtliwKpiaXYBoNVwu7r0T2PdxZdmC6"
+  token: ""
 });
 
 /***/ }),

@@ -14,7 +14,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') C3 Chart  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Charts  @endslot
                      @slot('li3') C3 Chart  @endslot
                 @endcomponent

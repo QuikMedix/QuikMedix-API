@@ -8,7 +8,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') Morris Chart  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Charts  @endslot
                      @slot('li3') Morris Chart  @endslot
                 @endcomponent

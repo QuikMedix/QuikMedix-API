@@ -313,7 +313,7 @@ class RouteTemplatesController extends Controller
         
         if(!empty($data_array)) {
             DB::table('routes_priority')->insert($data_array);
-            Notifications::send_push($driver_id,"A2BRx","New route template assigned to you.");
+            Notifications::send_push($driver_id,"QuikMedix","New route template assigned to you.");
             return redirect()->back()->with('success', "Template assigned to driver! Added $added_count points (some may contain multiple orders).");
         } else {
              return redirect()->back()->with('error', 'No relevant active orders found for the points in this template.');

@@ -10,7 +10,7 @@
                     <div class="card overflow-hidden">
                         <div class="card-body pt-0">
                             <h3 class="text-center mt-4">
-                                <a href="/" class="logo logo-admin"><img src="{{ URL::asset('/images/logo-dark.png')}}" height="130" alt="logo"></a>
+                                <a href="/" class="logo logo-admin"><img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" width="260" height="191" style="max-width: 100%; height: auto;" alt="QuikMedix — Your Health - Our Priority"></a>
                             </h3>
                             <div class="p-3">
                                 <h4 class="text-muted font-size-18 mb-1 text-center">Reset Password !</h4>
@@ -58,7 +58,7 @@
                     </div>
                     <div class="mt-5 text-center">
                         <!--<p>Don't have an account ? <a href="/register" class="text-primary"> Signup Now </a></p>-->
-                        <p>© 2025 All Rights Reserved - A2B RX Inc</p>
+                        <p>© {{ date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>
             </div>

@@ -57,7 +57,7 @@
                         <div class="col-4">
                             <div class="card">
                                 <div class="card-body">
-                                <img class="img-fluid" src="https://cp.a2brx.com/images/faq.jpg" alt="FAQ">
+                                <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;">
                                 </div>
                             </div>
                         </div>

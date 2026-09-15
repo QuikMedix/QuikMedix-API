@@ -14,7 +14,7 @@
 
                     <div class="p-4">
                         <div class="mb-2">
-                            <img src="{{ URL::asset('/images/layouts/layout-1.jpg')}}" class="img-fluid img-thumbnail" alt="">
+                            <div class="rounded border p-3 bg-light"><img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix layout" class="img-fluid"></div>
                         </div>
                         <div class="custom-control custom-switch mb-3">
                             <input type="checkbox" class="custom-control-input theme-choice" id="light-mode-switch" checked />
@@ -22,18 +22,18 @@
                         </div>
     
                         <div class="mb-2">
-                            <img src="{{ URL::asset('/images/layouts/layout-2.jpg')}}" class="img-fluid img-thumbnail" alt="">
+                            <div class="rounded border p-3 bg-light"><img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix layout" class="img-fluid"></div>
                         </div>
                         <div class="custom-control custom-switch mb-3">
-                            <input type="checkbox" class="custom-control-input theme-choice" id="dark-mode-switch" data-bsStyle="css/bootstrap-dark.min.css" data-appStyle="css/app-dark.min.css" />
+                            <input type="checkbox" class="custom-control-input theme-choice" id="dark-mode-switch" data-bsStyle="css/bootstrap-dark.min.css?v=quikmedix-1" data-appStyle="css/app-dark.min.css?v=quikmedix-1" />
                             <label class="custom-control-label" for="dark-mode-switch">Dark Mode</label>
                         </div>
     
                         <div class="mb-2">
-                            <img src="{{ URL::asset('/images/layouts/layout-3.jpg')}}" class="img-fluid img-thumbnail" alt="">
+                            <div class="rounded border p-3 bg-light"><img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix layout" class="img-fluid"></div>
                         </div>
                         <div class="custom-control custom-switch mb-5">
-                            <input type="checkbox" class="custom-control-input theme-choice" id="rtl-mode-switch" data-appStyle="css/app-rtl.min.css" />
+                            <input type="checkbox" class="custom-control-input theme-choice" id="rtl-mode-switch" data-appStyle="css/app-rtl.min.css?v=quikmedix-1" />
                             <label class="custom-control-label" for="rtl-mode-switch">RTL Mode</label>
                         </div>
 

@@ -3,7 +3,7 @@
 @section('title') {{ $title }} @endsection
 @section('headerCss')
 <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-multiselect.min.css')}}" type="text/css"/>
-<link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css')}}">
+<link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1')}}">
 <link href="{{ URL::asset('/css/bootstrap-datepicker.min.css')}}" rel="stylesheet">
 <link href="{{ URL::asset('/css/select2.min.css')}}" rel="stylesheet" type="text/css">
 <link href="{{ URL::asset('/css/jquery.bootstrap-touchspin.min.css')}}" rel="stylesheet">

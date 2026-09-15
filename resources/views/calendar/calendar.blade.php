@@ -13,7 +13,7 @@
 
                 @component('common-components.breadcrumb')
                      @slot('title') Calender  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Calender  @endslot
                      @slot('li3') Calender  @endslot
                 @endcomponent

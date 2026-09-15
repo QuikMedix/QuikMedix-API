@@ -44,7 +44,7 @@
                                                 @foreach($pharmacys as $pharmacy)
                                                 <tr>
                                                     <td>{{$pharmacy->name}}</span></td>
-                                                    <td><img src="https://test.a2brx.com/images/micromerchantsystem.png" alt="micromerchantsystem" class="mr-3" height="40"></td>
+                                                    <td><span class="font-weight-bold">Micro Merchant Systems</span></td>
                                                     <td>
                                                         NPI number: {{$pharmacy->npi}} </br>
                                                         Merchant Api Key: {{$pharmacy->merchantKey}}</br>

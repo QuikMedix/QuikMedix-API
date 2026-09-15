@@ -11,7 +11,7 @@
                     <div class="row">
                           @component('common-components.breadcrumb')
                      @slot('title') Ion Icons  @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Icons  @endslot
                      @slot('li3') Ion Icons  @endslot
                 @endcomponent

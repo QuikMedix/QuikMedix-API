@@ -49,8 +49,10 @@
                                 <div class="form-group row mb-0">
                                     <div class="col-md-10 offset-md-2">
                                         <a class="btn btn-link" href="{{ route('2fa.resend') }}">Resend Code?</a>
-                                        Or
-                                        <a class="btn btn-link" target="_blank" href="https://t.me/auth_a2brx_bot">Add Telegram Auth</a>
+                                        @if(config('branding.telegram_auth_url'))
+                                            Or
+                                            <a class="btn btn-link" target="_blank" rel="noopener noreferrer" href="{{ config('branding.telegram_auth_url') }}">Add Telegram Auth</a>
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="form-group row mb-0">
@@ -65,7 +67,7 @@
                     </div>
                     <div class="mt-5 text-center">
                         <!--<p>Don't have an account ? <a href="/register" class="text-primary"> Signup Now </a></p>-->
-                        <p>© 2025 All Rights Reserved - A2B RX Inc</p>
+                        <p>© {{ date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>
             </div>

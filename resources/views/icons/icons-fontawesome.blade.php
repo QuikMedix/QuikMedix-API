@@ -8,7 +8,7 @@
                     <div class="row">
                           @component('common-components.breadcrumb')
                      @slot('title') Font Awesome @endslot                     
-                     @slot('li1') Lexa  @endslot
+                     @slot('li1') QuikMedix  @endslot
                      @slot('li2') Icons  @endslot
                      @slot('li3') Font Awesome @endslot
                 @endcomponent

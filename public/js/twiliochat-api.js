@@ -76,27 +76,27 @@ var twiliochat = (function() {
   }
 
   function fetchAccessToken(username0, handler) {
-    $.post('https://cp.a2brx.com/api/chat-token', {identity: username0, _token: $("input[name='_token']").val()}, null, 'json')
+    $.post('/api/chat-token', {identity: username0, _token: $("input[name='_token']").val()}, null, 'json')
       .done(function(response) {
         handler(response.token);
       })
       .fail(function(error) {
         console.log('Failed to fetch the Access Token with error: ' + JSON.stringify(error));
       });
-    $.post('https://cp.a2brx.com/api/users/get', {identity: username, _token: $("input[name='_token']").val()}, null, 'json')
+    $.post('/api/users/get', {identity: username, _token: $("input[name='_token']").val()}, null, 'json')
       .done(function(response) {
         if(response.name!='') {
           nameuser1=response.name;
-          logouser1="https://cp.a2brx.com"+response.image;
+          logouser1=response.image;
         } else {
           console.log('Failed to fetch the username with error: ' + response.message);
         }
       });
-    $.post('https://cp.a2brx.com/api/users/get', {identity: username2, _token: $("input[name='_token']").val()}, null, 'json')
+    $.post('/api/users/get', {identity: username2, _token: $("input[name='_token']").val()}, null, 'json')
       .done(function(response) {
         if(response.name!='') {
           nameuser2=response.name;
-          logouser2="https://cp.a2brx.com"+response.image;
+          logouser2=response.image;
         } else {
           console.log('Failed to fetch the username with error: ' + response.message);
         }
@@ -227,14 +227,14 @@ var twiliochat = (function() {
 
   function messageAddAjax(username0,created,body) {
     if (username0 === tc.username) {
-      $.post('https://cp.a2brx.com/api/chats/new_message', {chat_name: GENERAL_CHANNEL_UNIQUE_NAME,created: created,body: body,user: tc.username,_token: $("input[name='_token']").val()}, null, 'json')
+      $.post('/api/chats/new_message', {chat_name: GENERAL_CHANNEL_UNIQUE_NAME,created: created,body: body,user: tc.username,_token: $("input[name='_token']").val()}, null, 'json')
       .done(function(response) {
         if(response.result!='true') {
           console.log('Failed with error: ' + response.message);
         }
       });
     } else {
-      $.post('https://cp.a2brx.com/api/chats/new_message', {chat_name: GENERAL_CHANNEL_UNIQUE_NAME,created: created,body: body,user: tc.username,not_me_author:1,_token: $("input[name='_token']").val()}, null, 'json')
+      $.post('/api/chats/new_message', {chat_name: GENERAL_CHANNEL_UNIQUE_NAME,created: created,body: body,user: tc.username,not_me_author:1,_token: $("input[name='_token']").val()}, null, 'json')
       .done(function(response) {
         if(response.result!='true') {
           console.log('Failed with error: ' + response.message);

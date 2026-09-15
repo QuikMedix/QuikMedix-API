@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'A2BRx'),
+    'name' => env('APP_NAME', 'QuikMedix'),
 
     /*
     |--------------------------------------------------------------------------
@@ -52,7 +52,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://cp.a2brx.com'),
+    'url' => env('APP_URL', 'https://app.quikmedix.com'),
 
     'asset_url' => env('ASSET_URL', null),
 
@@ -109,15 +109,15 @@ return [
     */
     
     'twilio_sid' => env('TWILIO_SID', null),
-    'twilio_auth_token' => '',
-    'twilio_from_phone' => '',
-    'twilio_chatServiceSid' => '',
-    'twilio_notifyClientServiceSid' => '',
-    'twilio_notifyClientIOSServiceSid' => '',
-    'twilio_notifyDriverIOSServiceSid' => '',
-    'twilio_notifyDriverServiceSid' => '',
-    'twilio_apiKey' => '',
-    'twilio_apiSecret' => '',
+    'twilio_auth_token' => env('TWILIO_AUTH_TOKEN'),
+    'twilio_from_phone' => env('TWILIO_FROM_PHONE'),
+    'twilio_chatServiceSid' => env('TWILIO_CHAT_SERVICE_SID'),
+    'twilio_notifyClientServiceSid' => env('TWILIO_NOTIFY_CLIENT_SERVICE_SID'),
+    'twilio_notifyClientIOSServiceSid' => env('TWILIO_NOTIFY_CLIENT_IOS_SERVICE_SID'),
+    'twilio_notifyDriverIOSServiceSid' => env('TWILIO_NOTIFY_DRIVER_IOS_SERVICE_SID'),
+    'twilio_notifyDriverServiceSid' => env('TWILIO_NOTIFY_DRIVER_SERVICE_SID'),
+    'twilio_apiKey' => env('TWILIO_API_KEY'),
+    'twilio_apiSecret' => env('TWILIO_API_SECRET'),
 
     /*
     |--------------------------------------------------------------------------
@@ -163,7 +163,7 @@ return [
     |
     */
 
-    'googlemaps_apikey' => 'AIzaSyAy18WGy28Z-SxLc21UH0dxBEXsIsOaiTk',
+    'googlemaps_apikey' => env('GOOGLE_MAPS_API_KEY'),
 
     /*
     |--------------------------------------------------------------------------
@@ -172,7 +172,7 @@ return [
     |
     */
 
-    'support_phone' => '(855) 657-9595',
+    'support_phone' => env('QUIKMEDIX_SUPPORT_PHONE', '(929) 969-8910'),
 
     /*
     |--------------------------------------------------------------------------

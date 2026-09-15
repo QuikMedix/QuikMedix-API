@@ -2,7 +2,7 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-sm-12">
-                                    © 2025 All Rights Reserved - A2B RX Inc
+                                    © {{ date('Y') }} QuikMedix. All rights reserved.
                                 </div>
                             </div>
                         </div>

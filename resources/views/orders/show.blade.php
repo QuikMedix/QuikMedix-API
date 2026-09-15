@@ -393,7 +393,7 @@ audio {
                                 .ft113{font-size:13px;line-height:17px;font-family:Times;color:#000000;}
                             </style>
                             <div id="page1-div" style="position:relative;width:918px;height:1188px;">
-                                <img width="918" height="1188" src="https://cp.a2brx.com/public/images/target001.png" alt="background image"/>
+                                @include('layouts.partials.document-image', ['document' => 'authorization', 'description' => 'Authorization form', 'imageStyle' => 'width: 918px; height: 1188px;'])
                                 <p style="position:absolute;top:36px;left:43px;white-space:nowrap" class="ft10"><b>&#160;</b></p>
                                 <p style="position:absolute;top:36px;left:97px;white-space:nowrap" class="ft10"><b>&#160;</b></p>
                                 <p style="position:absolute;top:36px;left:151px;white-space:nowrap" class="ft10"><b>&#160;</b></p>
@@ -458,7 +458,7 @@ audio {
                                 .ft24{font-size:17px;line-height:22px;font-family:Times;color:#000000;}
                             </style>
                             <div id="page2-div" style="position:relative;width:918px;height:1188px;">
-                                <img width="918" height="1188" src="https://cp.a2brx.com/public/images/target002.png" alt="background image"/>
+                                @include('layouts.partials.document-image', ['document' => 'authorization_instructions', 'description' => 'Authorization instructions', 'imageStyle' => 'width: 918px; height: 1188px;'])
                                 <p style="position:absolute;top:115px;left:108px;white-space:nowrap" class="ft20">&#160;</p>
                                 <p style="position:absolute;top:113px;left:360px;white-space:nowrap" class="ft21">Instructions for the Use&#160;</p>
                                 <p style="position:absolute;top:137px;left:108px;white-space:nowrap" class="ft21">&#160;</p>
@@ -586,10 +586,10 @@ audio {
                                                 </td>	
                                             <td style="text-align: center">
                                                 @if($order->pharmacy_id==46)
-                                                    <img src="https://cp.a2brx.com/images/sign_nyc_disc.png" alt="Signature" style="width:auto;height:90px;right:43px;top:938px;position: absolute">
+
                                                 @endif
                                                 @if($order->pharmacy_id==185 || $order->pharmacy_id==197)
-                                                    <img src="https://cp.a2brx.com/images/sign_nyc_disc_new.png" alt="Signature" style="width:auto;height:90px;right:248px;bottom:218px;position: absolute">
+
                                                 @endif
                                                 <p align="center" style="color: #000000;line-height: 14px;font-size: 14px; font-weight: 700; font-family: Arial;">&nbsp;<br>
                                                 <hr style="padding: 0 20px;margin: 0px 0 2px 0;"> 
@@ -827,7 +827,7 @@ audio {
 </style>
 
 <div id="page1-div" style="position:relative;width:918px;height:1188px;">
-<img width="918" height="1188" src="https://cp.a2brx.com/public/images/target001.png" alt="background image"/>
+@include('layouts.partials.document-image', ['document' => 'authorization', 'description' => 'Authorization form', 'imageStyle' => 'width: 918px; height: 1188px;'])
 <p style="position:absolute;top:36px;left:43px;white-space:nowrap" class="ft10"><b>&#160;</b></p>
 <p style="position:absolute;top:36px;left:97px;white-space:nowrap" class="ft10"><b>&#160;</b></p>
 <p style="position:absolute;top:36px;left:151px;white-space:nowrap" class="ft10"><b>&#160;</b></p>
@@ -895,7 +895,7 @@ audio {
 </style>
 
 <div id="page2-div" style="position:relative;width:918px;height:1188px;">
-<img width="918" height="1188" src="https://cp.a2brx.com/public/images/target002.png" alt="background image"/>
+@include('layouts.partials.document-image', ['document' => 'authorization_instructions', 'description' => 'Authorization instructions', 'imageStyle' => 'width: 918px; height: 1188px;'])
 <p style="position:absolute;top:115px;left:108px;white-space:nowrap" class="ft20">&#160;</p>
 <p style="position:absolute;top:113px;left:360px;white-space:nowrap" class="ft21">Instructions for the Use&#160;</p>
 <p style="position:absolute;top:137px;left:108px;white-space:nowrap" class="ft21">&#160;</p>
@@ -1029,10 +1029,10 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 							</td>	
 						 <td style="text-align: center">
                             @if($order->pharmacy_id==46)
-                                <img src="https://cp.a2brx.com/images/sign_nyc_disc.png" alt="Signature" style="width:auto;height:90px;right:43px;top:938px;position: absolute">
+
                             @endif
                             @if($order->pharmacy_id==185 || $order->pharmacy_id==197)
-                                <img src="https://cp.a2brx.com/images/sign_nyc_disc_new.png" alt="Signature" style="width:auto;height:90px;right:240px;top:920px;position: absolute">
+
                             @endif
 							 <p align="center" style="color: #000000;line-height: 14px;font-size: 14px; font-weight: 700; font-family: Arial;">&nbsp;<br>
 							 <hr style="padding: 0 20px;margin: -13px 0 2px 0;"> 
@@ -1516,7 +1516,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
             </p>
 		</div>
         <div class="col-2" style="color: #000000;padding: 5px 0 0 15px;text-align: center;">
-        <img width="70" height="auto" src="https://cp.a2brx.com/public/images/paas.png" alt="paas"/>
+        <span>PAAS</span>
 
 		</div>
 	</div>
@@ -1532,7 +1532,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     <div class="row" style="margin-top: 70px">
 		<div class="col-2"></div>
 		<div class="col-8" style="color: #000000;padding: 5px 0;text-align: center;">
-            <img width="100%" height="auto" src="https://cp.a2brx.com/public/images/integrapartners.png" alt="background image"/>
+            @include('layouts.partials.document-image', ['document' => 'partner_header', 'description' => 'Partner form header', 'imageStyle' => 'width: 100%; height: auto;'])
 			<p
 				style="padding: 5px 0;font-weight: 200;text-align: center; margin: 15px 0px; font-family: Arial; line-height: 30px;font-size: 20px;">
 				100 Wall Street, Suite 2502, New York, NY, 10005<br>
@@ -1638,7 +1638,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 
  <div class="row" style="margin-top: 10px;">
 		<div class="col-12" style="padding: 0 11px;text-align: center;">
-            <img width="100%" height="auto" src="https://cp.a2brx.com/public/images/integrapartners-t.png" alt="background image"/>
+            @include('layouts.partials.document-image', ['document' => 'partner_footer', 'description' => 'Partner form footer', 'imageStyle' => 'width: 100%; height: auto;'])
 		</div>
 </div>
 
@@ -1996,7 +1996,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                         <button id="toggle_map" class="btn btn-primary mt-2">Street View</button>
                         <!--<div style="min-height: 420px;width: 100%;display: flex;align-items: center;justify-content: center;" align="center">
                             <h5 align="center" style="margin: 50px 0;">Looking for a driver</h5>
-                            <img src="https://cp.a2brx.com/images/map.gif" alt="map" style="width:200px;">
+                            <i class="ion ion-md-map mr-2" aria-hidden="true"></i>
                         </div>-->
                 </div> 
             </div>				 
@@ -2159,9 +2159,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                         <div class="card">
                             <div class="card-body" style="text-align: center;">
                                 <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Video</h5>
-                                <video width="640" height="360" controls poster="https://cp.a2brx.com/public/images/poster-video.jpg">
-                                    <source src="https://cp.a2brx.com/public/images/logo-v.mp4" type="video/mp4">
-                                </video>							
+                                <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix — Your Health - Our Priority" width="400" style="max-width: 100%; height: auto;">
                             </div>
                         </div>
                     </div>				
@@ -2359,9 +2357,13 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     }  
     
     function Popup(data){
+        if (data && data.indexOf('data-document-unavailable') !== -1) {
+            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
+            return false;
+        }
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>Delivery_Slip_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2372,9 +2374,13 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         return true;
     }
     function Popup2(data){
+        if (data && data.indexOf('data-document-unavailable') !== -1) {
+            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
+            return false;
+        }
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>HIPAA_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2385,9 +2391,13 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         return true;
     } 
     function Popup3(data){
+        if (data && data.indexOf('data-document-unavailable') !== -1) {
+            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
+            return false;
+        }
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>AOB_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2398,9 +2408,13 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         return true;
     }   
     function Popup4(data){
+        if (data && data.indexOf('data-document-unavailable') !== -1) {
+            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
+            return false;
+        }
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>Provider_Lien_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2411,9 +2425,13 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         return true;
     }
     function Popup5(data){
+        if (data && data.indexOf('data-document-unavailable') !== -1) {
+            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
+            return false;
+        }
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>integrapartners_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2424,9 +2442,13 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         return true;
     }
     function Popup6(data){
+        if (data && data.indexOf('data-document-unavailable') !== -1) {
+            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
+            return false;
+        }
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>COVID-19_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');
@@ -2437,9 +2459,13 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         return true;
     }
     function Popup7(data){
+        if (data && data.indexOf('data-document-unavailable') !== -1) {
+            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
+            return false;
+        }
         var mywindow = window.open('', 'my div', 'height=400,width=600');
         mywindow.document.write('<html><head><title>Print_{{$order->username}}</title>');
-        mywindow.document.write('<link href="https://cp.a2brx.com/css/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
+        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
         mywindow.document.write('</head><body >');
         mywindow.document.write(data);
         mywindow.document.write('</body></html>');

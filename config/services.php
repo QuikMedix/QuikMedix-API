@@ -1,6 +1,20 @@
 <?php
 
 return [
+    'beams' => [
+        'instance_id' => env('PUSHER_BEAMS_INSTANCE_ID'),
+        'secret_key' => env('PUSHER_BEAMS_SECRET_KEY'),
+    ],
+    'fcm' => [
+        'server_key' => env('FCM_SERVER_KEY'),
+        'notification_icon' => env('FCM_NOTIFICATION_ICON', 'quikmedix_notification'),
+    ],
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+    ],
+    'tidio' => [
+        'widget_key' => env('TIDIO_WIDGET_KEY'),
+    ],
 
     /*
     |--------------------------------------------------------------------------

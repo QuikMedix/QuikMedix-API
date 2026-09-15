@@ -4,7 +4,7 @@
 
 @section('headerCss')
 
-    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css')}}">
+    <link rel="stylesheet" href="{{ URL::asset('/css/bootstrap-lib.min.css?v=quikmedix-1')}}">
     <!-- Responsive Table css -->
     <link href="{{ URL::asset('/libs/rwd-table/rwd-table.min.css')}}" rel="stylesheet" type="text/css" /> <!-- Bootstrap Css -->
     <style>
@@ -270,7 +270,7 @@
                     @if(Auth::user()->pharmacy_balance()<0)
                     Swal.fire({
                         title:"Couldn't process your last payment",
-                        html:"<p>Payment failed—please update ASAP.</p><p>We appreciate your attention and are happy to speak with you if you have any questions regarding your account.</p><p>Just call us at (855) 657-9595.</p>",
+                        html: @json('<p>Payment failed—please update your payment details.</p><p>For questions about your account, contact '.e(\App\Support\Branding::supportContact()).'.</p>'),
                         icon:"warning",
                         showCancelButton:!0,
                         confirmButtonColor:"#29bbe3",
