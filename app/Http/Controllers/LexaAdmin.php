@@ -1102,6 +1102,8 @@ class LexaAdmin extends Controller
             $input['tariff_asap']='';
             $input['tariff_after_hours']='';
             $input['tariff_fridge']='';
+            $input['plan_id']='';
+            $input['tariff_areas']=[];
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('pharmacy.pharmacy_add',['plans'=>$plans,'areas'=>$areas,'admin_areas'=>$admin_areas,'title'=>'Pharmacy Add','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Add','alert'=>'','input'=>$input]);
             if(isset($_GET['ajax'])) {
@@ -1120,6 +1122,15 @@ class LexaAdmin extends Controller
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
+                $tariffSelection = $request->validate([
+                    'plan_id' => 'required|integer|exists:plans,id',
+                    'tariff_areas' => 'nullable|array',
+                    'tariff_areas.*' => 'integer|distinct|exists:area,id',
+                ], [
+                    'plan_id.required' => 'Create and select a tariff plan before saving the pharmacy.',
+                    'plan_id.exists' => 'The selected tariff plan no longer exists. Please select another plan.',
+                    'tariff_areas.*.exists' => 'One of the selected tariff areas no longer exists. Please select it again.',
+                ]);
                 if(!empty(DB::table('pharmacys')->where('email', $request->input('email'))->first())) {
                     $plans = DB::table('plans')->orderBy('id','desc')->get();
                     $areas = DB::table('area')->get();
@@ -1137,9 +1148,12 @@ class LexaAdmin extends Controller
                     $input['tariff_asap']=$request->input('tariff_asap');
                     $input['tariff_after_hours']=$request->input('tariff_after_hours');
                     $input['tariff_fridge']=$request->input('tariff_fridge');
+                    $input['plan_id']=$request->input('plan_id');
+                    $input['tariff_areas']=$request->input('tariff_areas', []);
                     $admin_areas = DB::table('admin_areas')->get();
                     return view('pharmacy.pharmacy_add',['plans'=>$plans,'areas'=>$areas,'admin_areas'=>$admin_areas,'title'=>'Pharmacy Add','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Add','alert'=>'Pharmacy with this email already exists','input'=>$input]);
                 } else {
+                    $location = self::pharmacyCreationLocation($request);
                     if($request->hasFile('image')) {
                         $file = $request->file('image');
                         $name_f = date('mdHis').$request->file('image')->getClientOriginalName();
@@ -1161,9 +1175,15 @@ class LexaAdmin extends Controller
                     } else {
                         $massiveBagsTransfer = "0";
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
-                    $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                    DB::table('pharmacys')->insert(['name' => $request->input('name'),'email' => $request->input('email'),'plan_id' => $request->input('plan_id'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'massiveBagsTransfer'=>$massiveBagsTransfer,'address' => $request->input('address'),'location' => $location,'zone_id'=>$request->input('zone_id')]);
+                    DB::transaction(function () use ($request, $src, $src2, $massiveBagsTransfer, $location, $tariffSelection) {
+                        $pharmacy_id = DB::table('pharmacys')->insertGetId(['name' => $request->input('name'),'email' => $request->input('email'),'plan_id' => $request->input('plan_id'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'massiveBagsTransfer'=>$massiveBagsTransfer,'address' => $request->input('address'),'location' => $location,'zone_id'=>$request->input('zone_id')]);
+                        $areas = array_map(function ($area_id) use ($pharmacy_id) {
+                            return ['pharmacy_id' => $pharmacy_id, 'area_id' => $area_id, 'type' => 1];
+                        }, $tariffSelection['tariff_areas'] ?? []);
+                        if ($areas) {
+                            DB::table('pharmacy_areas')->insert($areas);
+                        }
+                    });
                 }
             }
             return redirect("pharmacys");
@@ -1207,6 +1227,33 @@ class LexaAdmin extends Controller
         } else {
             return abort(403, self::$err_perm);
         }
+    }
+
+    private static function pharmacyCreationLocation(Request $request) {
+        if (!config('app.googlemaps_apikey')) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'address' => 'Address lookup is not configured. Ask an administrator to enable Google Maps.',
+            ]);
+        }
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(10)->get('https://maps.googleapis.com/maps/api/geocode/json', [
+                'address' => $request->input('address'),
+                'key' => config('app.googlemaps_apikey'),
+            ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $error) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'address' => 'Address lookup is temporarily unavailable. Please try again.',
+            ]);
+        }
+        $latitude = $response->json('results.0.geometry.location.lat');
+        $longitude = $response->json('results.0.geometry.location.lng');
+        if (!$response->successful() || $response->json('status') !== 'OK'
+            || !is_numeric($latitude) || !is_numeric($longitude)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'address' => 'The address could not be located. Check the address and Google Maps configuration.',
+            ]);
+        }
+        return $latitude.','.$longitude;
     }
 
     public static function officesList() {
@@ -9018,7 +9065,7 @@ class LexaAdmin extends Controller
     public function settingsStatesAddHandler(Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
-                $area_id = DB::table('area')->insertGetId(['name' => $request->input('name'),'state' => $request->input('state'),'polygon'=>DB::raw("ST_GeomFromText('POLYGON((".$this->decodePolygon($request->input('polygon'))."))')")]);
+                $area_id = DB::table('area')->insertGetId($this->tariffAreaData($request));
                 if(!empty($request->input('zip'))){
                     $zips = array_filter(explode("\n",$request->input('zip')));
                     foreach($zips as $zip){
@@ -9066,7 +9113,7 @@ class LexaAdmin extends Controller
     public function settingsStatesEditHandler($area_id, Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
-                DB::table('area')->where("id",$area_id)->update(['name' => $request->input('name'),'state' => $request->input('state'),'polygon'=>DB::raw("ST_GeomFromText('POLYGON((".$this->decodePolygon($request->input('polygon'))."))')")]);
+                DB::table('area')->where("id",$area_id)->update($this->tariffAreaData($request));
                 //DB::table('area_zip')->where("area_id",$area_id)->delete();
                 if(!empty($request->input('zip'))){
                     $zips = array_filter(explode("\r\n",$request->input('zip')));
@@ -9081,6 +9128,42 @@ class LexaAdmin extends Controller
         } else {
             return abort(403, self::$err_perm);
         }
+    }
+
+    private function tariffAreaData(Request $request) {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'state' => 'required|string|max:255',
+            'polygon' => 'required|json',
+        ], ['polygon.required' => 'Draw a tariff area on the map before saving.']);
+        $points = json_decode($data['polygon'], true);
+        $invalid = function () {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'polygon' => 'Draw an area with at least three distinct corners on the map.',
+            ]);
+        };
+        if (!is_array($points) || !array_is_list($points) || count($points) < 3) {
+            $invalid();
+        }
+        $coordinates = [];
+        foreach ($points as $point) {
+            if (!is_array($point) || !isset($point['lat'], $point['lng'])
+                || !is_numeric($point['lat']) || !is_numeric($point['lng'])
+                || !is_finite((float) $point['lat']) || !is_finite((float) $point['lng'])
+                || abs((float) $point['lat']) > 90 || abs((float) $point['lng']) > 180) {
+                $invalid();
+            }
+            // Keep the latitude/longitude order used by existing area queries.
+            $coordinates[] = (float) $point['lat'].' '.(float) $point['lng'];
+        }
+        if (count(array_unique($coordinates)) < 3) {
+            $invalid();
+        }
+        if (end($coordinates) !== $coordinates[0]) {
+            $coordinates[] = $coordinates[0];
+        }
+        $data['polygon'] = DB::raw("ST_GeomFromText('POLYGON((".implode(',', $coordinates)."))')");
+        return $data;
     }
 
     function decodePolygon($polygon_json) {
