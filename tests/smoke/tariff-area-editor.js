@@ -38,7 +38,15 @@ function editorFor(initial = [], mapsAvailable = true) {
         fitBounds() { this.fitted = true; }
     }
     class Polygon extends Target {
-        constructor(options) { super(); this.path = new MapPath(options.paths); polygons.push(this); }
+        constructor(options) {
+            super();
+            // Maps treats paths: [] as no rings, so getPath() is undefined.
+            // An explicit first ring, paths: [[]], supports drawing from scratch.
+            if (options.paths.length) {
+                this.path = new MapPath(Array.isArray(options.paths[0]) ? options.paths[0] : options.paths);
+            }
+            polygons.push(this);
+        }
         getPath() { return this.path; }
     }
     class Bounds { extend() { return this; } }
@@ -70,6 +78,7 @@ function editorFor(initial = [], mapsAvailable = true) {
 }
 
 const editor = editorFor();
+check(editor.elements['area-map-status'].textContent.startsWith('0 corners.'), 'An empty area must initialize its drawing controls.');
 check(!editor.submit(), 'Saving with no boundary must be blocked.');
 editor.clickMap(40.7, -74);
 editor.clickMap(40.8, -74);
@@ -90,6 +99,12 @@ check(editor.points().length === 4, 'Inserting a corner must update submitted ge
 editablePath.removeAt(1);
 check(editor.points().length === 3, 'Removing a corner must update submitted geometry.');
 editor.elements['area-add-corners'].click();
+editor.polygons[0].fire('click', { latLng: new editor.LatLng(40.75, -73.98) });
+check(editor.points().length === 4, 'Clicking inside the current polygon must add a corner while drawing.');
+editor.polygons[0].fire('click', { latLng: new editor.LatLng(40.6, -74), vertex: 0 });
+editor.polygons[0].fire('click', { latLng: new editor.LatLng(40.7, -74), edge: 0 });
+check(editor.points().length === 4, 'Clicking editing handles must not append duplicate corners.');
+editor.elements['area-undo'].click();
 editor.clickMap(41, -73);
 check(editor.points().length === 4, 'Users can resume adding corners.');
 editor.elements['area-undo'].click();
@@ -98,6 +113,12 @@ editor.elements['area-clear'].click();
 check(editor.points().length === 0 && !editor.submit(), 'Clearing a boundary must clear the submitted geometry.');
 editor.clickMap(40, -74); editor.clickMap(40, -74); editor.clickMap(40, -74);
 check(!editor.submit(), 'Repeated copies of one corner are not an area.');
+editor.elements['area-clear'].click();
+editor.clickMap(40.7, -74); editor.clickMap(40.8, -74); editor.clickMap(40.8, -73.9);
+check(editor.points().length === 3 && !editor.elements['area-finish'].disabled, 'Drawing a new boundary after clearing must still work.');
+editor.elements['area-finish'].click();
+editor.polygons[0].fire('click', { latLng: new editor.LatLng(40.75, -73.98) });
+check(editor.points().length === 3, 'Clicks inside a finished polygon must not add corners.');
 
 const existing = [{ lat: 40.7, lng: -74 }, { lat: 40.8, lng: -74 }, { lat: 40.8, lng: -73.9 }];
 const edit = editorFor(existing);

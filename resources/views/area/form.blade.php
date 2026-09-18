@@ -78,7 +78,7 @@
 @endsection
 
 @section('footerScript')
-<script src="{{ URL::asset('/js/pages/tariff-area.init.js?v=1') }}"></script>
+<script src="{{ URL::asset('/js/pages/tariff-area.init.js?v=2') }}"></script>
 @if(config('app.googlemaps_apikey'))
 <script async src="https://maps.googleapis.com/maps/api/js?key={{ config('app.googlemaps_apikey') }}&amp;region=US&amp;language=en&amp;v=weekly&amp;loading=async&amp;callback=initTariffAreaMap"></script>
 @endif

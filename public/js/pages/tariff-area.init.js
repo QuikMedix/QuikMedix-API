@@ -50,7 +50,8 @@
         });
         var polygon = new google.maps.Polygon({
             map: map,
-            paths: points,
+            // Keep a first ring even when empty; paths: [] leaves getPath() undefined.
+            paths: [points],
             strokeColor: '#c90016',
             strokeWeight: 2,
             fillColor: '#c90016',
@@ -65,6 +66,7 @@
             var valid = hasArea(coordinates);
             input.value = valid ? JSON.stringify(coordinates) : '';
             add.disabled = drawing;
+            add.textContent = drawing ? 'Adding corners' : 'Add corners';
             finish.disabled = !drawing || !valid;
             undo.disabled = !drawing || path.getLength() === 0;
             clear.disabled = path.getLength() === 0;
@@ -77,9 +79,12 @@
         ['insert_at', 'set_at', 'remove_at'].forEach(function (event) {
             google.maps.event.addListener(path, event, sync);
         });
-        map.addListener('click', function (event) {
-            if (drawing && event.latLng) path.push(event.latLng);
-        });
+        function addCorner(event) {
+            // Vertex and midpoint clicks belong to the polygon's editing handles.
+            if (drawing && event.latLng && event.vertex == null && event.edge == null) path.push(event.latLng);
+        }
+        map.addListener('click', addCorner);
+        polygon.addListener('click', addCorner);
         add.addEventListener('click', function () { drawing = true; sync(); });
         finish.addEventListener('click', function () { drawing = false; sync(); });
         undo.addEventListener('click', function () {
