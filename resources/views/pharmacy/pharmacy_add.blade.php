@@ -5,6 +5,13 @@
 @section('headerCss')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
+.pharmacy-address-autocomplete {
+    display: block;
+    width: 100%;
+    color-scheme: light;
+    font-family: inherit;
+    font-size: inherit;
+}
 .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
     padding-left: 15px;
     padding-right: 0px;
@@ -106,12 +113,16 @@
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label for="example-text-input" class="col-sm-2 col-form-label">Address</label>
-                                            <div class="col-sm-10">
-                                                <input class="form-control" required id="searchTextField" type="text" name="address" value="{{ old('address', $input['address']) }}">
-                                                @unless(config('app.googlemaps_apikey'))
-                                                    <small class="form-text text-danger">Address lookup is unavailable. An administrator needs to configure Google Maps before this pharmacy can be saved.</small>
-                                                @endunless
+                                            <label for="searchTextField" id="pharmacy-address-label" class="col-sm-2 col-form-label">Address</label>
+                                            <div class="col-sm-10" data-pharmacy-address>
+                                                <input class="form-control" required id="searchTextField" type="text" name="address" autocomplete="street-address" aria-describedby="pharmacy-address-status" value="{{ old('address', $input['address']) }}">
+                                                <small id="pharmacy-address-status" class="form-text text-muted" role="status" aria-live="polite">
+                                                    @if(config('app.googlemaps_apikey'))
+                                                        Enter the full street address, city, state and ZIP code.
+                                                    @else
+                                                        Address lookup is unavailable. An administrator needs to configure Google Maps before this pharmacy can be saved.
+                                                    @endif
+                                                </small>
                                             </div>
                                         </div>
                                         <div class="form-group row">
@@ -225,24 +236,14 @@
                         }
                     }
                     </script>
-                    @if(config('app.googlemaps_apikey'))
-                    <script src="https://maps.googleapis.com/maps/api/js?key={{config('app.googlemaps_apikey')}}&region=US&language=en&libraries=places"></script>
-                    <script>
-                        var input = document.getElementById('searchTextField');
-                        var autocomplete = new google.maps.places.Autocomplete(input);
-
-                        input.addEventListener('input', function () {
-                        this.dataset.originalVal = this.value;
-                        });
-                        input.addEventListener('focus', function () {
-                        this.value = input.dataset.originalVal ? input.dataset.originalVal : this.value;
-                        });
-                    </script>
-                    @endif
                     
 @endsection
 
 @section('footerScript')
+<script src="{{ URL::asset('/js/pages/pharmacy-address.init.js?v=1') }}"></script>
+@if(config('app.googlemaps_apikey'))
+<script async src="https://maps.googleapis.com/maps/api/js?key={{ config('app.googlemaps_apikey') }}&amp;region=US&amp;language=en&amp;libraries=places&amp;v=weekly&amp;loading=async&amp;callback=initPharmacyAddress" onerror="pharmacyAddressUnavailable()"></script>
+@endif
 <script src="{{ URL::asset('/js/select2.min.js')}}"></script>
 <script>
     $('#areas').select2({ placeholder: 'Select tariff areas', width: '100%' });
