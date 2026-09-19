@@ -158,7 +158,7 @@
 
                                     <div class="form-group mb-0 row">
                                         <div class="col-12 mt-4 text-center">
-                                        <p>Already have an account? <a href="/login" class="text-primary"> Login </a> </p>
+                                            <p>Already have an account? <a href="{{ route('login') }}" class="text-primary">Login</a></p>
                                         </div>
                                     </div>
                                 </form>
