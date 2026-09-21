@@ -1230,6 +1230,7 @@ class LexaAdmin extends Controller
     }
 
     private static function pharmacyCreationLocation(Request $request) {
+        $request->validate(['address' => ['required', 'string', 'max:500']]);
         if (!config('app.googlemaps_apikey')) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'address' => 'Address lookup is not configured. Ask an administrator to enable Google Maps.',
@@ -1247,6 +1248,11 @@ class LexaAdmin extends Controller
         }
         $latitude = $response->json('results.0.geometry.location.lat');
         $longitude = $response->json('results.0.geometry.location.lng');
+        if ($response->json('status') === 'REQUEST_DENIED') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'address' => 'Address lookup is not authorized. Ask an administrator to enable the Geocoding API and check the Google Maps API key settings.',
+            ]);
+        }
         if (!$response->successful() || $response->json('status') !== 'OK'
             || !is_numeric($latitude) || !is_numeric($longitude)) {
             throw \Illuminate\Validation\ValidationException::withMessages([

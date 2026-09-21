@@ -106,6 +106,8 @@ namespace {
     check(str_contains($html, '/settings/area/add'), 'Missing area needs a setup link.');
     check(str_contains($html, 'No tariff areas exist yet'), 'Empty picker needs an explanation.');
     check((bool) preg_match('/<select[^>]*id="areas"[^>]*disabled/', $html), 'Empty picker should not offer an unusable search.');
+    check(str_contains($html, 'pharmacy-address.init.js') && str_contains($html, 'callback=initPharmacyAddress'), 'Pharmacy creation must load the replacement address widget.');
+    check(!str_contains($html, 'new google.maps.places.Autocomplete('), 'Pharmacy creation must not load legacy Places autocomplete.');
     $response = requestPage('/settings/area/add');
     check($response->getStatusCode() === 200, 'Area setup must render with no states.');
     check(str_contains($response->getContent(), 'value="New York"'), 'State reference choices must be available.');
@@ -150,6 +152,11 @@ namespace {
     check(requestPage('/pharmacys/add', $pharmacy)->getStatusCode() === 422, 'Missing Maps configuration must show a validation error.');
     check(DB::table('pharmacys')->count() === 0, 'Missing Maps configuration must not create a pharmacy.');
     config(['app.googlemaps_apikey' => 'test-only-key']);
+    check(requestPage('/pharmacys/add', array_replace($pharmacy, ['address' => '']))->getStatusCode() === 422, 'An empty address must be rejected even without browser validation.');
+    $geocoderResponse = ['status' => 'REQUEST_DENIED', 'results' => []];
+    $response = requestPage('/pharmacys/add', $pharmacy);
+    check($response->getStatusCode() === 422 && str_contains($response->getContent(), 'enable the Geocoding API'), 'Disabled geocoding must explain the configuration needed to save.');
+    check(DB::table('pharmacys')->count() === 0, 'Disabled geocoding must not save an unlocated pharmacy.');
     $geocoderResponse = ['status' => 'ZERO_RESULTS', 'results' => []];
     check(requestPage('/pharmacys/add', $pharmacy)->getStatusCode() === 422, 'Unknown addresses must show a validation error.');
     check(DB::table('pharmacys')->count() === 0, 'Unknown addresses must not create a pharmacy.');

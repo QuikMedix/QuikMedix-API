@@ -58,7 +58,7 @@
                         </div>
                     </div>
                     <div class="mt-5 text-center">
-                        <!--<p>Don't have an account ? <a href="/register" class="text-primary"> Signup Now </a></p>-->
+                        <p>Don't have an account? <a href="{{ route('register') }}" class="text-primary">Register</a></p>
                         <p>© {{ date('Y') }} QuikMedix. All rights reserved.</p>
                     </div>
                 </div>

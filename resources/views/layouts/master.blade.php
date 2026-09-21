@@ -114,7 +114,7 @@
     <!-- Begin page -->
     <div id="layout-wrapper">
         
-        @include('layouts/partials/navbar')
+        @include('layouts/partials/navbar', ['userDropdownToggleAttribute' => 'data-bs-toggle'])
 
         <!-- ============================================================== -->
         <!-- Start right Content here -->
