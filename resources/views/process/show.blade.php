@@ -439,7 +439,8 @@ label {
                         var map;
                         var _myPolygon;
                         var markersArray = [];
-                        var locationDriver = "{{ $locations->location }}";
+                        var locationDriver = "{{ $locations->location ?? '' }}"; // empty until the driver shares a location
+    function mapCenter() { return locationDriver || locationPharmacy[0] || locationPatients[0] || '40.7128,-74.0060'; }
                         var locationPatients = [@foreach($patients_locations as $patients_location)
                         @if(!empty($patients_location['location']))
                             @if((!empty($show_ids) && in_array("patient".$patients_location['id'],$show_ids)))
@@ -566,11 +567,11 @@ label {
                         function initMap() {
                             map = new google.maps.Map(document.getElementById("map"), {
                                 zoom: 11,
-                                center: { lat: parseFloat(locationDriver.split(",")[0]), lng: parseFloat(locationDriver.split(",")[1]) },
+                                center: { lat: parseFloat(mapCenter().split(",")[0]), lng: parseFloat(mapCenter().split(",")[1]) },
                                 legend: 'none'
                             });
 
-                            addMarkerDriver(locationDriver,map);
+                            if (locationDriver) addMarkerDriver(locationDriver,map);
                             if(showPatient) {
                                 for(n=0;n<locationPatients.length;n++) {
                                     if(locationPatientsID[n].toString().search(";")>-1) {

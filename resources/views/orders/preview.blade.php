@@ -30,10 +30,10 @@
                             </form>
                             @endif
                         </div>
-                        <b>Created:</b> {{date('m/d/Y g:i A', strtotime($order->created))}}<br>
-                        <b>Need Delivery:</b> <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date)){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date)){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span><br>
+                        <b>Created:</b> {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}<br>
+                        <b>Need Delivery:</b> <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date ?? '')){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date ?? '')){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date ?? ''))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span><br>
                         @if($order->statuse_id==4)
-                        <b>Delivered:</b> {{date('m/d/Y g:i A', strtotime($order->finish))}}<br>
+                        <b>Delivered:</b> {{date('m/d/Y g:i A', strtotime($order->finish ?? ''))}}<br>
                         @endif
                         <b>Options:</b> {{$order->delivery_method}}<br>
                         <b>Time:</b> {{$order->delivery_time}}<br>
@@ -149,7 +149,7 @@
                         <td>@if(count(explode('-',$rx->rx_id))>1){{explode('-',$rx->rx_id)[1]}}@endif</td>
                         <td>{{$rx->rx_count}}</td>
                         <td>{{$rx->rx_date}}</td>
-                        <td>@if(isset($additional_recipients[$rx->rx_recipient])) {{$additional_recipients[$rx->rx_recipient]->family_name}}, {{$additional_recipients[$rx->rx_recipient]->family_phone}} ({{$additional_recipients[$rx->rx_recipient]->family_type}}) @else{{'-'}}@endif</td>
+                        <td>@if(isset($additional_recipients[$rx->rx_recipient ?? ''])) {{$additional_recipients[$rx->rx_recipient ?? '']->family_name}}, {{$additional_recipients[$rx->rx_recipient ?? '']->family_phone}} ({{$additional_recipients[$rx->rx_recipient ?? '']->family_type}}) @else{{'-'}}@endif</td>
                     </tr>
                     @endforeach
                     </tbody>
@@ -182,7 +182,7 @@
                                     @foreach($dispatcher_notes as $dispatcher_note)
                                                 <li class="feed-item">
                                                     <div class="feed-item-list">
-                                                        <span class="date">{{date('m.d.Y g:i A', strtotime($dispatcher_note->created))}}</span>
+                                                        <span class="date">{{date('m.d.Y g:i A', strtotime($dispatcher_note->created ?? ''))}}</span>
                                                         <span class="activity-text">{{$dispatcher_note->note}}</span>
                                                     </div>
                                                 </li>                                          
@@ -201,7 +201,7 @@
                                     @foreach($customer_notes as $customer_note)
                                         <li class="feed-item">
                                             <div class="feed-item-list">
-                                                <span class="date">{{date('m.d.Y g:i A', strtotime($customer_note->created))}}</span>
+                                                <span class="date">{{date('m.d.Y g:i A', strtotime($customer_note->created ?? ''))}}</span>
                                                 <span class="activity-text">{{$customer_note->note}}</span>
                                             </div>
                                         </li> 

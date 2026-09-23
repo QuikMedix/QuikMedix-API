@@ -108,7 +108,7 @@
                                     <h6 class="mb-1 font-size-16 mt-2">{{ $user->name }} {{ $user->last_name }}</h6>
                                     <p class="text-muted mb-0">{{ $user->phone }}</p>
                                     
-                                    <p class="text-muted mb-0">Created: {{date('m.d.Y g:i A', strtotime($user->created_at))}}</p>
+                                    <p class="text-muted mb-0">Created: {{date('m.d.Y g:i A', strtotime($user->created_at ?? ''))}}</p>
                                     <p class="text-muted mb-0">App: 
                                         @if($user->os==1)
                                             Android
@@ -125,10 +125,10 @@
                                 <i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i>                                    
                             </div>
                             <div class="col-xl-3 col-sm-6 bor text-center">     
-                                <h6 class="mb-1 font-size-16 mt-1">Copay debt: ${{number_format($duty,2)}}</h6> 
+                                <h6 class="mb-1 font-size-16 mt-1">Copay debt: ${{number_format($duty ?? 0,2)}}</h6> 
                                 @if(!empty($last_cash))
-                                <p class="text-muted mb-0">Last transfer: ${{number_format($last_cash->copay,2)}}</p>
-                                <p class="text-muted mb-3">Collected by admin #{{$last_cash->admin_id}} - {{date('m.d.Y g:i A', strtotime($last_cash->return_at))}}</p>
+                                <p class="text-muted mb-0">Last transfer: ${{number_format($last_cash->copay ?? 0,2)}}</p>
+                                <p class="text-muted mb-3">Collected by admin #{{$last_cash->admin_id}} - {{date('m.d.Y g:i A', strtotime($last_cash->return_at ?? ''))}}</p>
                                 @endif
                                 <a href="/drivers/{{$user->id}}/payouts"><button type="button" class="btn btn-outline-primary btn-sm waves-effect waves-light">History <i class="mdi mdi-history"></i></button></a>                              
                             </div>                            

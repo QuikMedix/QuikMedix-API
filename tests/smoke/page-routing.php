@@ -108,6 +108,9 @@ function requestPage(string $path, ?User $user, string $method = 'GET', array $d
 }
 
 $checks = 0;
+/**
+ * @param bool $condition
+ */
 function check($condition, string $message)
 {
     global $checks;

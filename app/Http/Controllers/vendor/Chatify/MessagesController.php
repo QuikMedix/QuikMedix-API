@@ -423,7 +423,7 @@ class MessagesController extends Controller
 
         // send the response
         return Response::json([
-            'deleted' => $delete ? 1 : 0,
+            'deleted' => 0, // deletion is disabled above
         ], 200);
     }
 
@@ -440,7 +440,7 @@ class MessagesController extends Controller
 
         // send the response
         return Response::json([
-            'deleted' => $delete ? 1 : 0,
+            'deleted' => 0, // deletion is disabled above
         ], 200);
     }
 

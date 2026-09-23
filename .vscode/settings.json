@@ -1,0 +1,4 @@
+{
+  // _ide_helper.php (make ide-helper) is ~1 MB; the 1 MB default makes Intelephense skip it.
+  "intelephense.files.maxSize": 3000000
+}

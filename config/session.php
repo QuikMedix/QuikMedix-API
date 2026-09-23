@@ -4,6 +4,9 @@ use Illuminate\Support\Str;
 
 return [
 
+    // Keep existing sessions readable across the framework upgrade.
+    'serialization' => 'php',
+
     /*
     |--------------------------------------------------------------------------
     | Default Session Driver

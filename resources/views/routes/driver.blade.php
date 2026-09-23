@@ -805,7 +805,7 @@ label {
                                                  <span class="type_id" ondblclick="window.open('/pharmacys/edit/{{$order->pharmacy_id}}','_blank')" data-latlng="{{$order->pharmacylocation}}" data-id="{{$order->pharmacy_id}}">Pharmacy #{{$order->pharmacy_id}}</span>
                                             </div>
                                             <div class="text-center date">
-                                                Need Delivery: <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date)){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date)){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span>
+                                                Need Delivery: <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date ?? '')){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date ?? '')){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date ?? ''))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span>
                                             </div>
                                         </div>
                                     @endforeach
@@ -833,7 +833,7 @@ label {
                                                 @endif
                                             </div>
                                             <div class="text-center date">
-                                                Need Delivery: <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date)){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date)){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span>
+                                                Need Delivery: <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date ?? '')){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date ?? '')){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date ?? ''))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span>
                                             </div>
                                         </div>
                                     @endforeach
@@ -1425,7 +1425,8 @@ label {
     var map;
     var _myPolygon;
     var markersArray = [];
-    var locationDriver = "{{ $locations->location }}";
+    var locationDriver = "{{ $locations->location ?? '' }}"; // empty until the driver shares a location
+    function mapCenter() { return locationDriver || locationPharmacy[0] || locationPatients[0] || '40.7128,-74.0060'; }
     var locationOffice = [@foreach($offices as $office)
     "{{ $office->location }}",
     @endforeach];
@@ -1578,7 +1579,7 @@ label {
     function initMap() {
         map = new google.maps.Map(document.getElementById("map"), {
             zoom: 11,
-            center: { lat: parseFloat(locationDriver.split(",")[0]), lng: parseFloat(locationDriver.split(",")[1]) },
+            center: { lat: parseFloat(mapCenter().split(",")[0]), lng: parseFloat(mapCenter().split(",")[1]) },
             legend: 'none'
         });
 
@@ -1613,7 +1614,7 @@ label {
                 $('.modal1').fadeIn(300);
             }
         });
-        addMarkerDriver(locationDriver,map);
+        if (locationDriver) addMarkerDriver(locationDriver,map);
         for(n=0;n<locationOffice.length;n++) {
             addMarkerOffice(locationOffice[n],locationOfficeID[n].toString(),"#000","#eca40d","office"+locationOfficeID[n].toString(),map);
         }

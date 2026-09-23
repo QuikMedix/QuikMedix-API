@@ -256,7 +256,7 @@
                                                 <tbody>
                                                     @foreach($user_actions as $user_action)
                                                     <tr>
-                                                        <td>{{date('m/d/Y g:i A', strtotime($user_action->created))}}</td>
+                                                        <td>{{date('m/d/Y g:i A', strtotime($user_action->created ?? ''))}}</td>
                                                         <td>{{$user_action->type}} @if(!empty($user_action->comment)) - ({{$user_action->comment}}) @endif</td>
                                                         <td>{{$user_action->action_user_id}}</td>
                                                     </tr>

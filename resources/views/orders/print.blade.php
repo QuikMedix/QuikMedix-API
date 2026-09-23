@@ -74,7 +74,7 @@
                                 Receiver'ce Signature: <img src="{{ $order->signature_photo }}" alt="Signature Photo" style="width:auto;height: 120px;margin: 0px;position: absolute; left: 175px; top: 30px;">
                             </div>
                             <div class="col-6" style="font-size: 16px;color: #000000;font-family: TimesNewRoman,Times New Roman,Times,Baskerville,Georgia,serif;margin-top: 20px;">
-                                Date/Time: <b>{{ date('m.d.Y g:i A', strtotime($order->finish)) }}</b> <br><br>
+                                Date/Time: <b>{{ date('m.d.Y g:i A', strtotime($order->finish ?? '')) }}</b> <br><br>
                                 Delivered By <b style="text-transform: capitalize;">{{ $order->driver_name }} {{ $order->driver_last_name }}</b>
                             </div>
                         </div>

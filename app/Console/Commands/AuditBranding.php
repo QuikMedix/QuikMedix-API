@@ -73,7 +73,7 @@ class AuditBranding extends Command
                 $this->line($table.': '.$count.' rows contain legacy text or URLs');
                 $failed = $failed || $count > 0;
             }
-        } catch (\Throwable $exception) {
+        } catch (\Throwable) {
             // Connection errors can include credentials or private hostnames.
             $this->error('Saved content could not be checked: database connection/query unavailable.');
             return 2;

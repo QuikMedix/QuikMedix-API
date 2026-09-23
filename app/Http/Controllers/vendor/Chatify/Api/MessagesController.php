@@ -311,7 +311,7 @@ class MessagesController extends Controller
         $records=$records->paginate($request->per_page ?? $this->perPage);
 
         foreach ($records->items() as $index => $record) {
-            $records[$index] += Chatify::getUserWithAvatar($record);
+            $records[$index] = Chatify::getUserWithAvatar($record);
         }
 
         return Response::json([

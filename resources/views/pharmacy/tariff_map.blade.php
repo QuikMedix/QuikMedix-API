@@ -65,14 +65,14 @@
 <script>
     var map;
     var tariff = {
-        "tariff_default":@if(!empty($pharmacy->tariff)){{number_format($pharmacy->tariff,2)}}@else{{number_format($pharmacy_plan->tariff,2)}}@endif,
-        "tariff_next_day":@if(!empty($pharmacy->tariff_next_day)){{number_format($pharmacy->tariff_next_day,2)}}@else{{number_format($pharmacy_plan->tariff_next_day,2)}}@endif,
-        "tariff_same_day":@if(!empty($pharmacy->tariff_same_day)){{number_format($pharmacy->tariff_same_day,2)}}@else{{number_format($pharmacy_plan->tariff_same_day,2)}}@endif,
-        "tariff_asap":@if(!empty($pharmacy->tariff_asap)){{number_format($pharmacy->tariff_asap,2)}}@else{{number_format($pharmacy_plan->tariff_asap,2)}}@endif,
-        "tariff_after_hours":@if(!empty($pharmacy->tariff_after_hours)){{number_format($pharmacy->tariff_after_hours,2)}}@else{{number_format($pharmacy_plan->tariff_after_hours,2)}}@endif,
-        "tariff_area2":@if(!empty($pharmacy->tariff_area2)){{number_format($pharmacy->tariff_area2,2)}}@else{{number_format($pharmacy_plan->tariff_area2,2)}}@endif,
-        "tariff_area3":@if(!empty($pharmacy->tariff_area3)){{number_format($pharmacy->tariff_area3,2)}}@else{{number_format($pharmacy_plan->tariff_area3,2)}}@endif,
-        "tariff_area_more":@if(!empty($pharmacy->tariff_area_more)){{number_format($pharmacy->tariff_area_more,2)}}@else{{number_format($pharmacy_plan->tariff_area_more,2)}}@endif
+        "tariff_default":@if(!empty($pharmacy->tariff)){{number_format($pharmacy->tariff ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff ?? 0,2)}}@endif,
+        "tariff_next_day":@if(!empty($pharmacy->tariff_next_day)){{number_format($pharmacy->tariff_next_day ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_next_day ?? 0,2)}}@endif,
+        "tariff_same_day":@if(!empty($pharmacy->tariff_same_day)){{number_format($pharmacy->tariff_same_day ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_same_day ?? 0,2)}}@endif,
+        "tariff_asap":@if(!empty($pharmacy->tariff_asap)){{number_format($pharmacy->tariff_asap ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_asap ?? 0,2)}}@endif,
+        "tariff_after_hours":@if(!empty($pharmacy->tariff_after_hours)){{number_format($pharmacy->tariff_after_hours ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_after_hours ?? 0,2)}}@endif,
+        "tariff_area2":@if(!empty($pharmacy->tariff_area2)){{number_format($pharmacy->tariff_area2 ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_area2 ?? 0,2)}}@endif,
+        "tariff_area3":@if(!empty($pharmacy->tariff_area3)){{number_format($pharmacy->tariff_area3 ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_area3 ?? 0,2)}}@endif,
+        "tariff_area_more":@if(!empty($pharmacy->tariff_area_more)){{number_format($pharmacy->tariff_area_more ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_area_more ?? 0,2)}}@endif
     };
     var time_delivery = @if(isset($_GET["time_delivery"])) '{{$_GET["time_delivery"]}}' @else '1' @endif;
     var locationPharmasy = "{{ $pharmacy->location }}".split(',');

@@ -1,7 +1,6 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use Twilio\Jwt\AccessToken;
 use Twilio\Jwt\Grants\ChatGrant;
@@ -10,10 +9,9 @@ class TokenController extends Controller
 {
     public function generate(Request $request, AccessToken $accessToken, ChatGrant $chatGrant)
     {
-        $appName = "QuikMedix";
         $identity = $request->input("identity");
 
-        $TWILIO_CHAT_SERVICE_SID = config('app.twilio_chatServiceSid');
+        $TWILIO_CHAT_SERVICE_SID = config()->string('app.twilio_chatServiceSid');
 
         $accessToken->setIdentity($identity);
 

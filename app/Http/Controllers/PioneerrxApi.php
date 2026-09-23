@@ -3,10 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\User;
-use Twilio\Rest\Client;
-use App\Notifications;
-use Illuminate\Support\Facades\Hash;
 use DB;
 
 class PioneerrxApi extends Controller
@@ -25,7 +21,7 @@ class PioneerrxApi extends Controller
         
     }
 
-    private function checkAuth($request) {
+    private function checkAuth(Request $request) {
         if($request->hasHeader('prx-api-key') && $request->hasHeader('prx-timestamp') && $request->hasHeader('prx-signature') && !empty($request->header('prx-api-key'))) {
             $apiKey = $request->header('prx-api-key');
             $timestamp = $request->header('prx-timestamp');

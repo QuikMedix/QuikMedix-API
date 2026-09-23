@@ -177,6 +177,12 @@
                                         @if($alert!='') 
                                             <div class="alert alert-danger" role="alert">{{ $alert }}</div>
                                         @endif
+                                        @if($errors->any())
+                                            <div class="alert alert-danger" role="alert">
+                                                <b>The order was not saved:</b>
+                                                <ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                                            </div>
+                                        @endif
 							<div class="row">
                                 <div class="col-5">
 										<h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
@@ -186,7 +192,7 @@
                                                     <select id="select-state" placeholder="Customer..." name="user">
                                                         <option value="">Customer...</option>
                                                         @foreach($users as $user)
-                                                            @if(isset($_GET["patient"]) && $_GET["patient"]==$user->id)
+                                                            @if((isset($_GET["patient"]) && $_GET["patient"]==$user->id) || old('user')==$user->id)
                                                             <option value="{{ $user->id }}" selected>{{ $user->name }} {{ $user->last_name }} - {{ $user->phone }}</option>
                                                             @else
                                                             <option value="{{ $user->id }}">{{ $user->name }} {{ $user->last_name }} - {{ $user->phone }}</option>
@@ -213,11 +219,11 @@
 											
 											<div class="col-sm-4" style="margin-bottom: 20px;">
                                                     <small>Count bags</small>
-                                                    <input type="number" min="1" max="10" name="count_bags" class="form-control" value="1">
+                                                    <input type="number" min="1" max="10" name="count_bags" class="form-control" value="{{ old('count_bags', 1) }}">
                                             </div>
 											<div class="col-sm-4" style="margin-bottom: 20px;">
                                                 <small>Co-pay ($)</small>
-                                                <input type="number" min="0" step="0.01" class="form-control" name="copay" placeholder="Co-pay">   
+                                                <input type="number" min="0" step="0.01" class="form-control" name="copay" placeholder="Co-pay" value="{{ old('copay') }}">   
                                                 <div style="padding: 5px 20px;" class="paidph">
                                                     <input class="form-check-input" type="checkbox" id="formCheck2" value="1" name="copay_paid_pharm">
                                                     <label class="form-check-label" for="formCheck2">Paid at the pharmacy</label>
@@ -237,7 +243,7 @@
                                                 <select name="delivery_method" placeholder="Delivery options" class="form-control" required>
                                                     <option value="">Delivery options...</option>
                                                     @foreach($delivery_methods as $delivery_method)
-                                                        <option value="{{ $delivery_method->id }}">{{ $delivery_method->name }}</option>
+                                                        <option value="{{ $delivery_method->id }}" @selected(old('delivery_method') == $delivery_method->id)>{{ $delivery_method->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -246,7 +252,7 @@
                                                 <select name="delivery_time" placeholder="Preferred delivery time" class="form-control" required>
                                                     <option value="">Preferred delivery time...</option>
                                                     @foreach($delivery_times as $delivery_time)
-                                                        <option value="{{ $delivery_time->id }}">{{ $delivery_time->name }}</option>
+                                                        <option value="{{ $delivery_time->id }}" @selected(old('delivery_time') == $delivery_time->id)>{{ $delivery_time->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -278,24 +284,27 @@
                                     <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Order Items</h5>
                                     <div class="row">                                            
                                         <div class="col-sm-12 rx-list">
+                                            @foreach(old('rx_id', ['']) as $i => $rx_value)
                                             <div class="rx-row col-sm-12 row rx-items">
                                                 <div class="col-sm-3 rx-field">
                                                     <small>RX#</small>
-                                                    <input type="text" maxlength="256" placeholder="" name="rx_id[]" class="form-control">
+                                                    <input type="text" maxlength="15" placeholder="" name="rx_id[]" class="form-control" value="{{ $rx_value }}" required>
                                                 </div>
                                                 <div class="col-sm-2 rx-field">
                                                     <small>Rf#</small>
-                                                    <input type="text" maxlength="20" placeholder="" name="rf_id[]" class="form-control">
+                                                    <input type="text" maxlength="4" pattern="\d{1,4}" title="Up to 4 digits" placeholder="" name="rf_id[]" class="form-control" value="{{ old('rf_id.'.$i) }}">
                                                 </div>
                                                 <div class="col-sm-2 rx-field">
                                                     <small>Qty</small>
-                                                    <input type="number" value="1" min="1" name="rx_count[]" class="form-control">
+                                                    <input type="number" value="{{ old('rx_count.'.$i, 1) }}" min="1" name="rx_count[]" class="form-control">
                                                 </div>
                                                 <div class="col-sm-3 rx-field">
                                                     <small>Date</small>
-                                                    <input type="date" placeholder="Date" name="rx_date[]" class="form-control">
-                                                </div>                                               
+                                                    <input type="date" placeholder="Date" name="rx_date[]" class="form-control" value="{{ old('rx_date.'.$i) }}">
+                                                </div>
+                                                @if($i > 0)<div class="rx-field" style="position: absolute;right: 3px;top: 0px;"><i class="fas fa-eye-slash remove-rx"></i></div>@endif
                                             </div>
+                                            @endforeach
                                         </div>                                            
                                         <div class="col-sm-12"  style="margin: 24px 0">
                                             <div id="add_rx2"> 	
@@ -305,12 +314,12 @@
                                     </div>
                                     <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
                                     <div class="col-sm-12" >
-                                        <textarea class="form-control" name="special_instructions" rows="3"></textarea>
+                                        <textarea class="form-control" name="special_instructions" rows="3" maxlength="1000">{{ old('special_instructions') }}</textarea>
                                     </div>
                                     <div class="col-sm-12" style="margin: 20px 0;text-align: center;">
-                                        <input type="radio" class="btn-check" value="1" name="type_driver" id="success-outlined" autocomplete="off" checked>
+                                        <input type="radio" class="btn-check" value="1" name="type_driver" id="success-outlined" autocomplete="off" @checked(old('type_driver', '1') == '1')>
                                         <label class="btn btn-outline-primary" for="success-outlined">QuikMedix driver</label>
-                                        <input type="radio" class="btn-check" value="2" name="type_driver" id="danger-outlined" autocomplete="off">
+                                        <input type="radio" class="btn-check" value="2" name="type_driver" id="danger-outlined" autocomplete="off" @checked(old('type_driver') == '2')>
                                         <label class="btn btn-outline-primary" for="danger-outlined">Pharmacy driver</label>
                                     </div>
                                     <div class="col-sm-12 drivers-list" style="display:none;">
@@ -493,7 +502,7 @@ $(document).on('keypress', '.select2-search__field', function () {
     }
 });
 $('#add_rx2').on('click',function() {
-    $('.rx-list').append('<div class="rx-row col-sm-12 row rx-items"><div class="col-sm-3 rx-field"><small>RX#</small><input type="text" maxlength="256" placeholder="" name="rx_id[]" class="form-control"></div><div class="col-sm-2 rx-field"><small>Rf#</small><input type="text" maxlength="20" placeholder="" name="rf_id[]" class="form-control"></div><div class="col-sm-2 rx-field"><small>Qty</small><input type="number" value="1" min="1" name="rx_count[]" class="form-control"></div><div class="col-sm-3 rx-field"><small>Date</small><input type="date" placeholder="Date" name="rx_date[]" class="form-control"></div><div class="rx-field"  style="position: absolute;right: 3px;top: 0px;"><i class="fas  fa-eye-slash remove-rx"></i></div></div>');
+    $('.rx-list').append('<div class="rx-row col-sm-12 row rx-items"><div class="col-sm-3 rx-field"><small>RX#</small><input type="text" maxlength="15" placeholder="" name="rx_id[]" class="form-control" required></div><div class="col-sm-2 rx-field"><small>Rf#</small><input type="text" maxlength="4" pattern="\\d{1,4}" title="Up to 4 digits" placeholder="" name="rf_id[]" class="form-control"></div><div class="col-sm-2 rx-field"><small>Qty</small><input type="number" value="1" min="1" name="rx_count[]" class="form-control"></div><div class="col-sm-3 rx-field"><small>Date</small><input type="date" placeholder="Date" name="rx_date[]" class="form-control"></div><div class="rx-field"  style="position: absolute;right: 3px;top: 0px;"><i class="fas  fa-eye-slash remove-rx"></i></div></div>');
 });
 $('body').on('click','.remove-rx', function() {
     $(this).parent().parent('.rx-row').remove();

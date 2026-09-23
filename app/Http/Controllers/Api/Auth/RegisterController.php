@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\RegisterFormRequest;
 use App\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use DB;
 
 class RegisterController extends Controller
@@ -18,7 +17,7 @@ class RegisterController extends Controller
         } else {
             $email = $request->input('email');
         }
-        $user = User::create([
+        User::create([
             'name' => $request->input('name'),
             'last_name' => $request->input('last_name'),
             'phone' => $request->input('phone'),

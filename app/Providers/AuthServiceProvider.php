@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Gate;
 use Laravel\Passport\Passport;
 
 class AuthServiceProvider extends ServiceProvider
@@ -22,10 +21,20 @@ class AuthServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function register(): void
+    {
+        parent::register();
+
+        // Preserve existing integer client identifiers and OAuth endpoints.
+        Passport::$clientUuids = false;
+        Passport::$registersJsonApiRoutes = true;
+        Passport::$deviceCodeGrantEnabled = false;
+        Passport::enablePasswordGrant();
+    }
+
+    public function boot(): void
     {
         $this->registerPolicies();
-        Passport::routes();
-        //
+        Passport::authorizationView('auth.oauth.authorize');
     }
 }

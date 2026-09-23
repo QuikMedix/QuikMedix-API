@@ -4,16 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\User;
 use App\Notifications;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Stripe\Stripe;
-use Carbon\Carbon;
 use Twilio\Rest\Client;
-use net\authorize\api\contract\v1 as AnetAPI;
-use net\authorize\api\controller as AnetController;
 use Illuminate\Support\Facades\Redis;
 
 
@@ -30,9 +25,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $user = DB::table('users')->where('id', Auth::user()->id)->first();
         unset($user->password);
@@ -50,9 +43,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $banner = DB::table('banners')->first();
         if(!empty($banner)) {
@@ -76,9 +67,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $validator = Validator::make($request->all(), [
             'image' => 'mimes:jpeg,jpg,png|max:5048',
@@ -192,7 +181,11 @@ class LexaAdminApi extends Controller
         }
     }
 
-    private static function action_log_user_check($request,$address,$user_id) {
+    /**
+     * @param string|null $address
+     * @param int|string $user_id
+     */
+    private static function action_log_user_check(Request $request,$address,$user_id) {
         $user = DB::table('users')->where('id', $user_id)->first();
         if($request->input('name')!=$user->name) {
             DB::table('action_log')->insert(['type'=>'change name','comment'=>'from '.$user->name.' to '.$request->input('name'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
@@ -231,22 +224,18 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'user') {
             $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();
-            $head_text = $wishs[array_rand($wishs)];
+            $head_text = $wishs ? $wishs[array_rand($wishs)] : '';
             $pharmacy = DB::table('pharmacys')->where("id",Auth::user()->pharmacy_id)->first();
             $last_order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->leftJoin('medicine', 'orders.id', '=', 'medicine.order_id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', DB::raw('sum(medicine.count) as count'), 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.user_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.user_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name')->orderBy('orders.id','desc')->first();
             if(!empty($last_order)) {
                 if($last_order->statuse_id==3) {
                     if($last_order->driver_id>0) {
-                        $driver = DB::table('users')->where('id',$last_order->driver_id)->first();
                         $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$last_order->driver_id)->first();
                     } else {
-                        $driver="";
                         $locations="";
                     }
                     if(!empty($locations)) {
@@ -301,14 +290,12 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'driver' || Auth::user()->role == 'user') {
             if(Auth::user()->role == 'user') {
                 $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.statuse_id', 'orders.copay', 'orders.actual', 'orders.pharmacy_id', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'),'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.location as pharmacylocation','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.user_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.driver_id', 'orders.created', 'orders.signature_photo', 'orders.actual', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name','users.last_name')->orderBy('orders.id','desc');
-            } else if (Auth::user()->role == 'driver') {
+            } else { // driver
                 $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.statuse_id', 'orders.copay', 'orders.actual', 'orders.pharmacy_id', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'),'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.location as pharmacylocation','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.driver_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.driver_id', 'orders.created', 'orders.signature_photo', 'orders.actual', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name','users.last_name')->orderBy('orders.id','desc');
             }
             if(!empty($_GET['statuse'])) {
@@ -321,10 +308,8 @@ class LexaAdminApi extends Controller
             foreach($orders as $key=>$order) {
                 if($order->statuse_id==3) {
                     if($order->driver_id>0) {
-                        $driver = DB::table('users')->where('id',$order->driver_id)->first();
                         $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$order->driver_id)->first();
                     } else {
-                        $driver="";
                         $locations="";
                     }
                     if(!empty($locations)) {
@@ -357,6 +342,9 @@ class LexaAdminApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function ordersShow($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -364,9 +352,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->leftJoin('medicine', 'orders.id', '=', 'medicine.order_id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.user_id', 'orders.delivery_address','orders.delivery_location', 'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.actual','orders.drop_off_photo', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', DB::raw('sum(medicine.count) as count'), 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge','orders.actual', 'orders.special_instructions', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.user_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name','orders.delivery_address','orders.delivery_location')->first();
         if(!empty($order)) {
@@ -420,16 +406,17 @@ class LexaAdminApi extends Controller
     }
 
 
-    public static function ordersShowHandler(Request $request,$order_id) {
+    /**
+     * @param int|string $order_id
+     */
+    public static function ordersShowHandler($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
                 'message' => 'You cannot open this page',
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $order = DB::table('orders')->where('orders.id',$order_id)->first();
         if(!empty($order)) {
@@ -456,9 +443,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             $routes_priority1 = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
@@ -563,6 +548,9 @@ class LexaAdminApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $route_id
+     */
     public static function routesShow($route_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -570,12 +558,16 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'user' || Auth::user()->role == 'driver') {
             $route = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id")->havingRaw('min(id) = ?', [$route_id])->orderBy("priority","asc")->first();
+            if(empty($route) || empty($route->id)) {
+                return response()->json([
+                    'message' => 'Route not found',
+                    'errors' => 'Not Found'
+                ], 404);
+            }
             $driver= DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',Auth::user()->id)->first();
             if($route->type=='pharmacy') {
                 $pharmacy = DB::table('pharmacys')->where('id',$route->type_id)->first();
@@ -640,9 +632,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'user' || Auth::user()->role == 'driver') {
             $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
@@ -670,9 +660,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'user' || Auth::user()->role == 'driver') {
             if(!empty($request->input('name')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
@@ -738,9 +726,9 @@ class LexaAdminApi extends Controller
                     $unid = uniqid("",true).rand(0,100);
                     $body = new \Square\Models\CreatePaymentRequest(
                         $card_token,
-                        $unid,
-                        $amount_money
+                        $unid
                     );
+                    $body->setAmountMoney($amount_money);
                     $body->setAutocomplete(true);
                     $body->setCustomerId($payment_account->profile_id);
                     $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
@@ -825,18 +813,11 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             $code = explode("_",$request->input('order_id'));
             $order_id = $code[0];
-            if(isset($code[1])) {
-                $bag = $code[1];
-            } else {
-                $bag = 1;
-            }
             if(empty($order_id)) {
                 return response()->json([
                     'message' => 'Something is wrong with this field!',
@@ -873,9 +854,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             $validator = Validator::make($request->all(), [
@@ -890,11 +869,6 @@ class LexaAdminApi extends Controller
             }
             $code = explode("_",$request->input('order_id'));
             $order_id = $code[0];
-            if(isset($code[1])) {
-                $bag = $code[1];
-            } else {
-                $bag = 1;
-            }
             if(empty($order_id)) {
                 return response()->json([
                     'message' => 'Something is wrong with this field!',
@@ -903,11 +877,15 @@ class LexaAdminApi extends Controller
             }
             $order=DB::table('orders')->where('id',$order_id)->where('driver_id',Auth::user()->id)->first();
             if(!empty($order)) {
-                if($request->hasFile('image')) {
-                    $file = $request->file('image');
-                    $file->move(public_path() . '/images/drop_off/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/drop_off/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                if(!$request->hasFile('image')) {
+                    return response()->json([
+                        'message' => 'Image is required',
+                        'errors' => 'Bad Request'
+                    ], 400);
                 }
+                $file = $request->file('image');
+                $file->move(public_path() . '/images/drop_off/',date('mdHis').$request->file('image')->getClientOriginalName());
+                $src = '/images/drop_off/'.date('mdHis').$request->file('image')->getClientOriginalName();
                 if(empty($order->signature_photo)) {
                     DB::table('orders')->where('id',$order_id)->update(['drop_off_photo'=>$src]);
                 } else {
@@ -973,15 +951,14 @@ class LexaAdminApi extends Controller
                     if($order->type_driver==1) {
                         if($order->delivery_time_id==1) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==2) {
+                        } elseif($order->delivery_time_id==2) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==3) {
+                        } elseif($order->delivery_time_id==3) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==4) {
+                        } elseif($order->delivery_time_id==4) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                        } else {
+                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                         }
                         if($order->fridge==1) {
                             $tariff_res+= floatval($tariff_fridge);
@@ -1052,9 +1029,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             $validator = Validator::make($request->all(), [
@@ -1070,11 +1045,6 @@ class LexaAdminApi extends Controller
             }
             $code = explode("_",$request->input('order_id'));
             $order_id = $code[0];
-            if(isset($code[1])) {
-                $bag = $code[1];
-            } else {
-                $bag = 1;
-            }
             if(empty($order_id)) {
                 return response()->json([
                     'message' => 'Something is wrong with this field!',
@@ -1083,11 +1053,15 @@ class LexaAdminApi extends Controller
             }
             $order=DB::table('orders')->where('id',$order_id)->where('driver_id',Auth::user()->id)->first();
             if(!empty($order)) {
-                if($request->hasFile('image')) {
-                    $file = $request->file('image');
-                    $file->move(public_path() . '/images/signature/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/signature/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                if(!$request->hasFile('image')) {
+                    return response()->json([
+                        'message' => 'Image is required',
+                        'errors' => 'Bad Request'
+                    ], 400);
                 }
+                $file = $request->file('image');
+                $file->move(public_path() . '/images/signature/',date('mdHis').$request->file('image')->getClientOriginalName());
+                $src = '/images/signature/'.date('mdHis').$request->file('image')->getClientOriginalName();
                 if($order->signature>0) {
                     if(empty($order->drop_off_photo)) {
                         DB::table('orders')->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>$request->input('signature_type')]);
@@ -1154,15 +1128,14 @@ class LexaAdminApi extends Controller
                         if($order->type_driver==1) {
                             if($order->delivery_time_id==1) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                            }
-                            if($order->delivery_time_id==2) {
+                            } elseif($order->delivery_time_id==2) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                            }
-                            if($order->delivery_time_id==3) {
+                            } elseif($order->delivery_time_id==3) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                            }
-                            if($order->delivery_time_id==4) {
+                            } elseif($order->delivery_time_id==4) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                            } else {
+                                throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                             }
                             if($order->fridge==1) {
                                 $tariff_res+= floatval($tariff_fridge);
@@ -1235,11 +1208,15 @@ class LexaAdminApi extends Controller
             $order_id=$request->input('order_id');
             $order=DB::table('orders')->where('id',$order_id)->first();
             if(!empty($order)) {
-                if($request->hasFile('image')) {
-                    $file = $request->file('image');
-                    $file->move(public_path() . '/images/signature/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/signature/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                if(!$request->hasFile('image')) {
+                    return response()->json([
+                        'message' => 'Image is required',
+                        'errors' => 'Bad Request'
+                    ], 400);
                 }
+                $file = $request->file('image');
+                $file->move(public_path() . '/images/signature/',date('mdHis').$request->file('image')->getClientOriginalName());
+                $src = '/images/signature/'.date('mdHis').$request->file('image')->getClientOriginalName();
                 DB::table('orders')->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>'Patient']);
                 return response()->json([
                     'message' => 'Signature was saved'
@@ -1265,9 +1242,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             $location = $request->input('location');
@@ -1296,9 +1271,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'driver') {
             $token=bin2hex(random_bytes(24));
@@ -1321,9 +1294,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $device_token = $request->input('device_token');
         if(empty($device_token)) {
@@ -1339,7 +1310,7 @@ class LexaAdminApi extends Controller
                 foreach ($bindings as $record) {
                     $twilio->notify->v1->services(config('app.twilio_notifyDriverServiceSid'))->bindings($record->sid)->delete();
                 }
-                $binding = $twilio->notify->v1->services(config('app.twilio_notifyDriverServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
+                $twilio->notify->v1->services(config('app.twilio_notifyDriverServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
                 // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             } else {
@@ -1347,7 +1318,7 @@ class LexaAdminApi extends Controller
                 foreach ($bindings as $record) {
                     $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings($record->sid)->delete();
                 }
-                $binding = $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
+                $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
                 // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             }
@@ -1357,7 +1328,7 @@ class LexaAdminApi extends Controller
                 foreach ($bindings as $record) {
                     $twilio->notify->v1->services(config('app.twilio_notifyDriverIOSServiceSid'))->bindings($record->sid)->delete();
                 }
-                $binding = $twilio->notify->v1->services(config('app.twilio_notifyDriverIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
+                $twilio->notify->v1->services(config('app.twilio_notifyDriverIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
                 // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             } else {
@@ -1365,7 +1336,7 @@ class LexaAdminApi extends Controller
                 foreach ($bindings as $record) {
                     $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings($record->sid)->delete();
                 }
-                $binding = $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
+                $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
                 DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
                 // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
             }
@@ -1382,9 +1353,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         return response()->json([
             'work_now' => Auth::user()->work_now
@@ -1398,9 +1367,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         DB::table('users')->where('id',Auth::user()->id)->update(['work_now'=>1]);
         return response()->json([
@@ -1415,9 +1382,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         DB::table('users')->where('id',Auth::user()->id)->update(['work_now'=>0]);
         return response()->json([
@@ -1425,6 +1390,9 @@ class LexaAdminApi extends Controller
         ], 200);
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public static function testNotification($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -1432,9 +1400,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $bing = Notifications::send_push($user_id,"QuikMedix","Test Notification");
         return response()->json([
@@ -1449,9 +1415,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $count_noread=Auth::user()->get_unread_mess();
         return response()->json([
@@ -1466,14 +1430,11 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $chats_db = DB::table('chats')->orWhere('user1',Auth::user()->id)->orWhere('user2',Auth::user()->id)->orderBy('last_message_date','desc')->get();
         $chats=array();
         foreach ($chats_db as $chat) {
-            $chat_name=$chat->name;
             if($chat->user1==Auth::user()->id) {
                 $user_id=$chat->user2;
                 $count_noread=$chat->unread_user1;
@@ -1497,6 +1458,9 @@ class LexaAdminApi extends Controller
         ], 200);
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public function chatUser($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -1504,9 +1468,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $user = DB::table('users')->where('id', $user_id)->first();
         $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
@@ -1582,9 +1544,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             if(empty($request->input('from')) && empty($request->input('to'))) {
@@ -1661,14 +1621,12 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             DB::table('users')->where('id', Auth::user()->id)->update(['route_status'=>'started']);
             $routes = DB::table('routes_priority')->where('driver_id', Auth::user()->id)->orderBy("priority","asc")->get();
-            foreach($routes as $key => $value) {
+            foreach($routes as $value) {
                 if($value->type=='patient') {
                     //Notifications::send_push(DB::table('orders')->where('id', $value->order_id)->first()->user_id,"QuikMedix","Your orders are out for delivery today");
                 }
@@ -1686,9 +1644,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             if(!empty($request->input('order_id')) && !empty($request->input('status_id'))) {
@@ -1758,15 +1714,14 @@ class LexaAdminApi extends Controller
                     if($order->type_driver==1) {
                         if($order->delivery_time_id==1) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==2) {
+                        } elseif($order->delivery_time_id==2) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==3) {
+                        } elseif($order->delivery_time_id==3) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==4) {
+                        } elseif($order->delivery_time_id==4) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                        } else {
+                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                         }
                         if($order->fridge==1) {
                             $tariff_res+= floatval($tariff_fridge);
@@ -1848,9 +1803,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             if(!empty($request->input('order_id'))) {
@@ -1917,9 +1870,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             if(!empty($request->input('order_id')) && !empty($request->input('code'))) {
@@ -1987,9 +1938,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $count_noread=Auth::user()->get_unread_mess();
         return response()->json([
@@ -2004,9 +1953,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
             $amount = round(DB::table('payouts_driver')->where('driver_id', Auth::user()->id)->where('withdraw',0)->sum('amount'),1);
@@ -2021,6 +1968,9 @@ class LexaAdminApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function payCopay($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -2028,9 +1978,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
@@ -2048,9 +1996,9 @@ class LexaAdminApi extends Controller
                     $unid = uniqid("",true).rand(0,100);
                     $body = new \Square\Models\CreatePaymentRequest(
                         $payment_account->payment_profile_id,
-                        $unid,
-                        $amount_money
+                        $unid
                     );
+                    $body->setAmountMoney($amount_money);
                     $body->setAutocomplete(true);
                     $body->setCustomerId($payment_account->profile_id);
                     $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
@@ -2098,6 +2046,9 @@ class LexaAdminApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function PayedCashCopay($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -2105,9 +2056,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
@@ -2159,6 +2108,9 @@ class LexaAdminApi extends Controller
         }
     }
     
+    /**
+     * @param int|string $order_id
+     */
     public static function notPayedCashCopay($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -2166,9 +2118,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
@@ -2198,9 +2148,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $family_members = DB::table('family_members')->where('user_id', Auth::user()->id)->get();
         return response()->json([
@@ -2215,9 +2163,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $validator = Validator::make($request->all(), [
             'family_type' => 'required|max:155',
@@ -2252,9 +2198,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $family_member = DB::table('family_members')->where('id',$request->input('family_member_id'))->first();
         if(!empty($family_member)) {
@@ -2277,6 +2221,9 @@ class LexaAdminApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function customer_notesAddHandler($order_id, Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -2284,9 +2231,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $order = DB::table('orders')->where('orders.id',$order_id)->first();
         if((Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
@@ -2311,6 +2256,9 @@ class LexaAdminApi extends Controller
         }   
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function ratingHandler($order_id, Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return response()->json([
@@ -2318,9 +2266,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $order = DB::table('orders')->where('orders.id',$order_id)->first();
         if((Auth::user()->role == 'user' && Auth::user()->id==$order->user_id) && $order->statuse_id==4 && empty($order->rating)) {
@@ -2359,9 +2305,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         $delivery_times = DB::table('delivery_times')->get();
         return response()->json([
@@ -2376,9 +2320,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         if(Auth::user()->role == 'admin' || Auth::user()->role == 'user') {
             if(!empty($request->input('order_id')) && !empty($request->input('time_id'))) {
@@ -2415,15 +2357,13 @@ class LexaAdminApi extends Controller
                 'errors' => 'Forbidden'
             ], 403);
         } else {
-            $token = Auth::user()->token();
-            $token->expires_at = Carbon::now()->addDays(7);
-            $token->save();
+            Auth::user()->extendTokenExpiry();
         }
         //$news = [["created"=>"2022-01-07 11:00:05","type"=>"news","link"=>"","title"=>"News from QuikMedix","text"=>"Welcome to our updated app"]];
         if(!empty(Auth::user()->pharmacy_id)) {
             $news = DB::table('news_patient')->where("pharmacy_id",Auth::user()->pharmacy_id)->orderBy('id','desc')->get();
             foreach($news as $key=>$new) {
-                $news[$key]->created = date('m/d/Y g:i A', strtotime($new->created));
+                $news[$key]->created = date('m/d/Y g:i A', strtotime($new->created ?? ''));
             }
         } else {
             $news = NULL;
@@ -2433,6 +2373,10 @@ class LexaAdminApi extends Controller
         ], 200);
     }
 
+    /**
+     * @param int|string $driver_id
+     * @param \stdClass $next_route
+     */
     static function next_patient_push($driver_id,$next_route){
         $distance=0;
         $duration=0;
@@ -2520,9 +2464,8 @@ class LexaAdminApi extends Controller
             ),
         )); 
         $response = json_decode(curl_exec($curl));
-        curl_close($curl);
         if(isset($response->access_token) && isset($response->expires_in)) {
-            Redis::set('here_access_token',$response->access_token, 'EX', intval($response->expires_in));
+            Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
             return $response->access_token;
         } else {
             dd('Error when update access token HERE!');

@@ -117,7 +117,7 @@
                                                 <h6 class="mb-1 font-size-16 mt-2">{{ $user->name }} {{ $user->last_name }}</h6>
                                                 <p class="text-muted mb-0">{{ $user->phone }}</p>
                                                 
-                                                <p class="text-muted mb-0">Created: {{date('m.d.Y g:i A', strtotime($user->created_at))}}</p>
+                                                <p class="text-muted mb-0">Created: {{date('m.d.Y g:i A', strtotime($user->created_at ?? ''))}}</p>
                                                 <p class="text-muted mb-0">App: 
                                                     @if($user->os==1)
                                                         Android
@@ -141,7 +141,7 @@
                                         </div>
                                         <div class="col-xl-3 col-sm-6 text-center">
                                             <h6 class="mb-1 font-size-16 mt-2">Total orders: {{$orders_stat->count}}</h6>
-                                            <h6 class="mb-3 font-size-16 mt-2">Co-pay: ${{number_format($orders_stat->copay,2)}}</h6>
+                                            <h6 class="mb-3 font-size-16 mt-2">Co-pay: ${{number_format($orders_stat->copay ?? 0,2)}}</h6>
                                             <a href="/orders/{{$user->pharmacy_id}}/add?patient={{$user->id}}"><button type="button" class="btn btn-outline-primary btn-sm waves-effect waves-light">New Order <i class="mdi mdi-car"></i></button></a>
                                             <a href="/orders/{{$user->pharmacy_id}}?search={{$user->name}} {{$user->last_name}}">
                                                 <button type="button" class="btn btn-outline-primary btn-sm waves-effect waves-light">History <i class="mdi mdi-history"></i></button>
@@ -313,7 +313,7 @@
                                                                 @foreach($orders as $order)
                                                                 <tr>
                                                                     <th scope="row">{{$order->id}}</th>
-                                                                    <td>{{date('m/d/Y g:i A', strtotime($order->created))}}</td>
+                                                                    <td>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}</td>
                                                                     <td><span style="font-size: 11px;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
                                                                     <td>{{$order->drivername}} {{$order->driverlast_name}}</td>
                                                                     <td><a href="/orders/{{$order->pharmacy_id}}/show/{{$order->id}}"><button type="button" class="btn btn-outline-secondary waves-effect">View order</button></a></td>                                                    
@@ -336,7 +336,7 @@
                                                             <tbody>
                                                                 @foreach($user_actions as $user_action)
                                                                 <tr>
-                                                                    <td>{{date('m/d/Y g:i A', strtotime($user_action->created))}}</td>
+                                                                    <td>{{date('m/d/Y g:i A', strtotime($user_action->created ?? ''))}}</td>
                                                                     <td>{{$user_action->type}} @if(!empty($user_action->comment)) - ({{$user_action->comment}}) @endif</td>
                                                                     <td>{{$user_action->action_user_id}}</td>
                                                                 </tr>

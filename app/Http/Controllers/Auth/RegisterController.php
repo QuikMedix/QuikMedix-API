@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\GeocodeAddress;
 use App\Http\Controllers\Controller;
 use App\Providers\RouteServiceProvider;
 use App\User;
-use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -51,18 +51,25 @@ class RegisterController extends Controller
      */
     protected function validator(array $data)
     {
+        // Limits mirror the columns: users.phone is varchar(20), pharmacys.phone matches it.
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
+            'email' => ['required', 'string', 'email', 'max:191', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
             'pharmacyName' => ['required', 'string', 'max:255'],
-            'pharmacyPhone' => ['required', 'string', 'max:255'],
-            'pharmacyLogo' => ['mimes:jpeg,jpg,png', 'max:6000'],
+            'pharmacyPhone' => ['required', 'string', 'max:20'],
+            'pharmacyLogo' => ['nullable', 'file', 'mimes:jpeg,jpg,png', 'max:6000'],
             'pharmacyEmail' => ['required', 'string', 'email', 'max:255'],
-            'pharmacyWebsite' => ['required', 'string', 'max:255'],
+            'pharmacyWebsite' => ['nullable', 'string', 'max:255'],
             'pharmacyAddress' => ['required', 'string', 'max:255'],
+        ], [
+            'phone.unique' => 'An account with this phone number already exists. Try logging in instead.',
+            'email.unique' => 'An account with this e-mail already exists. Try logging in instead.',
+            'password.confirmed' => 'The passwords do not match.',
+            'pharmacyLogo.mimes' => 'The logo must be a JPG or PNG image.',
+            'pharmacyLogo.max' => 'The logo must be smaller than 6 MB.',
         ]);
     }
 
@@ -74,6 +81,14 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+        // Resolve the address before writing anything; a failure is shown on the address field.
+        $location = app(GeocodeAddress::class)->handle($data['pharmacyAddress'], 'pharmacyAddress');
+
+        return DB::transaction(fn () => $this->createAdminWithPharmacy($data, $location));
+    }
+
+    private function createAdminWithPharmacy(array $data, string $location): User
+    {
         $user = User::create([
             'name' => $data['name'],
             'last_name' => $data['last_name'],
@@ -83,10 +98,6 @@ class RegisterController extends Controller
             'role' => "medic",
             'isactive' => 1
         ]);
-        $user->isactive = 1;
-        $user->save();
-        $data0 = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($data['pharmacyAddress'])."&key=".config('app.googlemaps_apikey')));
-        $location = $data0->results[0]->geometry->location->lat.','.$data0->results[0]->geometry->location->lng;
         if(isset($data['ref_id'])) {
             if(!empty(User::find(base64_decode($data['ref_id'])))) {
                 $ref_id = base64_decode($data['ref_id']);
@@ -105,7 +116,7 @@ class RegisterController extends Controller
         } else {
             $src = NULL;
         }
-        $pharmacy_id = DB::table('pharmacys')->insertGetId(['name' => $data['pharmacyName'],'email' => $data['pharmacyEmail'],'phone' => $data['pharmacyPhone'],'address' => $data['pharmacyAddress'],'location' => $location,'logo'=>$src,'site'=>$data['pharmacyWebsite'],'admin_id' => $user->id, 'ref_id' => $ref_id,'ip'=>\Request::ip()]);
+        $pharmacy_id = DB::table('pharmacys')->insertGetId(['name' => $data['pharmacyName'],'email' => $data['pharmacyEmail'],'phone' => $data['pharmacyPhone'],'address' => $data['pharmacyAddress'],'location' => $location,'logo'=>$src,'site'=>$data['pharmacyWebsite'] ?? null,'admin_id' => $user->id, 'ref_id' => $ref_id,'ip'=>\Request::ip()]);
         $user->pharmacy_id = $pharmacy_id;
         $user->save();
         return $user;

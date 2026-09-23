@@ -56,10 +56,10 @@
                                 @foreach ($orders as $key=>$order)
                                     <tr>
                                         <td><a href="/orders/0/show/{{$order->order_id}}">{{$order->order_id}}</a></td>
-                                        <td>{{date('m/d/Y g:i A', strtotime($order->created))}}</td>
+                                        <td>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}</td>
                                         <td>{{ $user->name }} {{ $user->last_name }}</td>
                                         <td>{{$order->copay}} $</td>
-                                        <td>@if($order->return){{$order->copay}}@else{{'0'}}@endif $ ({{date('m/d/Y g:i A', strtotime($order->return_at))}})</td>
+                                        <td>@if($order->return){{$order->copay}}@else{{'0'}}@endif $ ({{date('m/d/Y g:i A', strtotime($order->return_at ?? ''))}})</td>
                                         <td>Admin #{{$order->admin_id}}</td>
                                     </tr>
                                 @endforeach

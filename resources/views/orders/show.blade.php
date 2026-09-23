@@ -143,10 +143,10 @@ audio {
                                         </form>
                                         @endif
                                     </div>
-									<b>Created:</b> {{date('m/d/Y g:i A', strtotime($order->created))}}<br>
-									<b>Need Delivery:</b> <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date)){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date)){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span><br>
+									<b>Created:</b> {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}<br>
+									<b>Need Delivery:</b> <span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date ?? '')){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date ?? '')){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date ?? ''))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span><br>
 									 @if($order->statuse_id==4)
-                                    <b>Delivered:</b> {{date('m/d/Y g:i A', strtotime($order->finish))}}<br>
+                                    <b>Delivered:</b> {{date('m/d/Y g:i A', strtotime($order->finish ?? ''))}}<br>
                                     @if(!empty($order->delivery_address))
                                     <b>Delivered Address:</b> {{$order->delivery_address}} <br>
                                     <b>Delivered Location:</b> {{$order->delivery_location}} <br>
@@ -371,7 +371,7 @@ audio {
                                 </div>
 
                                 <div class="col-6" style="font-size: 16px;color: #000000;font-family: TimesNewRoman,Times New Roman,Times,Baskerville,Georgia,serif;margin-top: 20px;">
-                                Date/Time: <b>{{date('m.d.Y g:i A', strtotime($order->finish))}}</b><br><br>
+                                Date/Time: <b>{{date('m.d.Y g:i A', strtotime($order->finish ?? ''))}}</b><br><br>
                                 Delivered By <b style="text-transform: capitalize;">@if(!empty($driver)){{ $driver->name }} {{ $driver->last_name }}@endif</b>
                                 </div>
                             </div>
@@ -442,7 +442,7 @@ audio {
                                 <p style="position:absolute;top:1052px;left:43px;white-space:nowrap" class="ft19">&#160;</p>
                                 <p style="position:absolute;top:1073px;left:43px;white-space:nowrap" class="ft14">&#160;&#160;_______ @if(!empty($order->signature_photo))<img src="{{$order->signature_photo}}" alt="Signature Photo" style="width:auto;height: 50px;left:83px;top:-20px;position:absolute;">@endif ______________________________&#160;</p>
                                 <p style="position:absolute;top:1073px;left:421px;white-space:nowrap" class="ft14">&#160;</p>
-                                <p style="position:absolute;top:1073px;left:475px;white-space:nowrap" class="ft14">Date:&#160;{{date('m/d/Y g:i A', strtotime($order->finish))}}</p>
+                                <p style="position:absolute;top:1073px;left:475px;white-space:nowrap" class="ft14">Date:&#160;{{date('m/d/Y g:i A', strtotime($order->finish ?? ''))}}</p>
                                 <p style="position:absolute;top:1091px;left:43px;white-space:nowrap" class="ft14">&#160; &#160;Signature of patient or&#160;representative authorized by law.&#160;&#160;</p>
                                 <p style="position:absolute;top:1091px;left:421px;white-space:nowrap" class="ft14">&#160;</p>
                                 <p style="position:absolute;top:1119px;left:43px;white-space:nowrap" class="ft110">&#160;</p>
@@ -555,7 +555,7 @@ audio {
                                                 </td>	
                                             <td style="text-align: center">
                                                                         
-                                                <p align="center" style="color: #000000;line-height: 13px;font-size: 14px; font-weight: 700; font-family: Arial;">@if(!empty($order->finish)){{date('m.d.Y', strtotime($order->finish))}}@endif<br>
+                                                <p align="center" style="color: #000000;line-height: 13px;font-size: 14px; font-weight: 700; font-family: Arial;">@if(!empty($order->finish)){{date('m.d.Y', strtotime($order->finish ?? ''))}}@endif<br>
                                                 <hr style="padding: 0 20px;margin: 0px 0 2px 0;"> 
                                                 <span style="font-size: 11px;">(Date of signature)</span></p>
                                             </td>
@@ -703,7 +703,7 @@ audio {
                                 </div>
 
                                 <div class="col-6" style="font-size: 16px;color: #000000;font-family: TimesNewRoman,Times New Roman,Times,Baskerville,Georgia,serif;margin-top: 20px;">
-                                Date/Time: <b>{{date('m.d.Y g:i A', strtotime($order->finish))}}</b><br><br>
+                                Date/Time: <b>{{date('m.d.Y g:i A', strtotime($order->finish ?? ''))}}</b><br><br>
                                 Delivered By <b style="text-transform: capitalize;">@if(!empty($driver)){{ $driver->name }} {{ $driver->last_name }}@endif</b>
                                 </div>
                                 
@@ -796,7 +796,7 @@ audio {
                                 </div>
 
                                 <div class="col-6" style="font-size: 16px;color: #000000;font-family: TimesNewRoman,Times New Roman,Times,Baskerville,Georgia,serif;margin-top: 20px;">
-                                Date/Time: <b>{{date('m.d.Y g:i A', strtotime($order->finish))}}</b><br><br>
+                                Date/Time: <b>{{date('m.d.Y g:i A', strtotime($order->finish ?? ''))}}</b><br><br>
                                 Delivered By <b style="text-transform: capitalize;">{{ $driver->name }} {{ $driver->last_name }}</b>
                                 </div>
                                 
@@ -876,7 +876,7 @@ audio {
 <p style="position:absolute;top:1052px;left:43px;white-space:nowrap" class="ft19">&#160;</p>
 <p style="position:absolute;top:1073px;left:43px;white-space:nowrap" class="ft14">&#160;&#160;_______ @if(!empty($order->signature_photo))<img src="{{$order->signature_photo}}" alt="Signature Photo" style="width:auto;height: 50px;left:83px;top:-20px;position:absolute;">@endif ______________________________&#160;</p>
 <p style="position:absolute;top:1073px;left:421px;white-space:nowrap" class="ft14">&#160;</p>
-<p style="position:absolute;top:1073px;left:475px;white-space:nowrap" class="ft14">Date:&#160;{{date('m/d/Y g:i A', strtotime($order->finish))}}</p>
+<p style="position:absolute;top:1073px;left:475px;white-space:nowrap" class="ft14">Date:&#160;{{date('m/d/Y g:i A', strtotime($order->finish ?? ''))}}</p>
 <p style="position:absolute;top:1091px;left:43px;white-space:nowrap" class="ft14">&#160; &#160;Signature of patient or&#160;representative authorized by law.&#160;&#160;</p>
 <p style="position:absolute;top:1091px;left:421px;white-space:nowrap" class="ft14">&#160;</p>
 <p style="position:absolute;top:1119px;left:43px;white-space:nowrap" class="ft110">&#160;</p>
@@ -998,7 +998,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 							</td>	
 						 <td style="text-align: center">
 							 						 
-							 <p align="center" style="color: #000000;line-height: 13px;font-size: 14px; font-weight: 700; font-family: Arial;">@if(!empty($order->finish)){{date('m.d.Y', strtotime($order->finish))}}@endif<br>
+							 <p align="center" style="color: #000000;line-height: 13px;font-size: 14px; font-weight: 700; font-family: Arial;">@if(!empty($order->finish)){{date('m.d.Y', strtotime($order->finish ?? ''))}}@endif<br>
 							 <hr style="padding: 0 20px;margin: -13px 0 2px 0;"> 
 							<span style="font-size: 11px;">(Date of signature)</span></p>
 						  </td>
@@ -1052,7 +1052,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 							</td>	
 						 <td style="text-align: center">
 							 						 
-							 <p align="center" style="color: #000000;line-height: 14px;font-size: 14px; font-weight: 700; font-family: Arial;">@if(!empty($order->finish)){{date('m.d.Y', strtotime($order->finish))}}@endif<br>
+							 <p align="center" style="color: #000000;line-height: 14px;font-size: 14px; font-weight: 700; font-family: Arial;">@if(!empty($order->finish)){{date('m.d.Y', strtotime($order->finish ?? ''))}}@endif<br>
 							 <hr style="padding: 0 20px;margin: -13px 0 2px 0;"> 
 							<span style="font-size: 11px;">(Date of signature)</span></p>
 						  </td>
@@ -1564,7 +1564,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">
 								DATE </p>
 						</td>
-						<td style="width:20%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{date('m.d.Y', strtotime($order->finish))}} </td>
+						<td style="width:20%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{date('m.d.Y', strtotime($order->finish ?? ''))}} </td>
 					</tr>
 				</tbody>
 			</table>
@@ -1763,7 +1763,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 				<tbody>
                     <tr>
 						<td style="width:45%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">&nbsp;</td>
-                        <td style="width:15%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 16px;">/ &nbsp;&nbsp; {{date('m.d.Y', strtotime($order->finish))}}</td>
+                        <td style="width:15%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 16px;">/ &nbsp;&nbsp; {{date('m.d.Y', strtotime($order->finish ?? ''))}}</td>
                         <td style="width:2%; border: none;text-transform: uppercase;font-size: 22px;"> </td>
                         <td style="width:38%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">&nbsp;</td>
 					</tr>
@@ -2022,7 +2022,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                                             <tbody>
                                                 @foreach($orders_transitions as $orders_transition)
                                                 <tr>
-                                                    <td>{{date('m/d/Y g:i A', strtotime($orders_transition->created))}}</td>
+                                                    <td>{{date('m/d/Y g:i A', strtotime($orders_transition->created ?? ''))}}</td>
                                                     @if(!empty($orders_transition->pharmacy_id))
                                                     <td>The package was taken/given the pharmacy (Bag {{$orders_transition->bag}})</td>
                                                     @endif
@@ -2072,7 +2072,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 								@foreach($dispatcher_notes as $dispatcher_note)
                                             <li class="feed-item">
                                                 <div class="feed-item-list">
-                                                    <span class="date">{{date('m.d.Y g:i A', strtotime($dispatcher_note->created))}}</span>
+                                                    <span class="date">{{date('m.d.Y g:i A', strtotime($dispatcher_note->created ?? ''))}}</span>
                                                     <span class="activity-text">{{$dispatcher_note->note}}</span>
                                                 </div>
                                             </li>                                          
@@ -2091,7 +2091,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                                 @foreach($customer_notes as $customer_note)
                                     <li class="feed-item">
                                         <div class="feed-item-list">
-                                          	<span class="date">{{date('m.d.Y g:i A', strtotime($customer_note->created))}}</span>
+                                          	<span class="date">{{date('m.d.Y g:i A', strtotime($customer_note->created ?? ''))}}</span>
                                        		<span class="activity-text">{{$customer_note->note}}</span>
                                       	</div>
                                     </li> 
@@ -2127,8 +2127,8 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                                     <td>@if(count(explode('-',$rx->rx_id))>1){{explode('-',$rx->rx_id)[1]}}@endif</td>
                                     <td>{{$rx->rx_count}}</td>
                                     <td>{{$rx->rx_date}}</td>
-                                    <td>@if(isset($additional_recipients[$rx->rx_recipient])) {{$additional_recipients[$rx->rx_recipient]->family_name}}, {{$additional_recipients[$rx->rx_recipient]->family_phone}} ({{$additional_recipients[$rx->rx_recipient]->family_type}}) @else{{'-'}}@endif</td>
-                                    <td>@if(isset($additional_recipients[$rx->rx_recipient]) && $order->statuse_id==4) <button class="btn btn-dark waves-effect waves-light printbt facility" onclick="PrintElem('#finish-print{{$rx->rx_recipient}}')">Delivery Slip <i class="mdi mdi-printer-check"></i></button>@else{{'-'}}@endif</td>
+                                    <td>@if(isset($additional_recipients[$rx->rx_recipient ?? ''])) {{$additional_recipients[$rx->rx_recipient ?? '']->family_name}}, {{$additional_recipients[$rx->rx_recipient ?? '']->family_phone}} ({{$additional_recipients[$rx->rx_recipient ?? '']->family_type}}) @else{{'-'}}@endif</td>
+                                    <td>@if(isset($additional_recipients[$rx->rx_recipient ?? '']) && $order->statuse_id==4) <button class="btn btn-dark waves-effect waves-light printbt facility" onclick="PrintElem('#finish-print{{$rx->rx_recipient}}')">Delivery Slip <i class="mdi mdi-printer-check"></i></button>@else{{'-'}}@endif</td>
                                 </tr>
                                 @endforeach
                                 </tbody>
@@ -2214,9 +2214,9 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     "{{ $locationDriver->location }}",
     @endforeach];
     var locationDriversID = [@foreach($locationDrivers as $locationDriver)
-    "{{ date('g:i A', strtotime($locationDriver->created)) }}",
+    "{{ date('g:i A', strtotime($locationDriver->created ?? '')) }}",
     @endforeach];
-    var deliverTime = "{{date('gi', strtotime($order->finish))}}";
+    var deliverTime = "{{date('gi', strtotime($order->finish ?? ''))}}";
     var Driver = "{{ $locations->user_id }}";
     @endif
     function addMarker(latlng, text, map) {
@@ -2243,7 +2243,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         var map2 = L.map(document.getElementById("map-driver")).setView(UserLatlng, 20);
         L.tileLayer(hereTileUrl).addTo(map2);
         var marker2 = L.marker(UserLatlng,{
-            icon: customIconUser('{{$order->id}}\n({{date('g:i A', strtotime($order->finish))}})'),
+            icon: customIconUser('{{$order->id}}\n({{date('g:i A', strtotime($order->finish ?? ''))}})'),
         }).addTo(map2);
         for(n=0;n<locationDrivers.length;n++) {
             addMarker(locationDrivers[n].split(','),locationDriversID[n].toString(),map2);

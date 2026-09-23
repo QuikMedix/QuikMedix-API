@@ -1,17 +1,16 @@
 # syntax=docker/dockerfile:1
 
-# This application uses Laravel Mix 5 and a v1 npm lockfile. Node 16 is used
-# only to compile frontend assets and is not included in the runtime image.
-FROM node:16-bullseye-slim AS frontend
+# Node is only used to compile Vite assets, not in the PHP runtime image.
+FROM node:24-bookworm-slim AS frontend
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
-COPY webpack.mix.js ./
+COPY vite.config.mjs ./
 COPY resources ./resources
-RUN npm run production
+RUN npm run build
 
 
 # Start from a Laravel-oriented PHP-FPM + nginx image. It listens on 8080 and
@@ -67,4 +66,3 @@ RUN mkdir -p \
 USER www-data
 
 EXPOSE 8080
-

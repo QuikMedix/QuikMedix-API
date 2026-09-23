@@ -1,36 +1,29 @@
-.PHONY: run check-php recover-laravel composer-lock prepare-storage
+.PHONY: run serve check-php check-dev composer-lock prepare-storage ide-helper
 
 HOST ?= 127.0.0.1
 PORT ?= 8000
+DEV_FLAGS ?=
 
 check-php:
 	@php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION >= 4 ? 0 : 1);' \
 		|| { echo "PHP >=8.4 and <9.0 is required. Current version: $$(php -r 'echo PHP_VERSION;')"; exit 1; }
 
-# Frees the configured TCP port and starts Laravel's local development server.
+# Starts Laravel's server, queue listener, logs, and Vite in the tabbed dev UI.
 # Override the address when needed, for example: make run HOST=0.0.0.0 PORT=8080
-run: check-php prepare-storage
+run: check-dev prepare-storage
+	@SERVER_HOST="$(HOST)" SERVER_PORT="$(PORT)" php artisan dev $(DEV_FLAGS)
+
+check-dev: check-php
 	@test -f .env || { echo "Missing .env file. Create and configure it before running the application."; exit 1; }
 	@test -f vendor/autoload.php || { echo "Missing Composer dependencies. Run 'composer install' first."; exit 1; }
-	@command -v lsof >/dev/null || { echo "lsof is required to free port $(PORT)."; exit 1; }
-	@pids=$$(lsof -tiTCP:$(PORT) -sTCP:LISTEN); \
-		if [ -n "$$pids" ]; then \
-			echo "Stopping processes listening on port $(PORT): $$pids"; \
-			kill -9 $$pids; \
-		fi
+	@command -v node >/dev/null || { echo "Node.js 24 is required for the development terminal. Run 'nvm use'."; exit 1; }
+	@test -x node_modules/.bin/vite -a -x node_modules/.bin/multiplex || { echo "Missing frontend dependencies. Run 'npm ci' first."; exit 1; }
+
+# Runs just the PHP server, for example when assets were built with npm run build.
+serve: check-php prepare-storage
 	@php artisan serve --host=$(HOST) --port=$(PORT)
 
-# Recreates the Laravel files that were omitted from the downloaded project.
-# This will not overwrite existing files.
-recover-laravel:
-	@test ! -e artisan || { echo "artisan already exists; refusing to overwrite it."; exit 1; }
-	@test ! -e composer.json || { echo "composer.json already exists; refusing to overwrite it."; exit 1; }
-	@printf '%s\n' '#!/usr/bin/env php' '<?php' '' 'define('\''LARAVEL_START'\'', microtime(true));' '' 'require __DIR__. '\''/vendor/autoload.php'\'';' '' '$$app = require_once __DIR__. '\''/bootstrap/app.php'\'';' '$$kernel = $$app->make(Illuminate\Contracts\Console\Kernel::class);' '' '$$status = $$kernel->handle(' '    $$input = new Symfony\Component\Console\Input\ArgvInput,' '    new Symfony\Component\Console\Output\ConsoleOutput' ');' '' '$$kernel->terminate($$input, $$status);' '' 'exit($$status);' > artisan
-	@chmod +x artisan
-	@printf '%s\n' '{' '  "name": "quikmedix/quikmedix-api",' '  "type": "project",' '  "description": "QuikMedix API",' '  "require": {' '    "php": "^8.0",' '    "authorizenet/authorizenet": "2.0.4",' '    "aws/aws-sdk-php": "3.388.4",' '    "barryvdh/laravel-dompdf": "1.0.2",' '    "defuse/php-encryption": "2.4.0",' '    "fideloper/proxy": "4.4.2",' '    "firebase/php-jwt": "6.11.1",' '    "fruitcake/laravel-cors": "2.2.0",' '    "intervention/image": "2.7.2",' '    "laravel/framework": "8.83.29",' '    "laravel/passport": "10.4.2",' '    "laravel/ui": "3.4.6",' '    "league/flysystem-aws-s3-v3": "1.0.30",' '    "milon/barcode": "8.0.1",' '    "munafio/chatify": "1.6.3",' '    "pusher/pusher-push-notifications": "2.0",' '    "smalot/pdfparser": "0.18.2",' '    "stripe/stripe-php": "7.128.0",' '    "twilio/sdk": "6.44.4",' '    "zadarma/user-api-v1": "1.1.9"' '  },' '  "autoload": {' '    "psr-4": {' '      "App\\": "app/",' '      "Database\\Factories\\": "database/factories/",' '      "Database\\Seeders\\": "database/seeders/"' '    }' '  },' '  "scripts": {' '    "post-autoload-dump": [' '      "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",' '      "@php artisan package:discover --ansi"' '    ]' '  },' '  "config": {' '    "optimize-autoloader": true,' '    "sort-packages": true,' '    "audit": {' '      "block-insecure": false' '    }' '  },' '  "minimum-stability": "stable",' '  "prefer-stable": true' '}' > composer.json
-	@echo "Created artisan and composer.json. Run 'make composer-lock' next."
-
-# Resolves dependencies and creates composer.lock. Run this with PHP 8.2+.
+# Resolves dependencies and creates composer.lock. Run this with PHP 8.4+.
 composer-lock:
 	@composer validate --no-check-publish
 	@composer update --no-dev --prefer-dist --no-interaction --optimize-autoloader
@@ -38,4 +31,12 @@ composer-lock:
 # Recreates directories Laravel needs at runtime (including in production images).
 prepare-storage:
 	@mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
-	@chmod -R ug+rwx storage bootstrap/cache
+	@chmod -R ug+rwX storage bootstrap/cache
+	@test ! -f storage/oauth-private.key || chmod 600 storage/oauth-private.key
+	@test ! -f storage/oauth-public.key || chmod 660 storage/oauth-public.key
+
+# Regenerates the Intelephense/IDE type stubs after adding models, columns, or packages.
+ide-helper:
+	@php artisan ide-helper:generate
+	@php artisan ide-helper:meta
+	@php artisan ide-helper:models --nowrite

@@ -13,10 +13,10 @@ class TwilioAccessTokenProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind(
-            AccessToken::class, function ($app) {
-                $TWILIO_ACCOUNT_SID = config('app.twilio_sid');
-                $TWILIO_API_KEY = config('app.twilio_apiKey');
-                $TWILIO_API_SECRET = config('app.twilio_apiSecret');
+            AccessToken::class, function () {
+                $TWILIO_ACCOUNT_SID = config()->string('app.twilio_sid');
+                $TWILIO_API_KEY = config()->string('app.twilio_apiKey');
+                $TWILIO_API_SECRET = config()->string('app.twilio_apiSecret');
 
                 $token = new AccessToken(
                     $TWILIO_ACCOUNT_SID,

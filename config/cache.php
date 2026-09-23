@@ -20,6 +20,8 @@ return [
 
     'default' => env('CACHE_DRIVER', 'file'),
 
+    'serializable_classes' => false,
+
     /*
     |--------------------------------------------------------------------------
     | Cache Stores
@@ -99,6 +101,7 @@ return [
     |
     */
 
-    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache'),
+    // Laravel 8 appended this separator internally.
+    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache').':',
 
 ];

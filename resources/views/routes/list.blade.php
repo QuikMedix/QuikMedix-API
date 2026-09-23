@@ -117,7 +117,7 @@
                                                 @foreach ($orders as $order)
                                                     <tr>
                                                         <td>{{$order->id}}</td>
-                                                        <td>{{date('m/d/Y g:i A', strtotime($order->created))}}</td>
+                                                        <td>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}</td>
                                                         <td><span style="font-size: 13px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
                                                         <td>{{$order->username}} {{$order->last_name}}</td>
                                                         <td>{{$order->pharmacyname}}</td>

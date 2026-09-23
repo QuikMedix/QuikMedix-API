@@ -35,7 +35,7 @@
                                                     <tr>
                                                         <td>{{ $key + 1 }}</td>
                                                         <td><a href="/orders/{{ $order->pharmacy_id }}/show/{{ $order->id }}" target="_blank">{{$order->id}} <i class="mdi mdi-vector-link"></i></a></td>
-                                                        <td>{{date('m.d.Y g:i A', strtotime($order->created))}}</td>
+                                                        <td>{{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}</td>
                                                         <td>@if(($order->delivery_time=='ASAP Delivery'))
                                                                 <span style="font-size:10px;width:110px;white-space:normal;padding: 5px;color: white;" class="badge badge-pill badge-danger">{{$order->delivery_time}}</span>
                                                             @elseif($order->delivery_time=='Same day delivery')

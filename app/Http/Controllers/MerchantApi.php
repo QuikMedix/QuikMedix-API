@@ -3,16 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\User;
 use Twilio\Rest\Client;
 use App\Notifications;
 use Illuminate\Support\Facades\Hash;
 use DB;
-use Response;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class MerchantApi extends Controller
 {
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function getpharmacyinfo(Request $request,$pharmacy_id) {
         if($pharmacy_auth = $this->checkAuth($request,$pharmacy_id)){
             return response()->json([
@@ -122,7 +123,7 @@ class MerchantApi extends Controller
             $response = json_decode($request->getContent());
             if(isset($response->service_level) && isset($response->patient) && isset($response->pharmacy) && isset($response->recipient)) {
                 if(isset($response->service_date) && ($response->service_level=="1" || $response->service_level=="3")) {
-                    $delivery_date = date('Y-m-d', strtotime($response->service_date));
+                    $delivery_date = date('Y-m-d', strtotime($response->service_date ?? ''));
                 } else {
                     $delivery_date = date('Y-m-d', strtotime(' +1 day'));
                 }
@@ -182,7 +183,7 @@ class MerchantApi extends Controller
                             if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->patient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')])){
                                 
                             }
-                        } catch (\Throwable $th) {
+                        } catch (\Throwable) {
                             //throw $th;
                         }
                         $patient = DB::table("users")->where("phone",$patient_phone)->where("pharmacy_id",$pharmacy_auth->id)->first();
@@ -260,8 +261,12 @@ class MerchantApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public function orderRxAdd(Request $request,$order_id){
         if($pharmacy_auth = $this->checkAuth($request)){
+            $response = json_decode($request->getContent());
             $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
                 $copay=$order->copay;
@@ -310,6 +315,10 @@ class MerchantApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     * @param int|string $rx_number
+     */
     public function orderRxDelete(Request $request,$order_id,$rx_number) {
         if($pharmacy_auth = $this->checkAuth($request)){
             $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
@@ -330,6 +339,9 @@ class MerchantApi extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public function orderDelete(Request $request,$order_id) {
         if($pharmacy_auth = $this->checkAuth($request)){
             $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
@@ -397,17 +409,15 @@ class MerchantApi extends Controller
                             } else {
                                 $failure_reason = NULL;
                             }
-                            if(!empty($order->driver_id)) {
-                                $driver = DB::table('users')->where('id',$order->driver_id)->first();
-                            }
+                            $driver = !empty($order->driver_id) ? DB::table('users')->where('id',$order->driver_id)->first() : null;
                             $record["delivery"]=[
-                                "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish)),
+                                "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish ?? '')),
                                 "signature_url"=>url($order->signature_photo),
                                 "signed_by"=>$order->signature_type,
                                 "relationship"=>$relationship,
                                 "failure_reason"=>$failure_reason,
                                 "recipient_identification"=>[
-                                    "number"=>$driver->driving_license,
+                                    "number"=>$driver?->driving_license,
                                     "qualifier"=>"06"   
                                 ]
                             ];
@@ -417,42 +427,40 @@ class MerchantApi extends Controller
                             if(!empty($packages_transition)) {
                                 $record["delivery"]=[
                                     "failure_reason"=>"Patient Not Home",
-                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($packages_transition->created)),
+                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($packages_transition->created ?? '')),
                                     "signature_url"=>NULL,
                                     "other_relationship_description"=>NULL,
-                                    "signature_url"=>NULL,
                                     "recipient_identification"=>NULL,
                                     "signed_by"=>NULL
                                 ];
                             } else {
                                 $record["delivery"]=[
                                     "failure_reason"=>"Patient Not Home",
-                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish)),
+                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish ?? '')),
                                     "signature_url"=>NULL,
                                     "other_relationship_description"=>NULL,
-                                    "signature_url"=>NULL,
                                     "recipient_identification"=>NULL,
                                     "signed_by"=>NULL
                                 ];
                             }
                             if(empty($return)) {
                                 $record["return"]=[
-                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish))
+                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish ?? ''))
                                 ];
                             } else {
                                 $record["return"]=[
-                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($return->created))
+                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($return->created ?? ''))
                                 ];
                             }
                         } elseif($order->statuse_id==2 || $order->statuse_id==3 || $order->statuse_id==6 || $order->statuse_id==7){
                             $pickup = DB::table('packages_transitions')->where('order_id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('driver_id',$order->driver_id)->where("target","out")->first();
                             if(!empty($order->driver_id) && !empty($pickup)) {
                                 $record["pickup"]=[
-                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($pickup->created))
+                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($pickup->created ?? ''))
                                 ];
                             } else {
                                 $record["pickup"]=[
-                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->created))
+                                    "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->created ?? ''))
                                 ];
                             }
                         } else {
@@ -515,7 +523,6 @@ class MerchantApi extends Controller
                 $pharmacy = $pharmacy_auth;
                 $patient = DB::table('users')->where('id',$order->user_id)->first();
                 $wish = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->inRandomOrder()->first();
-                $pharmacy_id = NULL;
                 $res_arr = ['order'=>$order,'pharmacy'=>$pharmacy,'patient'=>$patient,'wish'=>$wish];
                 return view('orders.ticket_pdf',$res_arr);
             } else {
@@ -547,7 +554,6 @@ class MerchantApi extends Controller
                 $pharmacy = DB::table('pharmacys')->where('id',$order->pharmacy_id)->first();
                 $patient = DB::table('users')->where('id',$order->user_id)->first();
                 $wish = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->inRandomOrder()->first();
-                $pharmacy_id = NULL;
                 $res_arr = ['order'=>$order,'pharmacy'=>$pharmacy,'patient'=>$patient,'wish'=>$wish];
                 $filename='ticket_'.$order_id.'.pdf';
                 $pdf = PDF::loadView('orders.ticket_pdf',$res_arr);
@@ -566,7 +572,7 @@ class MerchantApi extends Controller
         }
     }
 
-    private function checkAuth($request,$pharmacy_id=NULL) {
+    private function checkAuth(Request $request,$pharmacy_id=NULL) {
         if($request->hasHeader('Authorization')) {
             $header = explode(" ",$request->header('Authorization'));
             $header = base64_decode(end($header));

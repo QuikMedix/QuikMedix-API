@@ -3,13 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\User;
 use App\Notifications;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Twilio\Rest\Client;
-use phpseclib\Net\SSH2;
 use Pusher\PushNotifications\PushNotifications;
 
 class LexaAdminApiNoAuth extends Controller
@@ -31,7 +29,7 @@ class LexaAdminApiNoAuth extends Controller
         return true;
     }
 
-    public function telegramAuth(Request $request) {
+    public function telegramAuth() {
         abort_unless(config('services.telegram.bot_token'), 503, 'Telegram authentication is not configured.');
         try {
             $bot = new \TelegramBot\Api\Client(config('services.telegram.bot_token'));
@@ -150,9 +148,6 @@ class LexaAdminApiNoAuth extends Controller
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
                     $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
-                } else {
-                    $src = '';
                 }
                 $driving_license_img = NULL;
                 if($request->hasFile('driving_license_img')) {
@@ -169,6 +164,11 @@ class LexaAdminApiNoAuth extends Controller
                             'errors' => 'Bad Request'
                         ], 400);
                     }
+                } else {
+                    return response()->json([
+                        'message' => 'Password is required',
+                        'errors' => 'Bad Request'
+                    ], 400);
                 }
                 if($request->input('pharmacy_id')>0) {
                     $pharmacy_id = $request->input('pharmacy_id');
@@ -280,7 +280,7 @@ class LexaAdminApiNoAuth extends Controller
                 return response()->json([
                     'message' => 'OK'
                 ], 200);
-            } catch (\Throwable $th) {
+            } catch (\Throwable) {
                 return json_encode([
                     'message' => 'An error occurred while sending',
                     'errors' => 'Error'
