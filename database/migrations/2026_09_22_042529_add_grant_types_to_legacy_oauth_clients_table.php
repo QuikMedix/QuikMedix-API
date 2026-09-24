@@ -16,6 +16,13 @@ return new class extends Migration
             return;
         }
 
+        // Tables created before Passport 9 lack the provider column Passport 13 always writes.
+        if (! $schema->hasColumn('oauth_clients', 'provider')) {
+            $schema->table('oauth_clients', function (Blueprint $table): void {
+                $table->string('provider')->nullable()->after('secret');
+            });
+        }
+
         if (! $schema->hasColumn('oauth_clients', 'grant_types')) {
             $schema->table('oauth_clients', function (Blueprint $table): void {
                 $table->text('grant_types')->nullable();
