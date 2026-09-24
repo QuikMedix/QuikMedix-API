@@ -22,15 +22,17 @@ class PassportUpgradeTest extends TestCase
         $this->createAuthenticationSchema();
     }
 
-    private function useLegacyClients(): void
+    private function useLegacyClients(bool $withProvider = true): void
     {
         Schema::drop('oauth_clients');
-        Schema::create('oauth_clients', function (Blueprint $table): void {
+        Schema::create('oauth_clients', function (Blueprint $table) use ($withProvider): void {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('name');
             $table->string('secret', 100)->nullable();
-            $table->string('provider')->nullable();
+            if ($withProvider) {
+                $table->string('provider')->nullable();
+            }
             $table->text('redirect');
             $table->boolean('personal_access_client');
             $table->boolean('password_client');
@@ -87,6 +89,17 @@ class PassportUpgradeTest extends TestCase
         $this->assertDatabaseHas('oauth_access_tokens', ['id' => $token->accessTokenId, 'client_id' => $client->id]);
         $this->migration()->down();
         $this->assertDatabaseHas('oauth_clients', ['id' => $client->id, 'personal_access_client' => true, 'password_client' => false]);
+    }
+
+    public function test_clients_table_from_before_passport_9_gains_the_provider_column(): void
+    {
+        $this->useLegacyClients(withProvider: false);
+
+        $this->migration()->up();
+
+        $client = app(ClientRepository::class)->createPersonalAccessGrantClient('Personal access client', 'users');
+        $token = User::factory()->create()->createToken('Mobile login');
+        $this->assertDatabaseHas('oauth_access_tokens', ['id' => $token->accessTokenId, 'client_id' => $client->id]);
     }
 
     public function test_migration_retains_distinct_password_and_client_credentials_grants(): void
