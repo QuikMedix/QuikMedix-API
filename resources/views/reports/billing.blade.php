@@ -75,12 +75,12 @@
                                                     <tr>
                                                         <td>Payment #{{$payment->id}}<br>
                                                         Invoice #{{$payment->invoice_id}}</th>
-                                                        <td>{{date('m.d.Y g:i A', strtotime($payment->created))}}</th>
+                                                        <td>{{date('m.d.Y g:i A', strtotime($payment->created ?? ''))}}</th>
                                                         <td>{{$payment->name}}</td>
-                                                        <td>{{date('m.d.Y', strtotime($payment->date_from))}} {{date('m.d.Y', strtotime($payment->date_to))}}</td>                                                       
+                                                        <td>{{date('m.d.Y', strtotime($payment->date_from ?? ''))}} {{date('m.d.Y', strtotime($payment->date_to ?? ''))}}</td>                                                       
                                                         <td>{{$payment->count}}</td>
                                                         <td>@if(!empty($payment->status)) @if($payment->status=="CANCELED" || $payment->status=="FAILED") <b style="color:red;">{{$payment->status}}</b> @elseif($payment->status=="PENDING") <b style="color:yellow;">{{$payment->status}}</b> @else <b style="color:green;">{{$payment->status}}</b> @endif @else <b style="color:green;">COMPLETED</b> @endif<br><small>({{$payment->type}})</small></td>
-                                                        <td>${{number_format($payment->amount,2)}}</td>
+                                                        <td>${{number_format($payment->amount ?? 0,2)}}</td>
                                                         <td>
                                                             <a href="/billing/{{$payment->pharmacy_id}}" target="_blank" rel="noopener noreferrer"><button class="btn btn-secondary btn-sm waves-effect">Pharmacy <i class="mdi mdi-history"></i></button></a>                                                            
                                                             <a href="/billing/{{$payment->pharmacy_id}}/print/{{$payment->invoice_id}}" target="_blank" rel="noopener noreferrer"><button class="btn btn-primary btn-sm waves-effect">Print <i class="mdi mdi-file-pdf"></i></button></a>

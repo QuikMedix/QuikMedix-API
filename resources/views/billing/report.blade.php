@@ -31,7 +31,7 @@
             <div class="tm_card_note tm_mobile_hide"></div>
             <div class="tm_invoice_info_list tm_white_color">
               <p class="tm_invoice_number tm_m0">Invoice No: <b>#{{$invoice->id}}</b></p>
-              <p class="tm_invoice_date tm_m0">Date: <b>{{date('m.d.Y', strtotime($invoice->created))}}</b></p>
+              <p class="tm_invoice_date tm_m0">Date: <b>{{date('m.d.Y', strtotime($invoice->created ?? ''))}}</b></p>
             </div>
             <div class="tm_invoice_seperator tm_accent_bg"></div>
           </div>
@@ -70,12 +70,12 @@
                     @foreach($orders as $order)
                     <tr>
                       <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">#{{$order->id}}</td>
-                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">{{date('m.d.Y', strtotime($order->finish))}}</td>
+                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">{{date('m.d.Y', strtotime($order->finish ?? ''))}}</td>
                       <td class="tm_width_3 tm_f10" style="padding: 0px 10px;">{{$order->delivery_time}}</td>
                       <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">{{$order->status}}</td>  
                       <td class="tm_width_4 tm_f10" style="padding: 0px 10px;">{{$order->username}}</td>
-                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">${{number_format($order->tariff,2)}}</td>                      
-                      <td class="tm_width_2 tm_f10 tm_text_right" style="padding: 0px 10px;">${{number_format($order->tariff,2)}}</td>
+                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">${{number_format($order->tariff ?? 0,2)}}</td>                      
+                      <td class="tm_width_2 tm_f10 tm_text_right" style="padding: 0px 10px;">${{number_format($order->tariff ?? 0,2)}}</td>
                     </tr>
                     @endforeach               
                   </tbody>
@@ -92,13 +92,13 @@
                     <tr class="tm_gray_bg ">
                       <td class="tm_width_3 tm_f12 tm_primary_color tm_bold" style="padding: 0px 10px;">Subtotal</td>
                       <td class="tm_width_3 tm_f12 tm_primary_color tm_bold tm_text_right" style="padding: 0px 10px;">
-                        ${{number_format($invoice->amount,2)}}
+                        ${{number_format($invoice->amount ?? 0,2)}}
                       </td>
                     </tr>                    
                     <tr class="tm_accent_bg">
                       <td class="tm_width_3 tm_f12 tm_border_top_0 tm_bold tm_white_color" style="padding: 0px 10px;">Total Amount</td>
                       <td class="tm_width_3 tm_f12 tm_border_top_0 tm_bold tm_white_color tm_text_right" style="padding: 0px 10px;">
-                        ${{number_format($invoice->amount,2)}}
+                        ${{number_format($invoice->amount ?? 0,2)}}
                       </td>
                     </tr>
                   </tbody>
@@ -127,12 +127,12 @@
                     @if($order->copay>0 && ($order->statuse_copay=='3' || $order->statuse_copay=='4'))
                     <tr>
                       <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">#{{$order->id}}</td>
-                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">{{date('m.d.Y', strtotime($order->finish))}}</td>
+                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">{{date('m.d.Y', strtotime($order->finish ?? ''))}}</td>
                       <td class="tm_width_3 tm_f10" style="padding: 0px 10px;">{{$order->delivery_time}}</td>
                       <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">{{$order->status}}</td>  
                       <td class="tm_width_4 tm_f10" style="padding: 0px 10px;">{{$order->username}}</td>
-                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">${{number_format($order->copay,2)}}</td>                      
-                      <td class="tm_width_2 tm_f10 tm_text_right" style="padding: 0px 10px;">${{number_format($order->copay,2)}}</td>
+                      <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">${{number_format($order->copay ?? 0,2)}}</td>                      
+                      <td class="tm_width_2 tm_f10 tm_text_right" style="padding: 0px 10px;">${{number_format($order->copay ?? 0,2)}}</td>
                     </tr>
                     @endif
                     @endforeach
@@ -150,13 +150,13 @@
                     <tr class="tm_gray_bg ">
                       <td class="tm_width_3 tm_f12 tm_primary_color tm_bold" style="padding: 0px 10px;">Subtotal</td>
                       <td class="tm_width_3 tm_f12 tm_primary_color tm_bold tm_text_right" style="padding: 0px 10px;">
-                        ${{number_format($invoice->copay,2)}}
+                        ${{number_format($invoice->copay ?? 0,2)}}
                       </td>
                     </tr>                    
                     <tr class="tm_accent_bg">
                       <td class="tm_width_3 tm_f12 tm_border_top_0 tm_bold tm_white_color" style="padding: 0px 10px;">Total Amount</td>
                       <td class="tm_width_3 tm_f12 tm_border_top_0 tm_bold tm_white_color tm_text_right" style="padding: 0px 10px;">         
-                        ${{number_format($invoice->copay,2)}}
+                        ${{number_format($invoice->copay ?? 0,2)}}
                       </td>
                     </tr>
                   </tbody>

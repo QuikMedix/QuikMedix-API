@@ -11,7 +11,7 @@ class TwoFAController extends Controller
     /**
      * Write code on Method
      *
-     * @return response()
+     * @return \Illuminate\Contracts\View\View
      */
     public function index()
     {
@@ -21,7 +21,7 @@ class TwoFAController extends Controller
     /**
      * Write code on Method
      *
-     * @return response()
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
@@ -44,7 +44,7 @@ class TwoFAController extends Controller
     /**
      * Write code on Method
      *
-     * @return response()
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function resend()
     {

@@ -64,6 +64,7 @@ class RouteTemplatesController extends Controller
 
     /**
      * Delete a route template.
+     * @param int|string $id
      */
     public function destroy($id)
     {
@@ -76,6 +77,7 @@ class RouteTemplatesController extends Controller
 
     /**
      * Display the specified route template (Map Interface).
+     * @param int|string $id
      */
     public function show($id)
     {
@@ -163,6 +165,7 @@ class RouteTemplatesController extends Controller
 
     /**
      * Update the items in the template (Save Route).
+     * @param int|string $id
      */
     public function updateItems(Request $request, $id)
     {
@@ -200,6 +203,7 @@ class RouteTemplatesController extends Controller
 
     /**
      * Assign template to driver.
+     * @param int|string $id
      */
     public function assignToDriver(Request $request, $id)
     {

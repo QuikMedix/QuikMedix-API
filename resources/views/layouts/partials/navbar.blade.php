@@ -1,33 +1,3 @@
-@php
-function time_elapsed_string($datetime, $full = false) {
-    $now = new DateTime;
-    $ago = new DateTime($datetime);
-    $diff = $now->diff($ago);
-
-    $diff->w = floor($diff->d / 7);
-    $diff->d -= $diff->w * 7;
-
-    $string = array(
-        'y' => 'year',
-        'm' => 'month',
-        'w' => 'week',
-        'd' => 'day',
-        'h' => 'hour',
-        'i' => 'minute',
-        's' => 'second',
-    );
-    foreach ($string as $k => &$v) {
-        if ($diff->$k) {
-            $v = $diff->$k . ' ' . $v . ($diff->$k > 1 ? 's' : '');
-        } else {
-            unset($string[$k]);
-        }
-    }
-
-    if (!$full) $string = array_slice($string, 0, 1);
-    return $string ? implode(', ', $string) . ' ago' : 'just now';
-}
-@endphp
 <header id="page-topbar">
             <div class="navbar-header">
                 <div class="container-fluid" style="z-index: 9999999999;">
@@ -195,10 +165,10 @@ function time_elapsed_string($datetime, $full = false) {
                                             </div>
                                             <div class="info-block">
                                                 <div class="text">{{$notification->text}}</div>
-                                                @if(round((strtotime(date('now')) - strtotime($notification->created))/3600, 1)<48)
-                                                    <div class="datetime">{{time_elapsed_string($notification->created)}}</div>
+                                                @if(round((strtotime(date('now')) - strtotime($notification->created ?? ''))/3600, 1)<48)
+                                                    <div class="datetime">{{\App\Support\TimeAgo::format($notification->created)}}</div>
                                                 @else
-                                                    <div class="datetime">{{date('m/d/Y g:i A', strtotime($notification->created))}}</div>
+                                                    <div class="datetime">{{date('m/d/Y g:i A', strtotime($notification->created ?? ''))}}</div>
                                                 @endif
                                             </div>
                                             </a>

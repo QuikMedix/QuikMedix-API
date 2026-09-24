@@ -1,13 +1,13 @@
 {
   "private": true,
   "scripts": {
-    "dev": "npm run development",
-    "development": "cross-env NODE_ENV=development node_modules/webpack/bin/webpack.js --progress --hide-modules --config=node_modules/laravel-mix/setup/webpack.config.js",
-    "watch": "npm run development -- --watch",
-    "watch-poll": "npm run watch -- --watch-poll",
-    "hot": "cross-env NODE_ENV=development node_modules/webpack-dev-server/bin/webpack-dev-server.js --inline --hot --config=node_modules/laravel-mix/setup/webpack.config.js",
-    "prod": "npm run production",
-    "production": "cross-env NODE_ENV=production node_modules/webpack/bin/webpack.js --no-progress --hide-modules --config=node_modules/laravel-mix/setup/webpack.config.js",
+    "dev": "vite",
+    "build": "vite build",
+    "development": "vite",
+    "watch": "vite",
+    "hot": "vite",
+    "prod": "npm run build",
+    "production": "npm run build",
     "build:theme": "sass --no-source-map resources/scss/brand.scss public/css/brand.css"
   },
   "dependencies": {
@@ -16,7 +16,7 @@
     "jquery-sparkline": "2.4.0",
     "larasocket-js": "1.0.16",
     "laravel-echo": "1.9.0",
-    "lodash": "4.17.20",
+    "lodash": "^4.18.1",
     "magnific-popup": "1.1.0",
     "metismenu": "3.0.6",
     "morris.js": "0.5.0",
@@ -24,15 +24,17 @@
     "popper.js": "1.16.1",
     "raphael": "2.3.0",
     "simplebar": "4.2.3",
-    "vue": "2.6.12"
+    "vue": "^2.7.16"
   },
   "devDependencies": {
-    "axios": "0.19.2",
-    "cross-env": "7.0.2",
-    "laravel-mix": "5.0.9",
-    "resolve-url-loader": "2.3.2",
-    "sass": "1.29.0",
-    "sass-loader": "8.0.2",
-    "vue-template-compiler": "2.6.12"
+    "@laravel/multiplex": "^0.4.3",
+    "@vitejs/plugin-vue2": "^2.3.4",
+    "axios": "^1.20.0",
+    "laravel-vite-plugin": "^2.0",
+    "sass": "^1.104.1",
+    "vite": "^7.0"
+  },
+  "engines": {
+    "node": "^24.0.0"
   }
 }

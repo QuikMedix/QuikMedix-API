@@ -314,7 +314,7 @@
                                                     <span class="badge badge-pill badge-{{$order->statusecolor}} small mb-2">{{$order->statusename}}</span><br>
                                                     <a href="/orders/{{ Auth::user()->pharmacy_id }}?search={{$order->id}}" class="mt-1"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View order</button></a>
                                                     <hr class="mb-2">
-                                                    <span class="small"> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created))}}   </span>
+                                                    <span class="small"> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}   </span>
                                             </div>
                                         </div> 
                                     @endforeach                                            
@@ -417,27 +417,27 @@
                                                         <div class="col-md-4">
                                                             <div>
                                                                 <h3 class="mb-0">
-                                                                    ${{number_format($income_today,2)}}
+                                                                    ${{number_format($income_today ?? 0,2)}}
                                                                 </h3>
-                                                                <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($income_today_prev,2)}}</p>
+                                                                <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($income_today_prev ?? 0,2)}}</p>
                                                                 <p class="text-muted">Today</p>                                                    
                                                             </div>
                                                         </div>
                                                         <div class="col-md-4">
                                                             <div>
                                                                 <h3 class="mb-0">
-                                                                    ${{number_format($income_week,2)}}
+                                                                    ${{number_format($income_week ?? 0,2)}}
                                                                 </h3>
-                                                                <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($income_week_prev,2)}}</p>
+                                                                <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($income_week_prev ?? 0,2)}}</p>
                                                                 <p class="text-muted">Week</p>                                                    
                                                             </div>
                                                         </div>
                                                         <div class="col-md-4">
                                                             <div>
                                                                 <h3 class="mb-0">
-                                                                    ${{number_format($income_month,2)}}
+                                                                    ${{number_format($income_month ?? 0,2)}}
                                                                 </h3>
-                                                                <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($income_month_prev,2)}}</p>
+                                                                <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($income_month_prev ?? 0,2)}}</p>
                                                                 <p class="text-muted">Month</p>                                                    
                                                             </div>
                                                         </div>
@@ -927,7 +927,7 @@
                                                     
                                                     <br>                                                
                                                     <hr>
-                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created))}}</span> <span class="float-right"><i class="far fa-grin-alt"></i> {{$order->statusename}}</span></p> 
+                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}</span> <span class="float-right"><i class="far fa-grin-alt"></i> {{$order->statusename}}</span></p> 
                                                 </div>                                                                                         
                                             </div>
                                             @endforeach
@@ -950,7 +950,7 @@
                                                     
                                                     <br>                                                
                                                     <hr>
-                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created))}}</span> <span class="float-right"><i class="far fa-grin-stars"></i> {{$order->statusename}}</span></p> 
+                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}</span> <span class="float-right"><i class="far fa-grin-stars"></i> {{$order->statusename}}</span></p> 
                                                 </div>                                                                                         
                                             </div>
                                             @endforeach
@@ -976,7 +976,7 @@
                                                         </td>
                                                         <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
                                                         <td>
-                                                            {{date('m/d/Y g:i A', strtotime($order->created))}}
+                                                            {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
                                                     </tr>
                                                     @endforeach
@@ -1002,7 +1002,7 @@
                                                         </td>
                                                         <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
                                                         <td>
-                                                            {{date('m/d/Y g:i A', strtotime($order->created))}}
+                                                            {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
                                                     </tr>
                                                     @endforeach
@@ -1052,7 +1052,7 @@
                                                         </td>
                                                         <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
                                                         <td>
-                                                            {{date('m/d/Y g:i A', strtotime($order->created))}}
+                                                            {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
                                                     </tr>
                                                     @endforeach
@@ -1078,7 +1078,7 @@
                                                         </td>
                                                         <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
                                                         <td>
-                                                            {{date('m/d/Y g:i A', strtotime($order->created))}}
+                                                            {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
                                                     </tr>
                                                     @endforeach
@@ -1176,7 +1176,7 @@ var dataForChartDelivered = [
 @if(isset($orders_7days_c))
 var lineDataDelivered7days = [
     @foreach($orders_7days_c as $key=>$orders_7day)
-    { y: '{{date("m.d.Y",strtotime($orders_7day->date))}}', a: {{$orders_7day->count}}, b: {{(isset($orders_7days[$key]))?$orders_7days[$key]->count:0}}},
+    { y: '{{date("m.d.Y",strtotime($orders_7day->date ?? ''))}}', a: {{$orders_7day->count}}, b: {{(isset($orders_7days[$key]))?$orders_7days[$key]->count:0}}},
     @endforeach
 ];
 @else

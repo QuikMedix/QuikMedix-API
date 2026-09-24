@@ -29,7 +29,7 @@
                                                     </tr>
                                                     <tr>
                                                         <td>Order Created (datetime)</td>
-                                                        <td>{{date('m/d/Y H:i:s', strtotime($order->created))}}</td>
+                                                        <td>{{date('m/d/Y H:i:s', strtotime($order->created ?? ''))}}</td>
                                                     </tr>
                                                     <tr>
                                                         <td>Order Status</td>

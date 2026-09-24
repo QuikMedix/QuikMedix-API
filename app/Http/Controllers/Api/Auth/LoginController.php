@@ -2,43 +2,45 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Auth\LoginFormRequest;
+use DateInterval;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
+use Laravel\Passport\Passport;
 
 class LoginController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function __invoke(Request $request)
+    public function __invoke(LoginFormRequest $request): JsonResponse
     {
-        $credentials = $request->only('phone', 'password');
+        $guard = Auth::guard('web');
 
-        if (!Auth::attempt($credentials)) {
+        if (! $guard->once($request->safe()->only(['phone', 'password']))) {
             return response()->json([
                 'message' => 'You cannot sign with those credentials',
-                'errors' => 'Unauthorised'
+                'errors' => 'Unauthorised',
             ], 401);
         }
 
-        $token = Auth::user()->createToken(config('app.name'));
-        $token->token->expires_at = $request->remember_me ?
-            Carbon::now()->addMonth() :
-            Carbon::now()->addDays(7);
-        $token->token->save();
-        $user = Auth::user();
-        $user->os = intval($request->os);
+        /** @var \App\User $user */
+        $user = $guard->user();
+        $previousExpiration = Passport::personalAccessTokensExpireIn();
+
+        // Set the signed JWT lifetime before issuance and restore it for later requests.
+        try {
+            Passport::personalAccessTokensExpireIn(new DateInterval($request->boolean('remember_me') ? 'P1M' : 'P7D'));
+            $token = $user->createToken(config('app.name'));
+        } finally {
+            Passport::personalAccessTokensExpireIn($previousExpiration);
+        }
+
+        $user->os = $request->integer('os');
         $user->save();
 
         return response()->json([
             'token_type' => 'Bearer',
             'token' => $token->accessToken,
-            'expires_at' => Carbon::parse($token->token->expires_at)->toDateTimeString()
-        ], 200);
+            'expires_at' => $token->getToken()->expires_at->toDateTimeString(),
+        ]);
     }
 }

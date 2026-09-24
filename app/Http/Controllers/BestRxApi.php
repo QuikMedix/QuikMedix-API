@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\User;
 use Twilio\Rest\Client;
 use App\Notifications;
 use Illuminate\Support\Facades\Hash;
 use DB;
-use Response;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class BestRxApi extends Controller
@@ -65,7 +63,7 @@ class BestRxApi extends Controller
             $response = json_decode($request->getContent());
             if(isset($response->bestrx_order_id) && isset($response->amount_to_collect) && isset($response->refrigeration_needed) && isset($response->signature_required) && isset($response->store) && isset($response->recipient) && isset($response->prescriptions)) {
                 if(isset($response->requested_delivery_date)) {
-                    $delivery_date = date('Y-m-d', strtotime($response->requested_delivery_date));
+                    $delivery_date = date('Y-m-d', strtotime($response->requested_delivery_date ?? ''));
                 } else {
                     $delivery_date = date('Y-m-d', strtotime(' +1 day'));
                 }
@@ -125,7 +123,7 @@ class BestRxApi extends Controller
                             if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->recipient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')])){
                                 
                             }
-                        } catch (\Throwable $th) {
+                        } catch (\Throwable) {
                             //throw $th;
                         }
                         $patient = DB::table("users")->where("phone",$patient_phone)->where("pharmacy_id",$pharmacy_auth->id)->first();
@@ -232,7 +230,6 @@ class BestRxApi extends Controller
             $pharmacy = DB::table('pharmacys')->where('id',$order->pharmacy_id)->first();
             $patient = DB::table('users')->where('id',$order->user_id)->first();
             $wish = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->inRandomOrder()->first();
-            $pharmacy_id = NULL;
             $res_arr = ['order'=>$order,'pharmacy'=>$pharmacy,'patient'=>$patient,'wish'=>$wish];
             return view('orders.ticket_pdf',$res_arr);
         } else {
@@ -257,7 +254,6 @@ class BestRxApi extends Controller
             $pharmacy = DB::table('pharmacys')->where('id',$order->pharmacy_id)->first();
             $patient = DB::table('users')->where('id',$order->user_id)->first();
             $wish = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->inRandomOrder()->first();
-            $pharmacy_id = NULL;
             $res_arr = ['order'=>$order,'pharmacy'=>$pharmacy,'patient'=>$patient,'wish'=>$wish];
             $filename='ticket_'.$order_id.'.pdf';
             $pdf = PDF::loadView('orders.ticket_pdf',$res_arr);
@@ -271,7 +267,7 @@ class BestRxApi extends Controller
     }
 
     public function validateAddress(Request $request) {
-        if($pharmacy_auth = $this->checkAuth($request)){
+        if($this->checkAuth($request)){
             $response = json_decode($request->getContent());
             if(isset($response->store) && isset($response->address_to_validate)) {
                 if(!empty($response->address_to_validate->address_line_1)){
@@ -388,7 +384,7 @@ class BestRxApi extends Controller
         }
     }
 
-    private function checkAuth($request,$pharmacy_id=NULL) {
+    private function checkAuth(Request $request,$pharmacy_id=NULL) {
         if($request->hasHeader('Authorization')) {
             $header = explode(" ",$request->header('Authorization'));
             $header = base64_decode(end($header));

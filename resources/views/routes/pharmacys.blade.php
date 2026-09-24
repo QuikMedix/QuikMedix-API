@@ -63,7 +63,7 @@
                                                 <tbody>
                                                 @foreach ($orders as $order)
                                                     <tr>
-                                                        <td>{{date('m/d/Y g:i A', strtotime($order->created))}}</td>
+                                                        <td>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}</td>
                                                         <td>{{$order->pharmacyname}}</td>
                                                         <td>{{$order->count}}</td>
                                                         <td class="action">

@@ -5,9 +5,9 @@ namespace App\Console;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use App\Notifications;
 use App\User;
-use Zadarma_API\Api as Zadarma_API;
 use Carbon\Carbon;
 
 class Kernel extends ConsoleKernel
@@ -153,7 +153,7 @@ class Kernel extends ConsoleKernel
                             DB::table('drivers_eta')->insert(["driver_id"=>$driver->id,"distance"=>$distance,"eta"=>$min,"last_location"=>$driver_loc]);
                         }
                     }
-                } catch (\Throwable $th) {
+                } catch (\Throwable) {
                     //throw $th;
                 }
             }
@@ -181,7 +181,7 @@ class Kernel extends ConsoleKernel
                         DB::table('drivers_eta')->where('driver_id',$driver->id)->whereNotNull('eta')->where('eta','>','0')->update(['eta'=>DB::raw('eta - 1')]);
                         DB::table('routes_priority')->where('driver_id',$driver->id)->whereNotNull('eta')->where('eta','>','0')->update(['eta'=>DB::raw('eta - 1')]);
                     }
-                } catch (\Throwable $th) {
+                } catch (\Throwable) {
                     //throw $th;
                 }
             }
@@ -232,7 +232,7 @@ class Kernel extends ConsoleKernel
                             DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $date_from)->whereDate('finish', '<=', $date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                         }
                     }
-                } catch (\Throwable $th) {
+                } catch (\Throwable) {
                     //throw $th;
                 }
             }
@@ -241,7 +241,7 @@ class Kernel extends ConsoleKernel
         $schedule->call(function () {
             $pharmacys = DB::table('pharmacys')->where('isactive','1')->where('isblocked','0')->where('plan_id',2)->get();
             foreach($pharmacys as $pharmacy) {
-                if(strtotime($pharmacy->date_end_trial)<=strtotime('now')) {
+                if(strtotime($pharmacy->date_end_trial ?? '')<=strtotime('now')) {
                     DB::table('pharmacys')->where("id",$pharmacy->id)->update(["date_end_trial"=>NULL,"plan_id"=>1]);
                 }
             }
@@ -252,6 +252,9 @@ class Kernel extends ConsoleKernel
         })->dailyAt('12:00');
     }
 
+    /**
+     * @param mixed $location
+     */
     public static function slice_location($location) {
         if(!is_string($location) || $location === '') {
             return '';
@@ -287,9 +290,8 @@ class Kernel extends ConsoleKernel
             ),
         ));
         $response = json_decode(curl_exec($curl));
-        curl_close($curl);
         if(isset($response->access_token) && isset($response->expires_in)) {
-            Redis::set('here_access_token',$response->access_token, 'EX', intval($response->expires_in));
+            Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
             return $response->access_token;
         } else {
             dd('Error when update access token HERE!');

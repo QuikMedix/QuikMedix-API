@@ -15,9 +15,6 @@ $app = new Illuminate\Foundation\Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
-$app->register(App\Providers\TwilioAccessTokenProvider::class);
-$app->register(App\Providers\TwilioChatGrantProvider::class);
-
 /*
 |--------------------------------------------------------------------------
 | Bind Important Interfaces

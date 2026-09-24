@@ -6,24 +6,25 @@
     "php": "^8.4",
     "authorizenet/authorizenet": "2.0.4",
     "aws/aws-sdk-php": "3.388.4",
-    "barryvdh/laravel-dompdf": "1.0.2",
+    "barryvdh/laravel-dompdf": "^3.1",
     "defuse/php-encryption": "2.4.0",
-    "fideloper/proxy": "4.4.2",
-    "firebase/php-jwt": "6.11.1",
-    "fruitcake/laravel-cors": "2.2.0",
-    "intervention/image": "2.7.2",
-    "laravel/framework": "8.83.29",
-    "laravel/passport": "10.4.2",
-    "laravel/ui": "3.4.6",
-    "league/flysystem-aws-s3-v3": "1.0.30",
-    "milon/barcode": "8.0.1",
+    "firebase/php-jwt": "^7.0",
+    "google/apiclient": "^2.20",
+    "intervention/image-laravel": "^4.1",
+    "laravel/framework": "^13.32",
+    "laravel/passport": "^13.0",
+    "laravel/ui": "^4.6",
+    "league/flysystem-aws-s3-v3": "^3.0",
+    "milon/barcode": "^13.5",
     "munafio/chatify": "1.6.3",
-    "predis/predis": "^1.1",
-    "pusher/pusher-push-notifications": "2.0",
+    "predis/predis": "^3.6",
+    "pusher/pusher-push-notifications": "^2.0.1",
+    "quickbooks/v3-php-sdk": "^6.3",
     "smalot/pdfparser": "0.18.2",
     "square/square": "40.0.0.20250123",
     "stripe/stripe-php": "7.128.0",
-    "twilio/sdk": "6.44.4",
+    "telegram-bot/api": "^2.5",
+    "twilio/sdk": "^8.12",
     "zadarma/user-api-v1": "1.1.9"
   },
   "autoload": {
@@ -34,18 +35,54 @@
     }
   },
   "scripts": {
+    "pre-autoload-dump": [
+      "Google\\Task\\Composer::cleanup"
+    ],
     "post-autoload-dump": [
       "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
       "@php artisan package:discover --ansi"
+    ],
+    "test": [
+      "@php vendor/bin/phpunit",
+      "@php tests/smoke/page-routing.php",
+      "@php tests/smoke/tariff-setup.php"
+    ],
+    "dev": [
+      "Composer\\Config::disableProcessTimeout",
+      "@php artisan dev"
     ]
   },
   "config": {
     "optimize-autoloader": true,
     "sort-packages": true,
-    "audit": {
-      "block-insecure": false
+    "platform": {
+      "php": "8.4.0"
+    },
+    "allow-plugins": {
+      "php-http/discovery": true
     }
   },
   "minimum-stability": "stable",
-  "prefer-stable": true
+  "prefer-stable": true,
+  "require-dev": {
+    "barryvdh/laravel-ide-helper": "^3.7",
+    "fakerphp/faker": "^1.24",
+    "laravel/pail": "^1.2",
+    "mockery/mockery": "^1.6",
+    "nunomaduro/collision": "^8.9",
+    "phpunit/phpunit": "^12.0"
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    },
+    "exclude-from-classmap": [
+      "tests/smoke/"
+    ]
+  },
+  "extra": {
+    "google/apiclient-services": [
+      "Sheets"
+    ]
+  }
 }

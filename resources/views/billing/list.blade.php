@@ -143,7 +143,7 @@
                                         </div>                                      
                                         <div class="col-md-2 billing-stat text-center text-black border-right">                                        
                                             #{{$invoice->id}} </br>
-                                            {{date('m.d.Y', strtotime($invoice->date_from))}} - {{date('m.d.Y', strtotime($invoice->date_to))}}
+                                            {{date('m.d.Y', strtotime($invoice->date_from ?? ''))}} - {{date('m.d.Y', strtotime($invoice->date_to ?? ''))}}
                                         </div>                                        
                                         <div class="col-md-1 billing-stat text-center text-black border-right mt-2" >
                                             @if($invoice->payed=='1')
@@ -154,7 +154,7 @@
                                         </div>
                                         <div class="col-md-1 billing-stat text-center text-black border-right">
                                         Amount</br>
-                                        ${{number_format($invoice->amount,2)}}
+                                        ${{number_format($invoice->amount ?? 0,2)}}
                                         </div>
                                         <div class="col-md-1 billing-stat text-center text-black border-right">
                                         Orders</br>
@@ -162,12 +162,12 @@
                                         </div>
                                         <div class="col-md-1 billing-stat text-center text-black border-right">
                                         Co-pay </br>
-                                        ${{number_format($invoice->copay,2)}}
+                                        ${{number_format($invoice->copay ?? 0,2)}}
                                         </div>
                                         <div class="col-md-1 billing-stat text-center text-black border-right">
                                         Correction</br>
                                         <p class="corrections mb-0">
-                                            {{($invoice->corrections<0)?'-$'.number_format(abs($invoice->corrections),2):'+$'.number_format($invoice->corrections,2)}}
+                                            {{($invoice->corrections<0)?'-$'.number_format(abs($invoice->corrections),2):'+$'.number_format($invoice->corrections ?? 0,2)}}
                                             @if((Auth::user()->role=="admin" || Auth::user()->role == 'superadmin') && $invoice->payed=='0')
                                             <a style="cursor:pointer;" onclick="$(this).parent('.corrections').hide();$(this).parent('.corrections').next('.corrections-inp').show();" class="text-light"><i style="color:#000;" class="mdi mdi-circle-edit-outline"></i></a>
                                             @endif
@@ -184,7 +184,7 @@
                                         <div class="col-md-1 billing-stat text-center text-black border-right">
                                         Total</br>
                                         @if($invoice->payed=='1')
-                                        ${{number_format($invoice->payed_amount,2)}}
+                                        ${{number_format($invoice->payed_amount ?? 0,2)}}
                                         @else
                                         @if($pharmacy->copay_bill=='1')
                                         @if((($invoice->amount+$invoice->corrections)-$invoice->copay)<0)

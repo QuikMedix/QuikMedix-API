@@ -48,8 +48,10 @@ namespace {
     });
     DB::setDefaultConnection('tariff_smoke');
     // SQLite has no spatial extension here. Check the saved WKT and its round trip.
-    DB::connection()->getPdo()->sqliteCreateFunction('ST_GeomFromText', fn ($value) => $value);
-    DB::connection()->getPdo()->sqliteCreateFunction('ST_AsText', fn ($value) => $value);
+    $pdo = DB::connection()->getPdo();
+    assert($pdo instanceof Pdo\Sqlite);
+    $pdo->createFunction('ST_GeomFromText', fn ($value) => $value);
+    $pdo->createFunction('ST_AsText', fn ($value) => $value);
     $app['view']->getFinder()->prependLocation($temporary);
 
     $priceFields = ['tariff', 'tariff_next_day', 'tariff_same_day', 'tariff_asap', 'tariff_after_hours', 'tariff_fridge', 'tariff_area2', 'tariff_area3', 'tariff_area_more'];
@@ -77,6 +79,9 @@ namespace {
 
     $user = new TariffSetupUser;
     $user->forceFill(['id' => 101, 'role' => 'superadmin', 'isactive' => 1, 'isblocked' => 0]);
+    /**
+     * @param string $path
+     */
     function requestPage($path, $data = null) {
         global $app, $user;
         $request = Request::create('http://localhost'.$path, $data === null ? 'GET' : 'POST', $data ?? []);
@@ -94,6 +99,10 @@ namespace {
         }
     }
     $checks = 0;
+    /**
+     * @param bool $condition
+     * @param string $message
+     */
     function check($condition, $message) {
         global $checks;
         if (!$condition) throw new RuntimeException($message);

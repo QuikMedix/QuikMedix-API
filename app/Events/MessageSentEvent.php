@@ -2,9 +2,9 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use App\Message;
+use App\User;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -14,8 +14,8 @@ class MessageSentEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $message;
-    public $user;
+    public Message $message;
+    public User $user;
 
     /**
      * Create a new event instance.

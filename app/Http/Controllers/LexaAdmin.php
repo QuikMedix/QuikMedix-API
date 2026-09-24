@@ -13,12 +13,14 @@ use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
 use Carbon\Carbon;
 use Zadarma_API\Api as Zadarma_API;
-use Illuminate\Support\Str;
 use URL;
 use Smalot\PdfParser\Parser;
-use Intervention\Image\Facades\Image;
+use App\Actions\GeocodeAddress;
+use App\Actions\RotateSignature;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use QuickBooksOnline\API\DataService\DataService;
+use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 
 class LexaAdmin extends Controller
 {
@@ -36,6 +38,10 @@ class LexaAdmin extends Controller
         return redirect()->route('home');
     }
 
+    /**
+     * @param string $folderName
+     * @param string $fileName
+     */
     public function index($folderName, $fileName) {
         // Render perticular view file by foldername and filename
         if (view()->exists($folderName . "." . $fileName)) {
@@ -124,7 +130,7 @@ class LexaAdmin extends Controller
             'count_orders_all'=>$count_orders_all,
             'count_orders_merchant'=>$count_orders_merchant,
             'title'=>'Dashboard','br1'=>'Dashboard'];
-            Redis::set(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id, serialize($res_arr), 'EX', 200);
+            Redis::setex(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id, 200, serialize($res_arr));
             return view('dashboard.index',$res_arr);
         } else {
             $res_arr=self::get_cached_value(request()->getHttpHost().':admin_dash');
@@ -469,11 +475,14 @@ class LexaAdmin extends Controller
                 'orders_7days'=>$orders_7days,
                 'orders_7days_c'=>$orders_7days_c,
                 'title'=>'Dashboard','br1'=>'Dashboard'];
-            Redis::set(request()->getHttpHost().':admin_dash', serialize($res_arr), 'EX', 200);
+            Redis::setex(request()->getHttpHost().':admin_dash', 200, serialize($res_arr));
             return view('dashboard.index',$res_arr);
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function pharmacyUsers($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -522,6 +531,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function pharmacyUsersHandler(Request $request, $pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -586,6 +598,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function pharmacyUsersEdit($pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -605,6 +621,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function pharmacyUsersEditHandler(Request $request,$pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -639,6 +659,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function pharmacyUsersAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -667,6 +690,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function pharmacyUsersAddHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -720,6 +746,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function pharmacysTariffMap($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -900,6 +929,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function pharmacysListEdit($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -928,6 +960,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function pharmacysListEditHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1205,8 +1240,7 @@ class LexaAdmin extends Controller
                         $file->move(public_path() . '/images/pharmacys/',$name_f);
                         $src = '/images/pharmacys/'.$name_f;
                     } else {
-                        $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-                        $src = $pharmacy->logo;
+                        $src = '';
                     }
                     if($request->hasFile('image_front')) {
                         $file = $request->file('image_front');
@@ -1214,8 +1248,7 @@ class LexaAdmin extends Controller
                         $file->move(public_path() . '/images/pharmacys/',$name_f);
                         $src2 = '/images/pharmacys/'.$name_f;
                     } else {
-                        $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-                        $src2 = $pharmacy->image_front;
+                        $src2 = '';
                     }
                     $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
@@ -1231,35 +1264,7 @@ class LexaAdmin extends Controller
 
     private static function pharmacyCreationLocation(Request $request) {
         $request->validate(['address' => ['required', 'string', 'max:500']]);
-        if (!config('app.googlemaps_apikey')) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'address' => 'Address lookup is not configured. Ask an administrator to enable Google Maps.',
-            ]);
-        }
-        try {
-            $response = \Illuminate\Support\Facades\Http::timeout(10)->get('https://maps.googleapis.com/maps/api/geocode/json', [
-                'address' => $request->input('address'),
-                'key' => config('app.googlemaps_apikey'),
-            ]);
-        } catch (\Illuminate\Http\Client\ConnectionException $error) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'address' => 'Address lookup is temporarily unavailable. Please try again.',
-            ]);
-        }
-        $latitude = $response->json('results.0.geometry.location.lat');
-        $longitude = $response->json('results.0.geometry.location.lng');
-        if ($response->json('status') === 'REQUEST_DENIED') {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'address' => 'Address lookup is not authorized. Ask an administrator to enable the Geocoding API and check the Google Maps API key settings.',
-            ]);
-        }
-        if (!$response->successful() || $response->json('status') !== 'OK'
-            || !is_numeric($latitude) || !is_numeric($longitude)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'address' => 'The address could not be located. Check the address and Google Maps configuration.',
-            ]);
-        }
-        return $latitude.','.$longitude;
+        return app(GeocodeAddress::class)->handle($request->input('address'));
     }
 
     public static function officesList() {
@@ -1363,12 +1368,18 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $office_id
+     */
     public static function officesListEdit($office_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin')) {
             $office = DB::table('offices')->where('id', $office_id)->first();
+            if(empty($office)) {
+                return abort(404, 'Office not found');
+            }
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas, 'title'=>'Office Edit','br1'=>'Offices','br2'=>'Office','br3'=>'Office Edit','alert'=>'']);
             if(isset($_GET['ajax'])) {
@@ -1381,13 +1392,16 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $office_id
+     */
     public static function officesListEditHandler(Request $request,$office_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin')) {
             if($request->input('save')>0) {
-                if(!empty(DB::table('offices')->where('id','!=',$office_id)->where(function($query) use ($search) {
+                if(!empty(DB::table('offices')->where('id','!=',$office_id)->where(function($query) use ($request) {
                         $query->where('email', $request->input('email'))->orWhere('zone_id', $request->input('zone_id'));
                     })->first())) {
                     $office=new \StdClass();
@@ -1478,6 +1492,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function driversUsers($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1495,7 +1512,7 @@ class LexaAdmin extends Controller
                 } else if($type==[1]) {
                     $users->where('pharmacy_id',$pharmacy_id);
                 } else if($type==[2]) {
-                    $users->where(function($query) use ($pharmacy_id) {
+                    $users->where(function($query) {
                         $query->where('pharmacy_id',NULL)
                               ->orWhere('pharmacy_id','');
                         });
@@ -1551,6 +1568,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function driversUsersHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1583,6 +1603,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function driversUsersEdit($pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1602,6 +1626,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function driversUsersEditHandler(Request $request,$pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1653,6 +1681,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function driversUsersAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1687,6 +1718,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function driversUsersAddHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1846,6 +1880,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $driver_id
+     */
     public static function driversPayouts($driver_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -1891,7 +1928,10 @@ class LexaAdmin extends Controller
         }
     }
 
-    public static function patients(Request $request,$pharmacy_id) {
+    /**
+     * @param int|string $pharmacy_id
+     */
+    public static function patients($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
@@ -1939,7 +1979,10 @@ class LexaAdmin extends Controller
         }
     }
 
-    public static function facilitys(Request $request,$pharmacy_id) {
+    /**
+     * @param int|string $pharmacy_id
+     */
+    public static function facilitys($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
@@ -1987,12 +2030,14 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function facilitysHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
         if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $error = '';
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
             }
@@ -2011,6 +2056,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function facilitysAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2042,6 +2090,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function facilitysAddHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2120,22 +2171,22 @@ class LexaAdmin extends Controller
                         if(!empty($pharmacy_name)) {
                             try {
                                 $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable $th) {
+                            } catch (\Throwable) {
                                 //throw $th;
                             }
                         } else {
                             try {
                                 $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable $th) {
+                            } catch (\Throwable) {
                                 //throw $th;
                             }
                         }
-                    } catch (\Throwable $th) {
+                    } catch (\Throwable) {
                         //
                     }
                 }
             }
-            if(!empty($request->input('order_add'))) {
+            if(!empty($request->input('order_add')) && isset($user_id)) {
                 return redirect("orders/$pharmacy_id/add?facility=$user_id");
             }
             return redirect("facilitys/$pharmacy_id");
@@ -2144,6 +2195,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function facilitysEdit($pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2165,6 +2220,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function facilitysEditHandler(Request $request,$pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2189,7 +2248,6 @@ class LexaAdmin extends Controller
             }
             if($request->input('save')>0) {
                 $user = DB::table('users')->where('id', $user_id)->first();
-                $pharmacys = DB::table('pharmacys')->get();
                 $email = $request->input('email');
                 if(empty($email)){
                     $email = 'facilitys'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
@@ -2218,14 +2276,16 @@ class LexaAdmin extends Controller
                 DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'), 'home_phone'=>$home_phone, 'image' => $src,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment')]);
             }
             $user = DB::table('users')->where('id', $user_id)->first();
-            $pharmacys = DB::table('pharmacys')->get();
             return redirect("facilitys/$pharmacy_id/edit/$user_id");
         } else {
             return abort(403, self::$err_perm);
         }
     }
 
-    public static function patientsRemoved(Request $request,$pharmacy_id) {
+    /**
+     * @param int|string $pharmacy_id
+     */
+    public static function patientsRemoved($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
@@ -2273,12 +2333,14 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function patientsHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
         if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $error = '';
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
             }
@@ -2293,11 +2355,7 @@ class LexaAdmin extends Controller
                     if(Hash::check($request->input('password'),Auth::user()->password)) {
                         DB::table('deleted_patients')->insert(['user_id' => $request->input('user_id'),'medic_id' => Auth::user()->id,'reason' => $request->input('reason')]);
                         DB::table('users')->where('id', $request->input('user_id'))->update(['pharmacy_id' => NULL]);
-                    } else {
-                        $error = 'Password not valid!';
                     }
-                } else {
-                    $error = 'User ID not valid!';
                 }
             }
             return redirect("patients/$pharmacy_id");
@@ -2306,6 +2364,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function patientsEdit($pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2332,6 +2394,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $user_id
+     */
     public static function patientsEditHandler(Request $request,$pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2349,7 +2415,6 @@ class LexaAdmin extends Controller
             }
             if($request->input('save')>0) {
                 $user = DB::table('users')->where('id', $user_id)->first();
-                $pharmacys = DB::table('pharmacys')->get();
                 $email = $request->input('email');
                 if(empty($email)){
                     $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
@@ -2413,6 +2478,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public static function patients_family($user_id){
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2429,6 +2497,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public static function patients_additional_recipients($user_id){
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2445,6 +2516,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function patientsAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2476,6 +2550,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function patientsAddHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2532,9 +2609,15 @@ class LexaAdmin extends Controller
                     } else {
                         $address = $request->input('address');
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
-                    $address = $data->results[0]->formatted_address;
-                    $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
+                    try {
+                        $geo = app(GeocodeAddress::class)->lookup($address);
+                    } catch (\Illuminate\Validation\ValidationException $e) {
+                        // Same re-render the duplicate e-mail/phone checks use, so the form keeps what was typed.
+                        $input = $request->only(['name', 'last_name', 'email', 'phone', 'home_phone', 'birth_date', 'address', 'zip', 'apartment']) + ['image' => '', 'pharmacy' => $pharmacy_id];
+                        return view('patients.user_add', ['pharmacys' => DB::table('pharmacys')->get(), 'title' => 'Patients Add', 'br1' => 'Patients', 'br2' => 'Patient Add', 'alert' => $e->validator->errors()->first('address'), 'input' => $input]);
+                    }
+                    $address = $geo['formatted_address'];
+                    $location = $geo['location'];
                     $home_phone = (($request->input('home_phone')!='') ? $request->input('home_phone') : NULL);
                     $user_id = DB::table('users')->insertGetId(['isactive' => '1','name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'),'birth_date' => $request->input('birth_date'),'home_phone'=> $home_phone, 'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $pharmacy_id]);
                     $user = DB::table('users')->where('id',$user_id)->first();
@@ -2553,22 +2636,22 @@ class LexaAdmin extends Controller
                         if(!empty($pharmacy_name)) {
                             try {
                                 $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable $th) {
+                            } catch (\Throwable) {
                                 //throw $th;
                             }
                         } else {
                             try {
                                 $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable $th) {
+                            } catch (\Throwable) {
                                 //throw $th;
                             }
                         }
-                    } catch (\Throwable $th) {
+                    } catch (\Throwable) {
                         //
                     }
                 }
             }
-            if(!empty($request->input('order_add'))) {
+            if(!empty($request->input('order_add')) && isset($user_id)) {
                 return redirect("orders/$pharmacy_id/add?patient=$user_id");
             }
             return redirect("patients/$pharmacy_id");
@@ -2577,6 +2660,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function patientsImport($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2593,6 +2679,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function patientsImportHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2717,7 +2806,7 @@ class LexaAdmin extends Controller
                             $birth_date = $data0[$key_birth_date];
                         }
                         $password = bin2hex(openssl_random_pseudo_bytes(4));
-                        DB::table('users')->insert(['isactive' => '1','name' => $data0[$key_name],'last_name' => $data0[$key_last_name],'email' => $email,'phone' => $phone,'home_phone' => $home_phone,'address' => $data0[$key_address],'password' => Hash::make($password),'apartment' => $apartment,'zip' => $data0[$key_zip],'birth_date' => date("Y-m-d",strtotime($birth_date)),'pharmacy_id' => $pharmacy_id]);
+                        DB::table('users')->insert(['isactive' => '1','name' => $data0[$key_name],'last_name' => $data0[$key_last_name],'email' => $email,'phone' => $phone,'home_phone' => $home_phone,'address' => $data0[$key_address],'password' => Hash::make($password),'apartment' => $apartment,'zip' => $data0[$key_zip],'birth_date' => date("Y-m-d",strtotime($birth_date ?? '')),'pharmacy_id' => $pharmacy_id]);
                     }
                 }
                 return redirect("patients/$pharmacy_id");
@@ -2892,6 +2981,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function routesShow($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2915,6 +3007,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function routesShowHandler(Request $request,$order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -2941,6 +3036,9 @@ class LexaAdmin extends Controller
         }
     }
     
+    /**
+     * @param int|string $driver_id
+     */
     public static function routesDriver($driver_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3029,10 +3127,10 @@ class LexaAdmin extends Controller
             $patient_routes_priority=array();
             $pharmacy_routes_priority=array();
             foreach($routes_priority as $row) {
-                if($row->type='patient') {
+                if($row->type=='patient') {
                     array_push($patient_routes_priority,$row->order_id.','.$row->type_id);
                 }
-                if($row->type='pharmacy') {
+                if($row->type=='pharmacy') {
                     array_push($pharmacy_routes_priority,$row->order_id.','.$row->type_id);
                 }
             }
@@ -3043,10 +3141,10 @@ class LexaAdmin extends Controller
             $routes_priority1 = DB::table('routes_priority')->select("routes_priority.driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), DB::raw("GROUP_CONCAT(orders.special_instructions SEPARATOR '. ') as special_instructions"), "routes_priority.type", "routes_priority.type_id", DB::raw("min(routes_priority.eta) as eta"), DB::raw("min(routes_priority.priority) as priority"))->join('orders','orders.id','=','routes_priority.order_id')->where('routes_priority.driver_id', $driver_id)->where('routes_priority.type', '!=', 'office')->groupBy("routes_priority.type","routes_priority.type_id","routes_priority.driver_id")->orderBy("routes_priority.priority","asc")->get();
             $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), DB::raw("null as special_instructions"), "type", "type_id", "eta", "priority")->where('driver_id', $driver_id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
             $routes_priority = array();
-            foreach ($routes_priority1 as $key => $value) {
+            foreach ($routes_priority1 as $value) {
                 array_push($routes_priority,$value);
             }
-            foreach ($routes_priority0 as $key => $value) {
+            foreach ($routes_priority0 as $value) {
                 array_push($routes_priority,$value);
             }
             usort($routes_priority, function($a, $b){
@@ -3086,6 +3184,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $driver_id
+     */
     public static function routesDriverHandler(Request $request,$driver_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3096,6 +3197,7 @@ class LexaAdmin extends Controller
                 $order = DB::table('orders')->where('id', $request->input('confirm_order_id'))->first();
                 $types = ["pharmacy","patient"];
                 $count_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","desc")->first();
+                $data_array = [];
                 for ($i=0, $c = count($types); $i<$c; ++$i) {
                     $record = [];
                     $record['driver_id'] = $driver_id;
@@ -3131,6 +3233,8 @@ class LexaAdmin extends Controller
                     $pay_value=90;
                 } else if($type_pay==5) {
                     $pay_value=180;
+                } else {
+                    return redirect()->back()->with('error', 'Unknown pay type.');
                 }
                 if($count>0) {
                     DB::table('payouts_driver')->where('driver_id',$driver_id)->where('amount',-1)->update(["amount"=>round($pay_value/$count,2)]);
@@ -3222,7 +3326,6 @@ class LexaAdmin extends Controller
                     ));
                     $response = json_decode(curl_exec($curl));
                     $err = curl_error($curl);
-                    curl_close($curl);
                     if ($err) {
                         return redirect()->back()->with('error', 'Oh no, error automatically built');
                     } else {
@@ -3283,7 +3386,6 @@ class LexaAdmin extends Controller
                 }
                 $patients_id = $request->input('patients_id');
                 $pharmacys_id = $request->input('pharmacys_id');
-                $office_id = $request->input('office_id');
                 $count_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","desc")->first();
                 if(empty($count_priority)) {
                     $count_priority = new \stdClass();
@@ -3449,6 +3551,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function billing2($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3466,6 +3571,9 @@ class LexaAdmin extends Controller
     }
 
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function billing($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3532,6 +3640,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $invoice_id
+     */
     public static function billingOrders($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3540,6 +3652,9 @@ class LexaAdmin extends Controller
         if(!empty($pharmacy)) {
             if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
                 $invoice = DB::table('invoices')->where('pharmacy_id',$pharmacy_id)->where('id',$invoice_id)->first();
+                if(empty($invoice)) {
+                    return abort(404, 'Invoice not found');
+                }
                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice_id)->pluck('order_id')->toArray();
                 $orders = DB::table('orders')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->select("orders.id","delivery_times.name as delivery_time","orders.finish","orders.created","orders.copay","orders.tariff","orders.pharmacy_id")->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->get();
                 return view('billing.orders',['invoice'=>$invoice,'orders'=>$orders,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
@@ -3551,6 +3666,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $invoice_id
+     */
     public static function billingPrint($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3559,6 +3678,9 @@ class LexaAdmin extends Controller
         if(!empty($pharmacy)) {
             if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
                 $invoice = DB::table('invoices')->where('invoices.pharmacy_id',$pharmacy_id)->where('invoices.id',$invoice_id)->leftJoin("pharmacy_payments","pharmacy_payments.invoice_id","=","invoices.id")->select("invoices.id","invoices.created","invoices.pharmacy_id","invoices.date_from","invoices.date_to","invoices.count","invoices.amount","invoices.copay","invoices.corrections","invoices.payed","pharmacy_payments.amount as payed_amount")->first();
+                if(empty($invoice)) {
+                    return abort(404, 'Invoice not found');
+                }
                 $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
                 $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice_id)->pluck('order_id')->toArray();
@@ -3600,6 +3722,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $invoice_id
+     */
     public static function billingPrintReport($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3608,6 +3734,9 @@ class LexaAdmin extends Controller
         if(!empty($pharmacy)) {
             if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
                 $invoice = DB::table('invoices')->where('invoices.pharmacy_id',$pharmacy_id)->where('invoices.id',$invoice_id)->leftJoin("pharmacy_payments","pharmacy_payments.invoice_id","=","invoices.id")->select("invoices.id","invoices.created","invoices.pharmacy_id","invoices.date_from","invoices.date_to","invoices.count","invoices.amount","invoices.copay","invoices.corrections","invoices.payed","pharmacy_payments.amount as payed_amount")->first();
+                if(empty($invoice)) {
+                    return abort(404, 'Invoice not found');
+                }
                 $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice_id)->pluck('order_id')->toArray();
                 $orders = DB::table('orders')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select("orders.id","delivery_times.name as delivery_time","statuses.name as status",DB::raw("CONCAT(users.name, ' ', users.last_name) as username"),"orders.finish","orders.created","orders.copay","orders.statuse_copay","orders.tariff","orders.pharmacy_id")->where('orders.pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('orders.id',$invoice_exclusions)->get();
@@ -3620,6 +3749,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function billingHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3664,9 +3796,9 @@ class LexaAdmin extends Controller
                             $unid = uniqid("",true).rand(0,100);
                             $body = new \Square\Models\CreatePaymentRequest(
                                 $payment_account->payment_profile_id,
-                                $unid,
-                                $amount_money
+                                $unid
                             );
+                            $body->setAmountMoney($amount_money);
                             $body->setAutocomplete(true);
                             $body->setCustomerId($payment_account->profile_id);
                             $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
@@ -3691,7 +3823,6 @@ class LexaAdmin extends Controller
                         } else if(!empty($payment_account) && $payment_account->type=="bank") {
                             if(!empty($request->input('card')) && !empty($request->input('name'))) {
                                 $card_token = $request->input('card');
-                                $type = "bank";
                                 $name=explode(' ',$request->input('name'));
                                 if(count($name)==1) {
                                     $name[1]="";
@@ -3706,9 +3837,9 @@ class LexaAdmin extends Controller
                                 $unid = uniqid("",true).rand(0,100);
                                 $body = new \Square\Models\CreatePaymentRequest(
                                     $card_token,
-                                    $unid,
-                                    $amount_money
+                                    $unid
                                 );
+                                $body->setAmountMoney($amount_money);
                                 $body->setAutocomplete(true);
                                 $body->setCustomerId($payment_account->profile_id);
                                 $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
@@ -3716,7 +3847,6 @@ class LexaAdmin extends Controller
                                 $api_response = $client->getPaymentsApi()->createPayment($body);
                                 if ($api_response->isSuccess()) {
                                     $result = $api_response->getResult();
-                                    $payment_id = $result->getPayment()->getId();
                                     $payment_status = $result->getPayment()->getStatus();
                                     if($payment_status=="COMPLETED" || $payment_status=="APPROVED" || $payment_status=="PENDING") {
                                         $balance = floatval($pharmacy->balance)+$amount;
@@ -3760,9 +3890,9 @@ class LexaAdmin extends Controller
                             $unid = uniqid("",true).rand(0,100);
                             $body = new \Square\Models\CreatePaymentRequest(
                                 $payment_account->payment_profile_id,
-                                $unid,
-                                $amount_money
+                                $unid
                             );
+                            $body->setAmountMoney($amount_money);
                             $body->setAutocomplete(true);
                             $body->setCustomerId($payment_account->profile_id);
                             $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
@@ -3845,6 +3975,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function billingInvoiceAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3870,6 +4003,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function billingInvoiceAddHandler($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -3879,6 +4015,7 @@ class LexaAdmin extends Controller
             if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
                 if($request->input('save')>0 && !empty($request->input('date_from')) && !empty($request->input('date_to'))) {
                     $orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->where('invoice_payed','0')->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', date($request->input('date_from')))->whereDate('finish', '<=', date($request->input('date_to')));
+                    $invoice_exclusions = [];
                     if(!empty($request->input('invoice_exclusions'))){
                         $invoice_exclusions = array_filter(explode("\n",$request->input('invoice_exclusions')));
                         $orders=$orders->whereNotIn('id',$invoice_exclusions);
@@ -3956,15 +4093,14 @@ class LexaAdmin extends Controller
                             if($order->type_driver==1) {
                                 if($order->delivery_time_id==1) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                                }
-                                if($order->delivery_time_id==2) {
+                                } elseif($order->delivery_time_id==2) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                                }
-                                if($order->delivery_time_id==3) {
+                                } elseif($order->delivery_time_id==3) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                                }
-                                if($order->delivery_time_id==4) {
+                                } elseif($order->delivery_time_id==4) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                                } else {
+                                    throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                                 }
                                 if($order->fridge==1) {
                                     $tariff_res+= floatval($tariff_fridge);
@@ -4008,6 +4144,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $invoice_id
+     */
     public function billingInvoiceEdit($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4016,6 +4156,9 @@ class LexaAdmin extends Controller
         if(!empty($pharmacy)) {
             if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
                 $invoice = DB::table('invoices')->where('id', $invoice_id)->where('pharmacy_id', $pharmacy_id)->first();
+                if(empty($invoice)) {
+                    return abort(404, 'Invoice not found');
+                }
                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id', $invoice_id)->get();
                 $res_view = view('billing.invoice_form',['invoice'=>$invoice,'invoice_exclusions'=>$invoice_exclusions,'alert'=>'','title'=>'Billing Invoice Edit','br1'=>'Billings','br2'=>'Invoice Edit']);
                 if(isset($_GET['ajax'])) {
@@ -4031,6 +4174,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $invoice_id
+     */
     public function billingInvoiceEditHandler($pharmacy_id,$invoice_id, Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4040,6 +4187,7 @@ class LexaAdmin extends Controller
             if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
                 if($request->input('save')>0 && !empty($request->input('date_from')) && !empty($request->input('date_to')) && !empty($request->input('tariff'))) {
                     $count_orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('created', '>=', date($request->input('date_from')))->whereDate('created', '<=', date($request->input('date_to')));
+                    $invoice_exclusions = [];
                     if(!empty($request->input('invoice_exclusions'))){
                         $invoice_exclusions = array_filter(explode("\n",$request->input('invoice_exclusions')));
                         $count_orders=$count_orders->whereNotIn('id',$invoice_exclusions);
@@ -4064,6 +4212,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function ordersStatistic($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4105,6 +4256,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function ordersStatisticHandler($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4164,16 +4318,16 @@ class LexaAdmin extends Controller
                 $orders=$orders->leftJoin('users','users.id','=','orders.user_id')->select('orders.id','orders.created','orders.finish','orders.copay','orders.statuse_id','orders.pharmacy_id','orders.user_id',DB::raw("CONCAT(users.name, ' ', users.last_name) as user_name"))->get();
                 $statuses = self::get_statuses();
                 $pharmacys = self::get_pharmacys($orders->pluck('pharmacy_id')->toArray());
-                foreach($orders as $key=>$order) {
+                foreach($orders as $order) {
                     $data = [];
                     $pharmacy_name = '';
                     if(isset($pharmacys[$order->pharmacy_id])){
                         $pharmacy_name = $pharmacys[$order->pharmacy_id]->name;
                     }
                     $data['id']=$order->id;
-                    $data['created']=date('m/d/Y g:i A', strtotime($order->created));
-                    $data['finish']=date('m/d/Y g:i A', strtotime($order->finish));
-                    $data['copay']=number_format($order->copay,2);
+                    $data['created']=date('m/d/Y g:i A', strtotime($order->created ?? ''));
+                    $data['finish']=date('m/d/Y g:i A', strtotime($order->finish ?? ''));
+                    $data['copay']=number_format($order->copay ?? 0,2);
                     $data['pharmacy_id']=$order->pharmacy_id;
                     $data['user_id']=$order->user_id;
                     $data['status_name']=$statuses[$order->statuse_id]->name;
@@ -4189,13 +4343,13 @@ class LexaAdmin extends Controller
                         $rxs=$rxs->where('orders.pharmacy_id',Auth::user()->pharmacy_id);
                     }
                     $rxs=$rxs->get();
-                    foreach($rxs as $key=>$rx) {
+                    foreach($rxs as $rx) {
                         $data = [];
                         $data['rx_id']=$rx->rx_id;
                         $data['order_id']=$rx->order_id;
-                        $data['created']=date('m/d/Y g:i A', strtotime($rx->created));
-                        $data['finish']=date('m/d/Y g:i A', strtotime($rx->finish));
-                        $data['copay']=number_format($order->copay,2);
+                        $data['created']=date('m/d/Y g:i A', strtotime($rx->created ?? ''));
+                        $data['finish']=date('m/d/Y g:i A', strtotime($rx->finish ?? ''));
+                        $data['copay']=number_format($rx->copay ?? 0,2);
                         $data['link']="/orders/{$rx->pharmacy_id}/show/{$rx->order_id}";
                         $rxs_results[]=$data;
                     }
@@ -4213,7 +4367,7 @@ class LexaAdmin extends Controller
                         $users=$users->where('users.pharmacy_id',Auth::user()->pharmacy_id);
                     }
                     $users=$users->get();
-                    foreach($users as $key=>$user) {
+                    foreach($users as $user) {
                         $data = [];
                         $pharmacy_name = '';
                         if(isset($pharmacys[$user->pharmacy_id])){
@@ -4251,6 +4405,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function orders($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4404,6 +4561,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function ordersHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4481,7 +4641,7 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $date = request()->query('date');
+            $date = request()->query('date') ?: date('Y-m-d');
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('users as users2', 'orders.driver_id', '=', 'users2.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.count_bags', 'orders.statuse_id', 'orders.copay', 'orders.finish', 'users.apartment as userapartment', 'users2.name as driver_name', 'users2.last_name as driver_last_name', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.pharmacy_id', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id',4)->whereRaw('date(finish) = "'.$date.'"')->groupBy('orders.id', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.statuse_id', 'orders.driver_id', 'users.apartment', 'orders.count_bags', 'orders.finish', 'orders.created', 'users2.name', 'users2.last_name', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'),'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc')->get();
             foreach($orders as $key=>$order) {
                 $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
@@ -4500,7 +4660,7 @@ class LexaAdmin extends Controller
             }
             return view('orders.print',['orders'=>$orders]);
         } else if (Auth::user()->role == 'medic') {
-            $date = request()->query('date');
+            $date = request()->query('date') ?: date('Y-m-d');
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('users as users2', 'orders.driver_id', '=', 'users2.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.count_bags', 'orders.statuse_id', 'orders.copay', 'orders.finish', 'users.apartment as userapartment', 'users2.name as driver_name', 'users2.last_name as driver_last_name', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.pharmacy_id', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id',4)->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->whereRaw('date(finish) = "'.$date.'"')->groupBy('orders.id', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.statuse_id', 'orders.driver_id', 'users.apartment','users2.name', 'users2.last_name', 'orders.count_bags', 'orders.finish', 'orders.created', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc')->get();
             foreach($orders as $key=>$order) {
                 $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
@@ -4525,6 +4685,9 @@ class LexaAdmin extends Controller
         if((Auth::user()->role == 'medic') || (Auth::user()->role == 'superadmin') || (Auth::user()->role == 'admin') || (Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'driver') || (Auth::user()->role == 'logist')) {
             $order_id = request()->query('order_id');
             $order = DB::table('orders')->where('id',$order_id)->first();
+            if(empty($order)) {
+                return abort(404, 'Order not found');
+            }
             $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
             foreach($rxs as $key0=>$rx) {
                 if(empty($rx->rx_id)) {
@@ -4535,7 +4698,6 @@ class LexaAdmin extends Controller
             $pharmacys = self::get_pharmacys();
             $patients = self::get_patients();
             $wishs = self::get_wishs();
-            $pharmacy_id = NULL;
             $res_arr = ['order'=>$order,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
             return view('orders.ticket',$res_arr);
         } else {
@@ -4754,6 +4916,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $order_id
+     */
     public static function ordersShow($pharmacy_id,$order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4771,11 +4937,10 @@ class LexaAdmin extends Controller
             } else {
                 $driver="";
             }
-            $route_patient=DB::table('routes_priority')->where('order_id',$order->id)->where('type','patient')->first();
             $orders_transitions=DB::table('packages_transitions')->where('order_id',$order_id)->orderBy('id','ASC')->get();
             $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$order->driver_id)->first();
             if($order->statuse_id==4 && !empty($order->finish)) {
-                $locationDrivers = DB::table('locations')->where('user_id',$order->driver_id)->whereBetween("created",[date("Y-m-d H:i:s",strtotime($order->finish)-300),date("Y-m-d H:i:s",strtotime($order->finish)+300)])->get();
+                $locationDrivers = DB::table('locations')->where('user_id',$order->driver_id)->whereBetween("created",[date("Y-m-d H:i:s",strtotime($order->finish ?? '')-300),date("Y-m-d H:i:s",strtotime($order->finish ?? '')+300)])->get();
             } else {
                 $locationDrivers = [];
             }
@@ -4795,6 +4960,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public function ordersPreview($order_id)
     {
         if(Auth::user()->isblocked_or_isactive()) {
@@ -4810,11 +4978,10 @@ class LexaAdmin extends Controller
             } else {
                 $driver="";
             }
-            $route_patient=DB::table('routes_priority')->where('order_id',$order->id)->where('type','patient')->first();
             $orders_transitions=DB::table('packages_transitions')->where('order_id',$order_id)->orderBy('id','ASC')->get();
             $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$order->driver_id)->first();
             if($order->statuse_id==4 && !empty($order->finish)) {
-                $locationDrivers = DB::table('locations')->where('user_id',$order->driver_id)->whereBetween("created",[date("Y-m-d H:i:s",strtotime($order->finish)-300),date("Y-m-d H:i:s",strtotime($order->finish)+300)])->get();
+                $locationDrivers = DB::table('locations')->where('user_id',$order->driver_id)->whereBetween("created",[date("Y-m-d H:i:s",strtotime($order->finish ?? '')-300),date("Y-m-d H:i:s",strtotime($order->finish ?? '')+300)])->get();
             } else {
                 $locationDrivers = [];
             }
@@ -4828,18 +4995,16 @@ class LexaAdmin extends Controller
         }
     }
 
-    public static function ordersShowHandler(Request $request,$pharmacy_id,$order_id) {
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $order_id
+     */
+    public static function ordersShowHandler(Request $request,$pharmacy_id,$order_id, RotateSignature $rotateSignature) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.signature_type', 'users.name as username', 'users.last_name as last_name', 'users.os as useros', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor', 'orders.statuse_copay', 'statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.signature_type', 'orders.user_id', 'users.name', 'users.last_name', 'users.os', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color', 'orders.statuse_copay', 'statuses_copay.name','statuses_copay.color')->first();
         if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) ||  (Auth::user()->role == 'logist') || (Auth::user()->role == 'driver' && Auth::user()->id==$order->driver_id) || (Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
-            $medicines = DB::table('medicine')->join('medicines', 'medicine.medicine_id', '=', 'medicines.id')->select('medicine.count','medicines.name','medicine.dosage')->where('order_id',$order_id)->get();
-            if($order->driver_id>0) {
-                $driver = DB::table('users')->where('id',$order->driver_id)->first();
-            } else {
-                $driver="";
-            }
             if(isset($_POST['dispatcher_notes'])) {
                 DB::table('notes')->insert(["order_id"=>$order_id,"user_id"=>Auth::user()->id,"type"=>"1",'note'=>addslashes($request->input('dispatcher_notes'))]);
                 return json_encode([
@@ -4859,13 +5024,7 @@ class LexaAdmin extends Controller
                 DB::table('orders')->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
             }
             if($request->input('rotate_signature')>0 && !empty($order->signature_photo)) {
-                $path = public_path().$order->signature_photo;
-                $img = \Image::make($path);
-                $img->rotate(-90);
-                $base_path = explode('.',$order->signature_photo);
-                $mime_img = end($base_path);
-                $src = '/images/signature/'.date('mdHis').'rotated.'.$mime_img;
-                $img->save(public_path().$src);
+                $src = $rotateSignature->handle($order->signature_photo);
                 DB::table('orders')->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
             }
             if($request->input('eta_calculate')>0) {
@@ -4896,6 +5055,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $order_id
+     */
     public static function ordersEdit($pharmacy_id,$order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4930,6 +5093,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $order_id
+     */
     public static function ordersEditHandler(Request $request,$pharmacy_id,$order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -4975,7 +5142,7 @@ class LexaAdmin extends Controller
                 $rx_recipients = $request->input('rx_recipient');
                 $data=[];
                 if(!empty($rx_ids)){
-                    foreach($rx_ids as $key=>$value){
+                    foreach(array_keys($rx_ids) as $key){
                         if(empty($rx_recipients[$key])) {
                             $rx_recipient=NULL;
                         } else {
@@ -5084,15 +5251,14 @@ class LexaAdmin extends Controller
                     if($order->type_driver==1) {
                         if($order->delivery_time_id==1) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==2) {
+                        } elseif($order->delivery_time_id==2) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==3) {
+                        } elseif($order->delivery_time_id==3) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==4) {
+                        } elseif($order->delivery_time_id==4) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                        } else {
+                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                         }
                         if($order->fridge==1) {
                             $tariff_res+= floatval($tariff_fridge);
@@ -5140,6 +5306,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $order_id
+     */
     public static function ordersFacilitysEdit($pharmacy_id,$order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5171,6 +5341,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $order_id
+     */
     public static function ordersFacilitysEditHandler(Request $request,$pharmacy_id,$order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5264,7 +5438,7 @@ class LexaAdmin extends Controller
                 $rx_copays = $request->input('rx_copay');
                 $data=[];
                 if(!empty($rx_ids)){
-                    foreach($rx_ids as $key=>$value){
+                    foreach(array_keys($rx_ids) as $key){
                         if(empty($rx_recipients[$key])) {
                             $rx_recipient=NULL;
                         } else {
@@ -5367,15 +5541,14 @@ class LexaAdmin extends Controller
                     if($order->type_driver==1) {
                         if($order->delivery_time_id==1) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==2) {
+                        } elseif($order->delivery_time_id==2) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==3) {
+                        } elseif($order->delivery_time_id==3) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        }
-                        if($order->delivery_time_id==4) {
+                        } elseif($order->delivery_time_id==4) {
                             $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                        } else {
+                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                         }
                         if($order->fridge==1) {
                             $tariff_res+= floatval($tariff_fridge);
@@ -5408,6 +5581,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function ordersAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5436,6 +5612,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function ordersAddHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5468,7 +5647,33 @@ class LexaAdmin extends Controller
                 }
             }
             if($request->input('save')>0) {
-                $id_max = DB::table('orders')->max('id')+1;
+                // rxs.rx_id is varchar(20) and stores "<RX#>-<Rf#>", so RX# (15) + "-" + Rf# (4) fits.
+                $request->validate([
+                    'user' => ['required_without:facility', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('users', 'id')->where('pharmacy_id', $pharmacy_id)],
+                    'count_bags' => ['nullable', 'integer', 'min:1', 'max:10'],
+                    'copay' => ['nullable', 'numeric', 'min:0'],
+                    'delivery_method' => ['required', 'integer', 'exists:delivery_methods,id'],
+                    'delivery_time' => ['required', 'integer', 'exists:delivery_times,id'],
+                    'delivery_date' => ['nullable', 'date'],
+                    'type_driver' => ['nullable', 'in:1,2'],
+                    'driver' => ['nullable', 'integer', 'exists:users,id'],
+                    'special_instructions' => ['nullable', 'string', 'max:1000'],
+                    'rx_id' => ['required', 'array', 'min:1'],
+                    'rx_id.*' => ['required', 'string', 'max:15'],
+                    'rf_id.*' => ['nullable', 'regex:/^\d{1,4}$/'],
+                    'rx_count.*' => ['nullable', 'integer', 'min:1'],
+                    'rx_date.*' => ['nullable', 'date'],
+                ], [
+                    'user.required_without' => 'Choose a customer.',
+                    'user.exists' => 'The selected customer does not belong to this pharmacy.',
+                    'delivery_method.required' => 'Choose a delivery option.',
+                    'delivery_time.required' => 'Choose a preferred delivery time.',
+                    'rx_id.required' => 'Add at least one RX#.',
+                    'rx_id.*.required' => 'Every RX row needs an RX#.',
+                    'rx_id.*.max' => 'RX# can be at most 15 characters.',
+                    'rf_id.*.regex' => 'Rf# must be a number of up to 4 digits.',
+                    'rx_count.*.min' => 'Qty must be at least 1.',
+                ]);
                 $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
                 $statuse_copay = (empty($request->input('copay')))?'1':'2';
                 if(!empty($request->input('copay_paid_pharm'))) {
@@ -5482,23 +5687,19 @@ class LexaAdmin extends Controller
                 $rx_dates = $request->input('rx_date');
                 $rx_recipients = $request->input('rx_recipient');
                 $data=[];
-                foreach($rx_ids as $key=>$value){
+                foreach(array_keys($rx_ids) as $key){
                     if(empty($rx_recipients[$key])) {
                         $rx_recipient=NULL;
                     } else {
                         $rx_recipient=$rx_recipients[$key];
                     }
-                    $data[]=["order_id"=>$id_max,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>$rx_counts[$key],"rx_recipient"=>$rx_recipient];
+                    $data[]=["rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.($rf_ids[$key] ?? ''),"rx_date"=>$rx_dates[$key] ?? null,"rx_count"=>$rx_counts[$key] ?? 1,"rx_recipient"=>$rx_recipient];
                 }
-                DB::table('rxs')->insert($data);
                 if(!empty($request->input('delivery_date'))){
                     $delivery_date = date("Y-m-d",strtotime($request->input('delivery_date')));
                 } else {
-                    if($request->input('delivery_time')=="1"){
-                        $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
-                    } else {
-                        $delivery_date = DB::raw("CURDATE()");
-                    }
+                    // Use the app's timezone; the database server's CURDATE() is UTC.
+                    $delivery_date = $request->input('delivery_time')=="1" ? now()->addDay()->toDateString() : now()->toDateString();
                 }
                 $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
                 if(empty($request->input('delivery_time_range'))) {
@@ -5511,11 +5712,14 @@ class LexaAdmin extends Controller
                 } else {
                     $driver_id = NULL;
                 }
-                if(!empty($request->input('facility'))){
-                    DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
-                } else {
-                    DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('user'), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
-                }
+                $order_row = !empty($request->input('facility'))
+                    ? ['pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]
+                    : ['pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('user'), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')];
+                $id_max = DB::transaction(function () use ($order_row, $data) {
+                    $order_id = DB::table('orders')->insertGetId($order_row);
+                    DB::table('rxs')->insert(array_map(fn ($rx) => ['order_id' => $order_id] + $rx, $data));
+                    return $order_id;
+                });
                 if(!empty($request->input('facility'))){
                     $us = DB::table('users')->where('id',$request->input('facility'))->first();
                 } else {
@@ -5554,12 +5758,15 @@ class LexaAdmin extends Controller
                     self::add_row_to_google_sheeds($id_max);
                 }
             }
-            return redirect("orders/$pharmacy_id?added=$id_max");
+            return redirect("orders/$pharmacy_id".(isset($id_max) ? "?added=$id_max" : ""));
         } else {
             return abort(403, self::$err_perm);
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function ordersFacilitysAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5585,6 +5792,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function ordersFacilitysAddHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5594,7 +5804,6 @@ class LexaAdmin extends Controller
         }
         if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if(isset($_POST['user_id'])) {
-                $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
                 $patient=DB::table('users')->where('users.id',$request->input('user_id'))->first();
                 $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
                 if(!empty($zip_tariff)){
@@ -5626,7 +5835,7 @@ class LexaAdmin extends Controller
                 $rx_recipients = $request->input('rx_recipient');
                 $data=[];
                 if(!empty($rx_ids)){
-                    foreach($rx_ids as $key=>$value){
+                    foreach(array_keys($rx_ids) as $key){
                         if(empty($rx_recipients[$key])) {
                             $rx_recipient=NULL;
                         } else {
@@ -5684,7 +5893,6 @@ class LexaAdmin extends Controller
                 }
                 Notifications::send_push($request->input('user'),"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
                 if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
-                    $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                     Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
                         "Attention!",
                         "Urgent order No.".$id_max." has been created, which needs to be processed promptly.",
@@ -5804,7 +6012,6 @@ class LexaAdmin extends Controller
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin')) {
-            $alert='';
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
             }
@@ -5866,7 +6073,7 @@ class LexaAdmin extends Controller
                 $tariff_areas = $request->input('tariff_areas');
                 $data=[];
                 if(!empty($tariff_areas)) {
-                    foreach($tariff_areas as $key=>$value){
+                    foreach($tariff_areas as $value){
                         $data[]=["admin_area_id"=>$admin_area_id,"area_id"=>$value];
                     }
                 }
@@ -5887,6 +6094,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $admin_area_id
+     */
     public static function settingsAdminAreasEdit($admin_area_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5902,6 +6112,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $admin_area_id
+     */
     public static function settingsAdminAreasEditHandler(Request $request,$admin_area_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -5914,7 +6127,7 @@ class LexaAdmin extends Controller
                 $tariff_areas = $request->input('tariff_areas');
                 $data=[];
                 if(!empty($tariff_areas)) {
-                    foreach($tariff_areas as $key=>$value){
+                    foreach($tariff_areas as $value){
                         $data[]=["admin_area_id"=>$admin_area_id,"area_id"=>$value];
                     }
                 }
@@ -6242,7 +6455,7 @@ class LexaAdmin extends Controller
                 try {
                     $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
                     $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Welcome to QuikMedix, ".$user->name."!\nYour account has been verified. Now you can use the app.\nAll the best,\nThe team at QuikMedix", "from" => config('app.twilio_from_phone')]);
-                } catch (\Throwable $th) {
+                } catch (\Throwable) {
                     //throw $th;
                 }
             }
@@ -6435,6 +6648,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public static function settingsUsersedit($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -6455,6 +6671,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public static function settingsUserseditHandler(Request $request,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -6616,6 +6835,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     private static function add_row_to_google_sheeds($order_id) {
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as medic', 'orders.medic_id', '=', 'medic.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id','orders.delivery_address','orders.delivery_location', 'orders.eta', 'orders.created', 'orders.finish', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.statuse_id', 'orders.rating', 'orders.signature', 'orders.fridge', 'orders.facility', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.signature_type', 'orders.medic_id', 'medic.name as medicname', 'medic.last_name as mediclast_name', 'users.name as username', 'users.last_name as last_name', 'users.os as useros', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'users.home_phone as userhomephone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor', 'orders.statuse_copay', 'statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.statuse_id', 'orders.facility', 'orders.created', 'orders.finish', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.driver_id', 'orders.rating', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.signature_type', 'orders.user_id', 'users.name', 'users.last_name', 'medic.name', 'medic.last_name','users.os', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'orders.medic_id', 'users.phone','users.home_phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color', 'orders.statuse_copay', 'statuses_copay.name','statuses_copay.color','orders.delivery_address','orders.delivery_location')->first();
         if(!empty($order)){
@@ -6630,7 +6852,7 @@ class LexaAdmin extends Controller
             // configure the Sheets Service
             $service = new \Google_Service_Sheets($client);
             $spreadsheetId = '1MD4F0Xvz3uUc0kr7qt0vYd-QtNtPxjnMBha7PZrIhHY';
-            $spreadsheet = $service->spreadsheets->get($spreadsheetId);
+            $service->spreadsheets->get($spreadsheetId);
             $range = 'XBC-1'; // here we use the name of the Sheet to get all the rows
             $newRow = [
                 '',
@@ -6667,7 +6889,11 @@ class LexaAdmin extends Controller
         return false;
     }
 
-    private static function action_log_user_check($request,$address,$user_id,$address2=NULL,$address3=NULL) {
+    /**
+     * @param string|null $address
+     * @param int|string $user_id
+     */
+    private static function action_log_user_check(Request $request,$address,$user_id,$address2=NULL,$address3=NULL) {
         $user = DB::table('users')->where('id', $user_id)->first();
         if($request->input('name')!=$user->name) {
             DB::table('action_log')->insert(['type'=>'change name','comment'=>'from '.$user->name.' to '.$request->input('name'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
@@ -6865,10 +7091,10 @@ class LexaAdmin extends Controller
                     // Submit a UpdatePaymentProfileRequest
                     $request->setPaymentProfile($paymentprofile);
                     $controller = new AnetController\UpdateCustomerPaymentProfileController($request);
+                    /** @var AnetAPI\UpdateCustomerPaymentProfileResponse $response */
                     $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                     if (($response != null) && ($response->getMessages()->getResultCode() == "Ok") )
                     {
-                        $Message = $response->getMessages()->getMessage();
                         $success= "New Card successfully added!";
                         DB::table('payment_accounts')->where('user_id',Auth::user()->id)->update(['card'=>$ncard]);
                     } else if ($response != null) {
@@ -6928,6 +7154,7 @@ class LexaAdmin extends Controller
                     $request->setProfile($customerProfile);
                     // Create the controller and get the response
                     $controller = new AnetController\CreateCustomerProfileController($request);
+                    /** @var AnetAPI\CreateCustomerProfileResponse $response */
                     $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                     if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
                         $paymentProfiles = $response->getCustomerPaymentProfileIdList();
@@ -6948,6 +7175,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function cardPharmacyAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -6967,6 +7197,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function cardPharmacyAddHandler($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -7036,9 +7269,9 @@ class LexaAdmin extends Controller
                         $unid = uniqid("",true).rand(0,100);
                         $body = new \Square\Models\CreatePaymentRequest(
                             $card_token,
-                            $unid,
-                            $amount_money
+                            $unid
                         );
+                        $body->setAmountMoney($amount_money);
                         $body->setAutocomplete(true);
                         $body->setCustomerId($payment_account->profile_id);
                         $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
@@ -7100,6 +7333,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function cardPharmacyAddHandlerOld($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -7162,10 +7398,10 @@ class LexaAdmin extends Controller
                         // Submit a UpdatePaymentProfileRequest
                         $request->setPaymentProfile($paymentprofile);
                         $controller = new AnetController\UpdateCustomerPaymentProfileController($request);
+                        /** @var AnetAPI\UpdateCustomerPaymentProfileResponse $response */
                         $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                         if (($response != null) && ($response->getMessages()->getResultCode() == "Ok") )
                         {
-                            $Message = $response->getMessages()->getMessage();
                             $success= "New Card successfully added!";
                             DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->update(['card'=>$ncard]);
                         } else if ($response != null) {
@@ -7225,6 +7461,7 @@ class LexaAdmin extends Controller
                         $request->setProfile($customerProfile);
                         // Create the controller and get the response
                         $controller = new AnetController\CreateCustomerProfileController($request);
+                        /** @var AnetAPI\CreateCustomerProfileResponse $response */
                         $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                         if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
                             $paymentProfiles = $response->getCustomerPaymentProfileIdList();
@@ -7248,6 +7485,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function refillPharmacyBalance($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -7267,6 +7507,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public static function refillPharmacyBalanceHandler(Request $request, $pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -7301,6 +7544,7 @@ class LexaAdmin extends Controller
                     $request0->setRefId($refId);
                     $request0->setTransactionRequest($transactionRequestType);
                     $controller = new AnetController\CreateTransactionController($request0);
+                    /** @var AnetAPI\CreateTransactionResponse $response */
                     $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                     if ($response != null) {
                         if($response->getMessages()->getResultCode() == "Ok") {
@@ -7339,6 +7583,9 @@ class LexaAdmin extends Controller
     }
 
 
+    /**
+     * @param int|string $user_id
+     */
     public function chatUser($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -7470,7 +7717,6 @@ class LexaAdmin extends Controller
         $chats_db = DB::table('chats')->orWhere('user1',Auth::user()->id)->orWhere('user2',Auth::user()->id)->orderBy('last_message_date','desc')->get();
         $chats=array();
         foreach ($chats_db as $chat) {
-            $chat_name=$chat->name;
             if($chat->user1==Auth::user()->id) {
                 $user_id=$chat->user2;
                 $count_noread=$chat->unread_user1;
@@ -7508,7 +7754,7 @@ class LexaAdmin extends Controller
         }
     }
 
-    public static function notifications(Request $request) {
+    public static function notifications() {
         $countOnPage=30;
         $max_pages=ceil(DB::table('notifications')->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page=1;
@@ -7806,15 +8052,14 @@ class LexaAdmin extends Controller
                             if($order->type_driver==1) {
                                 if($order->delivery_time_id==1) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                                }
-                                if($order->delivery_time_id==2) {
+                                } elseif($order->delivery_time_id==2) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                                }
-                                if($order->delivery_time_id==3) {
+                                } elseif($order->delivery_time_id==3) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                                }
-                                if($order->delivery_time_id==4) {
+                                } elseif($order->delivery_time_id==4) {
                                     $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                                } else {
+                                    throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                                 }
                                 if($order->fridge==1) {
                                     $tariff_res+= floatval($tariff_fridge);
@@ -7878,6 +8123,11 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     * @param int|string $bag
+     * @param int|string $driver_id
+     */
     public function driversBagsOrder($order_id, $bag, $driver_id, $count=1) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $order = DB::table('orders')->where('id',$order_id)->where('driver_id', $driver_id)->whereIn('statuse_id', [1,2,3,5,6,7,8,9])->first();
@@ -8108,15 +8358,14 @@ class LexaAdmin extends Controller
                         if($order->type_driver==1) {
                             if($order->delivery_time_id==1) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                            }
-                            if($order->delivery_time_id==2) {
+                            } elseif($order->delivery_time_id==2) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                            }
-                            if($order->delivery_time_id==3) {
+                            } elseif($order->delivery_time_id==3) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                            }
-                            if($order->delivery_time_id==4) {
+                            } elseif($order->delivery_time_id==4) {
                                 $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                            } else {
+                                throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                             }
                             if($order->fridge==1) {
                                 $tariff_res+= floatval($tariff_fridge);
@@ -8174,6 +8423,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public static function driversPackages($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -8222,12 +8474,14 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public function driversPackagesHandler(Request $request, $user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
         if(Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $driver = DB::table('users')->where('id', $user_id)->first();
             if($request->input('confirm_receipt')>0) {
                 $driver_id = $user_id;
                 $orders = DB::table('cash_log')->where('driver_id', $driver_id)->where("return","0")->get();
@@ -8274,7 +8528,7 @@ class LexaAdmin extends Controller
                     }
                     $orders_transfer = DB::table('orders')->where('driver_id', $user_id)->where('pharmacy_id', Auth::user()->pharmacy_id)->whereIn('statuse_id', [1,2])->whereIn('id', explode(',',$routes_priority0->order_id))->get();
                 }
-                foreach($orders_transfer as $key=>$order) {
+                foreach($orders_transfer as $order) {
                     for ($i=1; $i <= $order->count_bags; $i++) { 
                         $this->driversBagsOrder($order->id, $i, $user_id);
                     }
@@ -8286,6 +8540,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function payCopay($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -8310,6 +8567,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public static function payCopayHandler(Request $request, $order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -8344,6 +8604,7 @@ class LexaAdmin extends Controller
                     $request0->setRefId($refId);
                     $request0->setTransactionRequest($transactionRequestType);
                     $controller = new AnetController\CreateTransactionController($request0);
+                    /** @var AnetAPI\CreateTransactionResponse $response */
                     $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                     if ($response != null) {
                         if($response->getMessages()->getResultCode() == "Ok") {
@@ -8401,6 +8662,7 @@ class LexaAdmin extends Controller
                         $request0->setCustomerProfileId($payment_account->profile_id);
                         $request0->setCustomerPaymentProfileId($payment_account->payment_profile_id);
                         $controller = new AnetController\GetCustomerPaymentProfileController($request0);
+                        /** @var AnetAPI\GetCustomerPaymentProfileResponse $response */
                         $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                         if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
                             $billTo = new AnetAPI\CustomerAddressType();
@@ -8421,10 +8683,10 @@ class LexaAdmin extends Controller
                             $request0->setCustomerProfileId($payment_account->profile_id);
                             $request0->setPaymentProfile($paymentprofile);
                             $controller = new AnetController\UpdateCustomerPaymentProfileController($request0);
+                            /** @var AnetAPI\UpdateCustomerPaymentProfileResponse $response */
                             $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                             if (($response != null) && ($response->getMessages()->getResultCode() == "Ok") )
                             {
-                                $Message = $response->getMessages()->getMessage();
                                 $success= "New Card successfully added!";
                                 DB::table('payment_accounts')->where('user_id',$user->id)->update(['card'=>$ncard]);
                             } else if ($response != null) {
@@ -8487,6 +8749,7 @@ class LexaAdmin extends Controller
                         $request0->setProfile($customerProfile);
                         // Create the controller and get the response
                         $controller = new AnetController\CreateCustomerProfileController($request0);
+                        /** @var AnetAPI\CreateCustomerProfileResponse $response */
                         $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                         if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
                             $paymentProfiles = $response->getCustomerPaymentProfileIdList();
@@ -8514,6 +8777,9 @@ class LexaAdmin extends Controller
         return redirect()->route('login');
     }
 
+    /**
+     * @param int|string $user_id
+     */
     public static function reSendAuthMessage($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -8542,7 +8808,7 @@ class LexaAdmin extends Controller
                             return json_encode([
                                 'message' => 'OK'
                             ]);
-                        } catch (\Throwable $th) {
+                        } catch (\Throwable) {
                             return json_encode([
                                 'message' => 'An error occurred while sending',
                                 'errors' => 'Error'
@@ -8554,14 +8820,14 @@ class LexaAdmin extends Controller
                             return json_encode([
                                 'message' => 'OK'
                             ]);
-                        } catch (\Throwable $th) {
+                        } catch (\Throwable) {
                             return json_encode([
                                 'message' => 'An error occurred while sending',
                                 'errors' => 'Error'
                             ]);
                         }
                     }
-                } catch (\Throwable $th) {
+                } catch (\Throwable) {
                     return json_encode([
                         'message' => 'An error occurred while sending',
                         'errors' => 'Error'
@@ -8762,6 +9028,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $driver_id
+     */
     public function driversProfile($driver_id) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $user = DB::table('users')->where('id', $driver_id)->where('role','driver')->first();
@@ -8785,6 +9054,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $driver_id
+     */
     public function driversProfileHandler(Request $request,$driver_id) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $user = DB::table('users')->where('id', $driver_id)->where('role','driver')->first();
@@ -8925,6 +9197,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $wish_id
+     */
     public function settingsWishes($wish_id) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $countOnPage=20;
@@ -8959,6 +9234,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $wish_id
+     */
     public function settingsWishesHandler($wish_id,Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('remove')>0) {
@@ -8970,7 +9248,7 @@ class LexaAdmin extends Controller
         }
     }
 
-    public function settingsWishesAdd($wish_id) {
+    public function settingsWishesAdd() {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $input['text']='';
             $res_view = view('wishes.add',['input'=>$input,'alert'=>'','title'=>'Print Text Add','br1'=>'Print Text','br2'=>'Add']);
@@ -8984,6 +9262,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $wish_id
+     */
     public function settingsWishesAddHandler($wish_id,Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
@@ -9087,6 +9368,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $area_id
+     */
     public function settingsStatesEdit($area_id) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $area = DB::table('area')->where('id', $area_id)->select('id','name','state','tariff',DB::raw('ST_AsText(polygon) as polygon'))->first();
@@ -9116,6 +9400,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $area_id
+     */
     public function settingsStatesEditHandler($area_id, Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
@@ -9172,6 +9459,9 @@ class LexaAdmin extends Controller
         return $data;
     }
 
+    /**
+     * @param string $polygon_json
+     */
     function decodePolygon($polygon_json) {
         $polygon_str = "";
         $data = json_decode($polygon_json);
@@ -9187,6 +9477,9 @@ class LexaAdmin extends Controller
         return $polygon_str;
     }
 
+    /**
+     * @param string $polygon_str
+     */
     function encodePolygon($polygon_str) {
         $polygon_json = [];
         $data = explode(',',str_replace(['POLYGON((','))'],'',$polygon_str));
@@ -9201,6 +9494,9 @@ class LexaAdmin extends Controller
         return json_encode($polygon_json);
     }
 
+    /**
+     * @param string $polygon_str
+     */
     function encodePolygon2($polygon_str) {
         $polygon_json = [];
         $data = explode(',',str_replace(['POLYGON((','))'],'',$polygon_str));
@@ -9288,7 +9584,7 @@ class LexaAdmin extends Controller
     public function settingsPlansAddHandler(Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
-                $plan_id = DB::table('plans')->insertGetId(['name' => $request->input('name'),'order_rate' => $request->input('order_rate'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more')]);
+                DB::table('plans')->insertGetId(['name' => $request->input('name'),'order_rate' => $request->input('order_rate'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more')]);
             }
             return redirect("settings/plans");
         } else {
@@ -9296,6 +9592,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $plan_id
+     */
     public function settingsPlansEdit($plan_id) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             $plan = DB::table('plans')->where('id', $plan_id)->first();
@@ -9310,6 +9609,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $plan_id
+     */
     public function settingsPlansEditHandler($plan_id, Request $request) {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
             if($request->input('save')>0) {
@@ -9321,6 +9623,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $order_id
+     */
     public function get_records($order_id) {
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id', 'orders.created', 'users.phone as userphone')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.created','users.phone')->first();
         if(!empty($order)) {
@@ -9331,11 +9636,11 @@ class LexaAdmin extends Controller
                 try {
                     $result = $api->getPbxRecord(null,$last_call->call_id,3600);
                     if(!empty($result) && !empty($result->links)) {
-                        $record_link["created"] = date('m/d/Y g:i A', strtotime($last_call->created));
+                        $record_link["created"] = date('m/d/Y g:i A', strtotime($last_call->created ?? ''));
                         $record_link["link"] = $result->links[0];
                         $record_links[] = $record_link;
                     }
-                } catch (\Throwable $th) {}
+                } catch (\Throwable) {}
             }
             return response()->json($record_links);
         } else {
@@ -9343,6 +9648,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function import_order($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -9357,6 +9665,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function import_orderHandler($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -9447,7 +9758,7 @@ class LexaAdmin extends Controller
                 $rx_ids = $request->input('rx_id');
                 $rx_dates = $request->input('rx_date');
                 $data=[];
-                foreach($rx_ids as $key=>$value){
+                foreach(array_keys($rx_ids) as $key){
                     $data[]=["order_id"=>$id_max,"rx_id"=>str_replace(" ",'',$rx_ids[$key]),"rx_date"=>$rx_dates[$key]];
                 }
                 DB::table('rxs')->insert($data);
@@ -9593,15 +9904,14 @@ class LexaAdmin extends Controller
                 if($order->type_driver==1) {
                     if($order->delivery_time_id==1) {
                         $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                    }
-                    if($order->delivery_time_id==2) {
+                    } elseif($order->delivery_time_id==2) {
                         $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                    }
-                    if($order->delivery_time_id==3) {
+                    } elseif($order->delivery_time_id==3) {
                         $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                    }
-                    if($order->delivery_time_id==4) {
+                    } elseif($order->delivery_time_id==4) {
                         $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
+                    } else {
+                        throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
                     }
                     if($order->fridge==1) {
                         $tariff_res+= floatval($tariff_fridge);
@@ -9626,7 +9936,7 @@ class LexaAdmin extends Controller
             $accessTokenDb = DB::table('quickbook')->where('id',1)->value('data');
             try {
                 $accessToken = !empty($accessTokenDb) ? unserialize($accessTokenDb) : null;
-            } catch (\Throwable $exception) {
+            } catch (\Throwable) {
                 $accessTokenDb = null;
                 $accessToken = null;
             }
@@ -9639,6 +9949,7 @@ class LexaAdmin extends Controller
                 'baseUrl' => config('app.quick_baseUrl')
             ));
             $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
+            assert($OAuth2LoginHelper instanceof OAuth2LoginHelper);
             if(empty($accessTokenDb) || strtotime($accessToken->getRefreshTokenExpiresAt())<time()) {
                 $authUrl = $OAuth2LoginHelper->getAuthorizationCodeURL();
                 $userInfo="";
@@ -9652,6 +9963,7 @@ class LexaAdmin extends Controller
                     $accessToken = $refreshedAccessTokenObj;
                 }
                 $oauthLoginHelper = $dataService->getOAuth2LoginHelper();
+                assert($oauthLoginHelper instanceof OAuth2LoginHelper);
                 $userInfo = $oauthLoginHelper->getUserInfo($accessToken->getAccessToken());
             }
             $res_view = view('quickbook.index',['alert'=>'','title'=>'Quickbook','br1'=>'Quickbook','br2'=>'Index','authUrl'=>$authUrl,'userInfo'=>$userInfo]);
@@ -9679,6 +9991,7 @@ class LexaAdmin extends Controller
                 'baseUrl' => config('app.quick_baseUrl')
             ));
             $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
+            assert($OAuth2LoginHelper instanceof OAuth2LoginHelper);
             if(isset($_GET['code']) && isset($_GET['realmId'])) {
                 $accessToken = $OAuth2LoginHelper->exchangeAuthorizationCodeForToken($_GET['code'], $_GET['realmId']);
                 $dataService->updateOAuth2Token($accessToken);
@@ -10088,6 +10401,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $driver_id
+     */
     public static function dispatchingShow($driver_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -10109,10 +10425,10 @@ class LexaAdmin extends Controller
             $patient_routes_priority=array();
             $pharmacy_routes_priority=array();
             foreach($routes_priority as $row) {
-                if($row->type='patient') {
+                if($row->type=='patient') {
                     array_push($patient_routes_priority,$row->order_id.','.$row->type_id);
                 }
-                if($row->type='pharmacy') {
+                if($row->type=='pharmacy') {
                     array_push($pharmacy_routes_priority,$row->order_id.','.$row->type_id);
                 }
             }
@@ -10121,10 +10437,10 @@ class LexaAdmin extends Controller
             $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver_id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
             $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver_id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
             $routes_priority = array();
-            foreach ($routes_priority1 as $key => $value) {
+            foreach ($routes_priority1 as $value) {
                 array_push($routes_priority,$value);
             }
-            foreach ($routes_priority0 as $key => $value) {
+            foreach ($routes_priority0 as $value) {
                 array_push($routes_priority,$value);
             }
             usort($routes_priority, function($a, $b){
@@ -10143,6 +10459,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $driver_id
+     */
     public function dispatchingShowHandler($driver_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -10233,6 +10552,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param mixed $location
+     */
     public static function slice_location($location) {
         if(!is_string($location) || $location === '') {
             return '';
@@ -10246,6 +10568,9 @@ class LexaAdmin extends Controller
         return $location;
     }
 
+    /**
+     * @param int|string $driver_id
+     */
     public static function eta_calculate($driver_id,$primary=FALSE) {
         $driver = DB::table('users')->where('id',$driver_id)->first();
         if(!empty($driver)) {
@@ -10379,9 +10704,8 @@ class LexaAdmin extends Controller
             ),
         )); 
         $response = json_decode(curl_exec($curl));
-        curl_close($curl);
         if(isset($response->access_token) && isset($response->expires_in)) {
-            Redis::set('here_access_token',$response->access_token, 'EX', intval($response->expires_in));
+            Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
             return $response->access_token;
         } else {
             dd('Error when update access token HERE!');
@@ -10429,12 +10753,15 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function ordersReadyHandler($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'medic') {
-            $orders = DB::table("orders")->where("pharmacy_id",$pharmacy_id)->where("orders.ready",'0')->where("orders.statuse_id",1)->update(["ready"=>'1']);
+            DB::table("orders")->where("pharmacy_id",$pharmacy_id)->where("orders.ready",'0')->where("orders.statuse_id",1)->update(["ready"=>'1']);
             return json_encode([
                 'message' => 'OK'
             ]);
@@ -10443,6 +10770,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     */
     public function process($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -10500,6 +10830,10 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param int|string $pharmacy_id
+     * @param int|string $driver_id
+     */
     public static function processShow($pharmacy_id,$driver_id) {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
@@ -10522,10 +10856,10 @@ class LexaAdmin extends Controller
             $patient_routes_priority=array();
             $pharmacy_routes_priority=array();
             foreach($routes_priority as $row) {
-                if($row->type='patient') {
+                if($row->type=='patient') {
                     array_push($patient_routes_priority,$row->order_id.','.$row->type_id);
                 }
-                if($row->type='pharmacy') {
+                if($row->type=='pharmacy') {
                     array_push($pharmacy_routes_priority,$row->order_id.','.$row->type_id);
                 }
             }
@@ -10534,10 +10868,10 @@ class LexaAdmin extends Controller
             $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver_id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
             $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver_id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
             $routes_priority = array();
-            foreach ($routes_priority1 as $key => $value) {
+            foreach ($routes_priority1 as $value) {
                 array_push($routes_priority,$value);
             }
-            foreach ($routes_priority0 as $key => $value) {
+            foreach ($routes_priority0 as $value) {
                 array_push($routes_priority,$value);
             }
             usort($routes_priority, function($a, $b){
@@ -10556,7 +10890,7 @@ class LexaAdmin extends Controller
         }
     }
 
-    public function ready_call(Request $request) {
+    public function ready_call() {
         if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
             $user = Auth::user();
             if($user->call_ready=='1') {
@@ -10571,6 +10905,9 @@ class LexaAdmin extends Controller
         }
     }
 
+    /**
+     * @param string $key
+     */
     private static function get_cached_value($key) {
         $cached = Redis::get($key);
         if(!is_string($cached) || $cached === '') {
@@ -10578,7 +10915,7 @@ class LexaAdmin extends Controller
         }
         try {
             return unserialize($cached);
-        } catch (\Throwable $exception) {
+        } catch (\Throwable) {
             Redis::del($key);
             return null;
         }
@@ -10588,7 +10925,7 @@ class LexaAdmin extends Controller
         $statuses = self::get_cached_value(request()->getHttpHost().':statuses');
         if(empty($statuses)) {
             $statuses = DB::table('statuses')->get()->keyBy('id');
-            Redis::set(request()->getHttpHost().':statuses', serialize($statuses), 'EX', 3600);
+            Redis::setex(request()->getHttpHost().':statuses', 3600, serialize($statuses));
         }
         return $statuses;
     }
@@ -10597,7 +10934,7 @@ class LexaAdmin extends Controller
         $statuses_copay = self::get_cached_value(request()->getHttpHost().':statuses_copay');
         if(empty($statuses_copay)) {
             $statuses_copay = DB::table('statuses_copay')->get()->keyBy('id');
-            Redis::set(request()->getHttpHost().':statuses_copay', serialize($statuses_copay), 'EX', 3600);
+            Redis::setex(request()->getHttpHost().':statuses_copay', 3600, serialize($statuses_copay));
         }
         return $statuses_copay;
     }
@@ -10606,7 +10943,7 @@ class LexaAdmin extends Controller
         $delivery_methods = self::get_cached_value(request()->getHttpHost().':delivery_methods');
         if(empty($delivery_methods)) {
             $delivery_methods = DB::table('delivery_methods')->get()->keyBy('id');
-            Redis::set(request()->getHttpHost().':delivery_methods', serialize($delivery_methods), 'EX', 3600);
+            Redis::setex(request()->getHttpHost().':delivery_methods', 3600, serialize($delivery_methods));
         }
         return $delivery_methods;
     }
@@ -10615,7 +10952,7 @@ class LexaAdmin extends Controller
         $delivery_times = self::get_cached_value(request()->getHttpHost().':delivery_times');
         if(empty($delivery_times)) {
             $delivery_times = DB::table('delivery_times')->get()->keyBy('id');
-            Redis::set(request()->getHttpHost().':delivery_times', serialize($delivery_times), 'EX', 3600);
+            Redis::setex(request()->getHttpHost().':delivery_times', 3600, serialize($delivery_times));
         }
         return $delivery_times;
     }
@@ -10651,11 +10988,15 @@ class LexaAdmin extends Controller
         $wishs = self::get_cached_value(request()->getHttpHost().':orders_wishs');
         if(empty($wishs)) {
             $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();
-            Redis::set(request()->getHttpHost().':orders_wishs', serialize($wishs), 'EX', 3600);
+            Redis::setex(request()->getHttpHost().':orders_wishs', 3600, serialize($wishs));
         }
         return $wishs;
     }
 
+    /**
+     * @param int|string $driver_id
+     * @param \stdClass $next_route
+     */
     static function next_patient_push($driver_id,$next_route){
         $distance=0;
         $duration=0;
@@ -10701,6 +11042,9 @@ class LexaAdmin extends Controller
         return true;
     }
 
+    /**
+     * @param int|string $order_id
+     */
     static function sendToBestRx($order_id){
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order) && !empty($order->bestrx_order_id)) {
@@ -10802,9 +11146,7 @@ class LexaAdmin extends Controller
                     "content-type: application/json",
                 ),
             ));
-            $response = json_decode(curl_exec($curl));
-            $err = curl_error($curl);
-            curl_close($curl);
+            curl_exec($curl);
         }
         return true;
     }

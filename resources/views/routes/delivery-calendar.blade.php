@@ -70,7 +70,7 @@
                             </div>
                         </div>
                         <div class="fc-center">
-                            <h2>{{date("F Y",strtotime($month))}}</h2>
+                            <h2>{{date("F Y",strtotime($month ?? ''))}}</h2>
                         </div>                       
                     </div>
                     <div class="fc-view-container">

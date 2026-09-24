@@ -7,14 +7,14 @@
                 <th data-priority="1">Waypoint</th>
                 <th data-priority="3">Orders</th>
                 <th style="width: 75px;" data-priority="4">Count Orders</th>
-                <th style="width: 120px;" data-priority="4">Cash Sum<br>Co-pay (${{number_format($copay_sum,2)}})</th>
+                <th style="width: 120px;" data-priority="4">Cash Sum<br>Co-pay (${{number_format($copay_sum ?? 0,2)}})</th>
             </tr>
         </thead>
         <tbody>
             @foreach($routes_logs_groups as $routes_logs_group)
             <tr>
                 <td>{{$routes_logs_group->priority}}</td>
-                <td>{{date('g:i A', strtotime($routes_logs_group->created))}}</td>
+                <td>{{date('g:i A', strtotime($routes_logs_group->created ?? ''))}}</td>
                 <td>{{ucfirst($routes_logs_group->type)}} #{{$routes_logs_group->type_id}}<br>
                     @if(!empty($routes_logs_group->area_name))
                     <span title="Area" class="badge bg-primary" style="color: #fff;">{{$routes_logs_group->area_name}}</span>

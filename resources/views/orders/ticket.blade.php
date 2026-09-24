@@ -23,7 +23,7 @@
                 <div class="row" style="width:306px; height: auto; background: #ffffff;">
                 <div align="center" style="width: 120px; height: auto; float: left; vertical-align: middle"><img src="{{ asset('images/smile.png') }}" alt="" height="80" style="margin-top: 0px;margin-left: 30px; float: left;" > </div>
                     <div align="center"  style="width: 180px;height: auto vertical-align: middle;text-align: center; float: none;">
-                        <span style="font-weight: normal; color: #000000; text-align: center;">{{$wishs[array_rand($wishs)]}}</span><br><b>Have a Nice Day!</b>
+                        <span style="font-weight: normal; color: #000000; text-align: center;">{{ $wishs ? $wishs[array_rand($wishs)] : '' }}</span><br><b>Have a Nice Day!</b>
                     </div>
                 </div>
             </div>

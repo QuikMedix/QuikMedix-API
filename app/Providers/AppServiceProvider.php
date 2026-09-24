@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Auth\AuthenticationException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,8 +23,9 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         Schema::defaultStringLength(191);
+        AuthenticationException::redirectUsing(fn (): string => route('login'));
     }
 }

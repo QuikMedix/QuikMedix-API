@@ -258,10 +258,10 @@
                                                             <img src="{{ URL::asset('/images/mms-logo-v2.png')}}" alt="mms-logo" class="mt-2 text-center" height="28">
                                                             @endif
 														</td>
-                                                        <td class="date-column time" style="vertical-align: middle;">Created:<br>{{date('m/d/Y g:i A', strtotime($order->created))}}
-                                                            <br>Need Delivery:<br><span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date)){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date)){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span>
+                                                        <td class="date-column time" style="vertical-align: middle;">Created:<br>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
+                                                            <br>Need Delivery:<br><span style="font-size:100%;" class="badge @if(empty($order->finish) && strtotime(date('Y-m-d'))==strtotime($order->delivery_date ?? '')){{'bg-success'}}@elseif(empty($order->finish) && strtotime(date('Y-m-d'))>strtotime($order->delivery_date ?? '')){{'bg-danger'}}@else{{'bg-light'}}@endif">{{date('m/d/Y', strtotime($order->delivery_date ?? ''))}} @if(!empty($order->delivery_time_range) && $order->delivery_time_range!='9:00 AM;12:00 AM')<b>{{str_replace(':00','',str_replace(';',' - ',$order->delivery_time_range))}}</b>@endif</span>
                                                             @if(!empty($order->finish))
-                                                            <br>Delivered:<br>{{date('m/d/Y g:i A', strtotime($order->finish))}}
+                                                            <br>Delivered:<br>{{date('m/d/Y g:i A', strtotime($order->finish ?? ''))}}
                                                             @endif
                                                         </td>
                                                         <td style="vertical-align: middle;text-align: center;">
@@ -360,7 +360,7 @@
                                                             <td style="color: black;vertical-align: middle;text-align: center;">No</td>
                                                         @endif
                                                         <td class="text-center" style="vertical-align: middle;">
-                                                            <span title="Tariff" style="font-size: 15px;color: #000;width: 70px;display: block;margin: 0 auto;">${{number_format($order->tariff,2)}}</span>
+                                                            <span title="Tariff" style="font-size: 15px;color: #000;width: 70px;display: block;margin: 0 auto;">${{number_format($order->tariff ?? 0,2)}}</span>
                                                             @if($order->copay==0 || empty($order->statuse_copay))
                                                             <span title="Co-pay" style="font-size: 11px;color: black;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-success mt-1">$0 Not required</span>
                                                             @else

@@ -12,12 +12,15 @@ yarn-error.log
 .phpunit.result.cache
 
 public/hot
+public/build
 public/storage
 
 storage/framework/cache/data/*
 storage/framework/sessions/*
 storage/framework/views/*
 storage/logs/*
+storage/oauth-private.key
+storage/oauth-public.key
 bootstrap/cache/*.php
 
 tests

@@ -14,7 +14,7 @@ class TwilioChatGrantProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind(
-            ChatGrant::class, function ($app) {
+            ChatGrant::class, function () {
                 return new ChatGrant();
             }
         );

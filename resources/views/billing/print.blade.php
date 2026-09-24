@@ -31,7 +31,7 @@
             <div class="tm_card_note tm_mobile_hide"><b class="tm_primary_color">Payment Method: </b>Credit card</div>
             <div class="tm_invoice_info_list tm_white_color">
               <p class="tm_invoice_number tm_m0">Invoice No: <b>#{{$invoice->id}}</b></p>
-              <p class="tm_invoice_date tm_m0">Date: <b>{{date('m.d.Y', strtotime($invoice->created))}}</b></p>
+              <p class="tm_invoice_date tm_m0">Date: <b>{{date('m.d.Y', strtotime($invoice->created ?? ''))}}</b></p>
             </div>
             <div class="tm_invoice_seperator tm_accent_bg"></div>
           </div>
@@ -82,41 +82,41 @@
                     </tr>
                     <tr>
                       <td class="tm_width_3">&emsp; 1. Delivery next day</td>
-                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from))}} - {{date('M d, Y', strtotime($invoice->date_to))}}</td>
+                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from ?? ''))}} - {{date('M d, Y', strtotime($invoice->date_to ?? ''))}}</td>
                       <td class="tm_width_1">{{$next_day["count"]}}</td>
                       <td class="tm_width_2 tm_text_right">${{number_format($next_day["amount"],2)}}</td>
                     </tr>
                     <tr>
                       <td class="tm_width_3">&emsp; 2. Delivery same day</td>
-                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from))}} - {{date('M d, Y', strtotime($invoice->date_to))}}</td>
+                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from ?? ''))}} - {{date('M d, Y', strtotime($invoice->date_to ?? ''))}}</td>
                       <td class="tm_width_1">{{$same_day["count"]}}</td>
                       <td class="tm_width_2 tm_text_right">${{number_format($same_day["amount"],2)}}</td>
                     </tr>
                     <tr>
                       <td class="tm_width_3">&emsp; 3. Delivery ASAP</td>
-                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from))}} - {{date('M d, Y', strtotime($invoice->date_to))}}</td>
+                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from ?? ''))}} - {{date('M d, Y', strtotime($invoice->date_to ?? ''))}}</td>
                       <td class="tm_width_1">{{$asap["count"]}}</td>
                       <td class="tm_width_2 tm_text_right">${{number_format($asap["amount"],2)}}</td>
                     </tr>
                     <tr>
                       <td class="tm_width_3">&emsp; 4. Delivery After hours</td>
-                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from))}} - {{date('M d, Y', strtotime($invoice->date_to))}}</td>
+                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from ?? ''))}} - {{date('M d, Y', strtotime($invoice->date_to ?? ''))}}</td>
                       <td class="tm_width_1">{{$after_hours["count"]}}</td>
                       <td class="tm_width_2 tm_text_right">${{number_format($after_hours["amount"],2)}}</td>
                     </tr>
                     @if(($pharmacy->copay_bill=='1' && empty($invoice->payed_amount)) || ($pharmacy->copay_bill=='1' && !empty($invoice->payed_amount) && (($invoice->amount+$invoice->corrections)-$invoice->copay)==$invoice->payed_amount))
                     <tr>
                       <td class="tm_width_3">&emsp; 5. Co-pay</td>
-                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from))}} - {{date('M d, Y', strtotime($invoice->date_to))}}</td>
+                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from ?? ''))}} - {{date('M d, Y', strtotime($invoice->date_to ?? ''))}}</td>
                       <td class="tm_width_1">1</td>
-                      <td class="tm_width_2 tm_text_right">-${{number_format($invoice->copay,2)}}</td>
+                      <td class="tm_width_2 tm_text_right">-${{number_format($invoice->copay ?? 0,2)}}</td>
                     </tr>
                     @endif
                     <tr>
                       <td class="tm_width_3">&emsp; @if(($pharmacy->copay_bill=='1' && empty($invoice->payed_amount)) || ($pharmacy->copay_bill=='1' && !empty($invoice->payed_amount) && (($invoice->amount+$invoice->corrections)-$invoice->copay)==$invoice->payed_amount)){{"6"}}@else{{"5"}}@endif. Corrections</td>
-                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from))}} - {{date('M d, Y', strtotime($invoice->date_to))}}</td>
+                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from ?? ''))}} - {{date('M d, Y', strtotime($invoice->date_to ?? ''))}}</td>
                       <td class="tm_width_1">1</td>
-                      <td class="tm_width_2 tm_text_right">{{($invoice->corrections<0)?'-$'.number_format(abs($invoice->corrections),2):'$'.number_format($invoice->corrections,2)}}</td>
+                      <td class="tm_width_2 tm_text_right">{{($invoice->corrections<0)?'-$'.number_format(abs($invoice->corrections),2):'$'.number_format($invoice->corrections ?? 0,2)}}</td>
                     </tr>
                     @if($pharmacy_driver["count"]>0)
                     <tr>
@@ -127,7 +127,7 @@
                     </tr>
                     <tr>
                       <td class="tm_width_3">&emsp; 1. Orders</td>
-                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from))}} - {{date('M d, Y', strtotime($invoice->date_to))}}</td>
+                      <td class="tm_width_4">{{date('M d', strtotime($invoice->date_from ?? ''))}} - {{date('M d, Y', strtotime($invoice->date_to ?? ''))}}</td>
                       <td class="tm_width_1">{{$pharmacy_driver["count"]}}</td>
                       <td class="tm_width_2 tm_text_right">${{number_format($pharmacy_driver["amount"],2)}}</td>
                     </tr>
@@ -148,7 +148,7 @@
                 @else
                 <p class="tm_m0">-
                 @endif
-                <br>Amount: ${{number_format($invoice->payed_amount,2)}}</p>
+                <br>Amount: ${{number_format($invoice->payed_amount ?? 0,2)}}</p>
               </div>
               <div class="tm_right_footer">
                 <table class="tm_mb15">
@@ -157,7 +157,7 @@
                       <td class="tm_width_3 tm_primary_color tm_bold">Subtotal</td>
                       <td class="tm_width_3 tm_primary_color tm_bold tm_text_right">
                         @if($invoice->payed=='1')
-                        ${{number_format($invoice->payed_amount,2)}}
+                        ${{number_format($invoice->payed_amount ?? 0,2)}}
                         @else
                         @if($pharmacy->copay_bill=='1')
                         @if((($invoice->amount+$invoice->corrections)-$invoice->copay)<0)
@@ -175,7 +175,7 @@
                       <td class="tm_width_3 tm_border_top_0 tm_bold tm_f16 tm_white_color">Total	</td>
                       <td class="tm_width_3 tm_border_top_0 tm_bold tm_f16 tm_white_color tm_text_right">
                         @if($invoice->payed=='1')
-                        ${{number_format($invoice->payed_amount,2)}}
+                        ${{number_format($invoice->payed_amount ?? 0,2)}}
                         @else
                         @if($pharmacy->copay_bill=='1')
                         @if((($invoice->amount+$invoice->corrections)-$invoice->copay)<0)
