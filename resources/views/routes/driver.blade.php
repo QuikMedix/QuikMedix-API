@@ -428,29 +428,20 @@ label {
 @endsection
 @section('content')
  <!-- start page title -->
-                    @if(!empty($_GET['order']))
+                    @if(!empty(request()->query('order')))
                     <div class="alert alert-warning" style="height: 59px;font-weight:bold;" role="alert">
-                        Are you sure you want to assign order #{{$_GET['order']}} to this driver?
+                        Are you sure you want to assign order #{{request()->query('order')}} to this driver?
                         <div style="float:right;">
                             <button class="btn btn-success" onclick="$('#confirm_order').submit()">Yes</button>
-                            <button class="btn btn-danger" onclick="location.href='{{ url('/routes-list/show') }}/{{$_GET['order']}}'">No</button>
+                            <button class="btn btn-danger" onclick="location.href='{{ url('/routes-list/show') }}/{{request()->query('order')}}'">No</button>
                         </div>
                         <form method="POST" id="confirm_order" style="display:none;">
                             @csrf
-                            <input type="hidden" name="confirm_order_id" value="{{$_GET['order']}}">
+                            <input type="hidden" name="confirm_order_id" value="{{request()->query('order')}}">
                         </form>
                     </div>
                     @endif
-                    @if(\Session::has('success'))
-                        <div class="alert alert-success">
-                            {!! \Session::get('success') !!}
-                        </div>
-                    @endif
-                    @if(\Session::has('error'))
-                        <div class="alert alert-danger">
-                            {!! \Session::get('error') !!}
-                        </div>
-                    @endif
+                    <x-flash-messages />
                     <div class="modal bs-example-modal modal1" style="display:none;" tabindex="1" role="dialog">
                         <div class="modal-dialog" role="document">
                             <div class="modal-content">
@@ -665,7 +656,7 @@ label {
                                                 @if(!empty($routes_priority[$n]))
                                                     @if($routes_priority[$n]->type=='pharmacy')
                                                         @php
-                                                            if(!empty($_GET["show_route"]) && $_GET["show_route"]>0) {
+                                                            if(!empty(request()->query('show_route')) && request()->query('show_route')>0) {
                                                                 array_push($show_ids,"pharmacy".$routes_priority[$n]->type_id);
                                                                 $show_priority["pharmacy".$routes_priority[$n]->type_id]=$n;
                                                             }
@@ -695,7 +686,7 @@ label {
                                                     @endif
                                                     @if($routes_priority[$n]->type=='patient')
                                                         @php
-                                                            if(!empty($_GET["show_route"]) && $_GET["show_route"]>0) {
+                                                            if(!empty(request()->query('show_route')) && request()->query('show_route')>0) {
                                                                 array_push($show_ids,"patient".$routes_priority[$n]->type_id);
                                                                 $show_priority["patient".$routes_priority[$n]->type_id]=$n;
                                                             }
@@ -857,7 +848,7 @@ label {
                                                 <input type="checkbox" value="1" name="patients" class="form-check-input" id="patients" checked>
                                                 <label class="form-check-label" for="patients">Patients</label>
                                             </div>
-                                            @if(!empty($_GET["show_route"]) && $_GET["show_route"]>0)
+                                            @if(!empty(request()->query('show_route')) && request()->query('show_route')>0)
                                             <div class="col-sm-5 mt-0 mb-2">
                                                 <button class="btn btn-outline-info" id="setup_route">Set Up Route</button>
                                                 <small class="ml-2" style="display:none;">After Set Up Route you need save the route from above!</small>
@@ -1435,7 +1426,7 @@ label {
     @endforeach];
     var locationPatients = [@foreach($patients_locations as $patients_location)
     @if(!empty($patients_location['id']) && !empty($patients_location['location']))
-    @if(!empty($_GET["show_route"]) && $_GET["show_route"]>0)
+    @if(!empty(request()->query('show_route')) && request()->query('show_route')>0)
         @if((!empty($show_ids) && in_array("patient".$patients_location['id'],$show_ids)))
         "{{ $patients_location['location'] }}",
         @endif
@@ -1446,7 +1437,7 @@ label {
     @endforeach];
     var locationPharmacy = [@foreach($pharmacy_locations as $pharmacy_location)
     @if(!empty($pharmacy_location['location']))
-    @if(!empty($_GET["show_route"]) && $_GET["show_route"]>0)
+    @if(!empty(request()->query('show_route')) && request()->query('show_route')>0)
         @if((!empty($show_ids) && in_array("pharmacy".$pharmacy_location['id'],$show_ids)))
         "{{ $pharmacy_location['location'] }}",
         @endif
@@ -1457,7 +1448,7 @@ label {
     @endforeach];
     var locationPatientsID = [@foreach($patients_locations as $patients_location)
     @if(!empty($patients_location['id']) && !empty($patients_location['location']))
-    @if(!empty($_GET["show_route"]) && $_GET["show_route"]>0)
+    @if(!empty(request()->query('show_route')) && request()->query('show_route')>0)
         @if(!empty($show_ids) && in_array("patient".$patients_location['id'],$show_ids))
             @if(isset($show_priority['patient'.$patients_location['id']]))
             "{{ $patients_location['id'] }};{{ $show_priority['patient'.$patients_location['id']]+1 }}",
@@ -1472,7 +1463,7 @@ label {
     @endforeach];
     var locationPharmacyID = [@foreach($pharmacy_locations as $pharmacy_location)
     @if(!empty($pharmacy_location['id']))
-    @if(!empty($_GET["show_route"]) && $_GET["show_route"]>0)
+    @if(!empty(request()->query('show_route')) && request()->query('show_route')>0)
         @if(!empty($show_ids) && in_array("pharmacy".$pharmacy_location['id'],$show_ids))
             @if(isset($show_priority['pharmacy'.$pharmacy_location['id']]))
             "{{ $pharmacy_location['id'] }};{{ $show_priority['pharmacy'.$pharmacy_location['id']]+1 }}",

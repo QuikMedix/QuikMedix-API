@@ -1,8 +1,15 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\FacilityOrderController;
+use App\Http\Controllers\OrderPrintController;
+use App\Http\Controllers\AllOrdersController;
 use App\Http\Controllers\LexaAdminApiNoAuth;
+use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\OrderCreationController;
+use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PharmacyDriverController;
 use App\Http\Controllers\RouteTemplatesController;
 use App\Http\Controllers\TwoFAController;
 use Illuminate\Support\Facades\Auth;
@@ -73,42 +80,42 @@ Route::post('/offices/edit/{office_id}', [LexaAdmin::class, 'officesListEditHand
 Route::get('/offices/add', [LexaAdmin::class, 'officesListAdd']);
 Route::post('/offices/add', [LexaAdmin::class, 'officesListAddHandler']);
 
-Route::get('/drivers/{pharmacy_id}/users', [LexaAdmin::class, 'driversUsers']);
-Route::post('/drivers/{pharmacy_id}/users', [LexaAdmin::class, 'driversUsersHandler']);
+Route::get('/drivers/{pharmacy_id}/users', [PharmacyDriverController::class, 'index']);
+Route::post('/drivers/{pharmacy_id}/users', [PharmacyDriverController::class, 'updateStatus']);
 
-Route::get('/drivers/{pharmacy_id}/users/edit/{user_id}', [LexaAdmin::class, 'driversUsersEdit']);
-Route::post('/drivers/{pharmacy_id}/users/edit/{user_id}', [LexaAdmin::class, 'driversUsersEditHandler']);
+Route::get('/drivers/{pharmacy_id}/users/edit/{user_id}', [PharmacyDriverController::class, 'edit']);
+Route::post('/drivers/{pharmacy_id}/users/edit/{user_id}', [PharmacyDriverController::class, 'update']);
 
-Route::get('/drivers/{pharmacy_id}/users/add', [LexaAdmin::class, 'driversUsersAdd']);
-Route::post('/drivers/{pharmacy_id}/users/add', [LexaAdmin::class, 'driversUsersAddHandler']);
+Route::get('/drivers/{pharmacy_id}/users/add', [PharmacyDriverController::class, 'create']);
+Route::post('/drivers/{pharmacy_id}/users/add', [PharmacyDriverController::class, 'store']);
 
 Route::get('/drivers/{driver_id}/profile', [LexaAdmin::class, 'driversProfile']);
 Route::post('/drivers/{driver_id}/profile', [LexaAdmin::class, 'driversProfileHandler']);
 
 Route::get('/drivers/{driver_id}/payouts', [LexaAdmin::class, 'driversPayouts']);
 
-Route::get('/patients/{pharmacy_id}', [LexaAdmin::class, 'patients']);
-Route::post('/patients/{pharmacy_id}', [LexaAdmin::class, 'patientsHandler']);
+Route::get('/patients/{pharmacy_id}', [PatientController::class, 'index']);
+Route::post('/patients/{pharmacy_id}', [PatientController::class, 'updateStatus']);
 
-Route::get('/facilitys/{pharmacy_id}', [LexaAdmin::class, 'facilitys']);
-Route::post('/facilitys/{pharmacy_id}', [LexaAdmin::class, 'facilitysHandler']);
+Route::get('/facilitys/{pharmacy_id}', [FacilityController::class, 'index']);
+Route::post('/facilitys/{pharmacy_id}', [FacilityController::class, 'updateStatus']);
 
-Route::get('/patients/{pharmacy_id}/add', [LexaAdmin::class, 'patientsAdd']);
-Route::post('/patients/{pharmacy_id}/add', [LexaAdmin::class, 'patientsAddHandler']);
+Route::get('/patients/{pharmacy_id}/add', [PatientController::class, 'create']);
+Route::post('/patients/{pharmacy_id}/add', [PatientController::class, 'store']);
 
-Route::get('/facilitys/{pharmacy_id}/add', [LexaAdmin::class, 'facilitysAdd']);
-Route::post('/facilitys/{pharmacy_id}/add', [LexaAdmin::class, 'facilitysAddHandler']);
+Route::get('/facilitys/{pharmacy_id}/add', [FacilityController::class, 'create']);
+Route::post('/facilitys/{pharmacy_id}/add', [FacilityController::class, 'store']);
 
-Route::get('/facilitys/{pharmacy_id}/edit/{user_id}', [LexaAdmin::class, 'facilitysEdit']);
-Route::post('/facilitys/{pharmacy_id}/edit/{user_id}', [LexaAdmin::class, 'facilitysEditHandler']);
+Route::get('/facilitys/{pharmacy_id}/edit/{user_id}', [FacilityController::class, 'edit']);
+Route::post('/facilitys/{pharmacy_id}/edit/{user_id}', [FacilityController::class, 'update']);
 
 Route::get('/patients/{pharmacy_id}/import', [LexaAdmin::class, 'patientsImport']);
 Route::post('/patients/{pharmacy_id}/import', [LexaAdmin::class, 'patientsImportHandler']);
 
-Route::get('/patients/{pharmacy_id}/removed', [LexaAdmin::class, 'patientsRemoved']);
+Route::get('/patients/{pharmacy_id}/removed', [PatientController::class, 'removed']);
 
-Route::get('/patients/{pharmacy_id}/edit/{user_id}', [LexaAdmin::class, 'patientsEdit']);
-Route::post('/patients/{pharmacy_id}/edit/{user_id}', [LexaAdmin::class, 'patientsEditHandler']);
+Route::get('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'edit']);
+Route::post('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'update']);
 
 Route::get('/routes-list', [LexaAdmin::class, 'routes']);
 
@@ -116,7 +123,7 @@ Route::get('/routes-drivers', [LexaAdmin::class, 'routesDrivers']);
 
 Route::get('/routes-pharmacys', [LexaAdmin::class, 'routesPharmacys']);
 
-Route::post('/orders/{pharmacy_id}/ready', [LexaAdmin::class, 'ordersReadyHandler']);
+Route::post('/orders/{pharmacy_id}/ready', [OrderController::class, 'markReady']);
 
 Route::get('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopay']);
 Route::post('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopayHandler']);
@@ -131,8 +138,8 @@ Route::post('/routes-list/driver/{driver_id}', [LexaAdmin::class, 'routesDriverH
 Route::get('/orders/add', [OrderCreationController::class, 'create'])->name('orders.create');
 Route::get('/orders/facilitys_add', [OrderCreationController::class, 'createFacility'])->name('orders.facility.create');
 
-Route::get('/orders/{pharmacy_id}', [LexaAdmin::class, 'orders'])->whereNumber('pharmacy_id');
-Route::post('/orders/{pharmacy_id}', [LexaAdmin::class, 'ordersHandler'])->whereNumber('pharmacy_id');
+Route::get('/orders/{pharmacy_id}', [OrderController::class, 'index'])->whereNumber('pharmacy_id');
+Route::post('/orders/{pharmacy_id}', [OrderController::class, 'updateStatus'])->whereNumber('pharmacy_id');
 
 Route::get('/search/json', [LexaAdmin::class, 'searchJson']);
 
@@ -156,32 +163,32 @@ Route::get('/process/{pharmacy_id}/show/{driver_id}', [LexaAdmin::class, 'proces
 Route::get('/import/{pharmacy_id}/order', [LexaAdmin::class, 'import_order']);
 Route::post('/import/{pharmacy_id}/order', [LexaAdmin::class, 'import_orderHandler']);
 
-Route::get('/orders', [LexaAdmin::class, 'ordersList']);
-Route::post('/orders', [LexaAdmin::class, 'ordersListHandler']);
+Route::get('/orders', [AllOrdersController::class, 'index']);
+Route::post('/orders', [AllOrdersController::class, 'updateStatus']);
 
-Route::get('/orders/day/print', [LexaAdmin::class, 'ordersDayPrint']);
-Route::get('/orders/ticket/print', [LexaAdmin::class, 'ordersTicketPrint']);
-Route::get('/orders/tickets/print', [LexaAdmin::class, 'ordersTicketsPrint']);
+Route::get('/orders/day/print', [OrderPrintController::class, 'day']);
+Route::get('/orders/ticket/print', [OrderPrintController::class, 'ticket']);
+Route::get('/orders/tickets/print', [OrderPrintController::class, 'tickets']);
 
-Route::get('/orders/{pharmacy_id}/edit/{order_id}', [LexaAdmin::class, 'ordersEdit']);
-Route::post('/orders/{pharmacy_id}/edit/{order_id}', [LexaAdmin::class, 'ordersEditHandler']);
+Route::get('/orders/{pharmacy_id}/edit/{order_id}', [OrderController::class, 'edit']);
+Route::post('/orders/{pharmacy_id}/edit/{order_id}', [OrderController::class, 'update']);
 
-Route::get('/orders/preview/{order_id}', [LexaAdmin::class, 'ordersPreview']);
+Route::get('/orders/preview/{order_id}', [OrderController::class, 'preview']);
 
-Route::get('/orders/{pharmacy_id}/facilitys_edit/{order_id}', [LexaAdmin::class, 'ordersFacilitysEdit']);
-Route::post('/orders/{pharmacy_id}/facilitys_edit/{order_id}', [LexaAdmin::class, 'ordersFacilitysEditHandler']);
+Route::get('/orders/{pharmacy_id}/facilitys_edit/{order_id}', [FacilityOrderController::class, 'edit']);
+Route::post('/orders/{pharmacy_id}/facilitys_edit/{order_id}', [FacilityOrderController::class, 'update']);
 
-Route::get('/orders/{pharmacy_id}/show/{order_id}', [LexaAdmin::class, 'ordersShow']);
-Route::post('/orders/{pharmacy_id}/show/{order_id}', [LexaAdmin::class, 'ordersShowHandler']);
+Route::get('/orders/{pharmacy_id}/show/{order_id}', [OrderController::class, 'show']);
+Route::post('/orders/{pharmacy_id}/show/{order_id}', [OrderController::class, 'handleShowAction']);
 
-Route::get('/orders/{pharmacy_id}/add', [LexaAdmin::class, 'ordersAdd'])->whereNumber('pharmacy_id')->name('orders.pharmacy.create');
-Route::post('/orders/{pharmacy_id}/add', [LexaAdmin::class, 'ordersAddHandler'])->whereNumber('pharmacy_id')->name('orders.pharmacy.store');
+Route::get('/orders/{pharmacy_id}/add', [OrderController::class, 'create'])->whereNumber('pharmacy_id')->name('orders.pharmacy.create');
+Route::post('/orders/{pharmacy_id}/add', [OrderController::class, 'store'])->whereNumber('pharmacy_id')->name('orders.pharmacy.store');
 
-Route::get('/orders/{pharmacy_id}/facilitys_add', [LexaAdmin::class, 'ordersFacilitysAdd'])->whereNumber('pharmacy_id')->name('orders.pharmacy.facility.create');
-Route::post('/orders/{pharmacy_id}/facilitys_add', [LexaAdmin::class, 'ordersFacilitysAddHandler'])->whereNumber('pharmacy_id')->name('orders.pharmacy.facility.store');
+Route::get('/orders/{pharmacy_id}/facilitys_add', [FacilityOrderController::class, 'create'])->whereNumber('pharmacy_id')->name('orders.pharmacy.facility.create');
+Route::post('/orders/{pharmacy_id}/facilitys_add', [FacilityOrderController::class, 'store'])->whereNumber('pharmacy_id')->name('orders.pharmacy.facility.store');
 
-Route::get('/orders/{pharmacy_id}/statistic', [LexaAdmin::class, 'ordersStatistic']);
-Route::post('/orders/{pharmacy_id}/statistic', [LexaAdmin::class, 'ordersStatisticHandler']);
+Route::get('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statistic']);
+Route::post('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statisticForDate']);
 
 Route::get('/profile', [LexaAdmin::class, 'profile']);
 Route::post('/profile', [LexaAdmin::class, 'profileHandler']);
@@ -233,8 +240,8 @@ Route::post('/drivers/qr_order', [LexaAdmin::class, 'driversQrOrder']);
 
 Route::post('/patients/{user_id}/resend', [LexaAdmin::class, 'reSendAuthMessage']);
 
-Route::get('/patients/{user_id}/family', [LexaAdmin::class, 'patients_family']);
-Route::get('/patients/{user_id}/additional_recipients', [LexaAdmin::class, 'patients_additional_recipients']);
+Route::get('/patients/{user_id}/family', [PatientController::class, 'familyOptions']);
+Route::get('/patients/{user_id}/additional_recipients', [PatientController::class, 'additionalRecipientOptions']);
 
 Route::get('/pusher/beams-auth', [LexaAdminApiNoAuth::class, 'pusher_auth']);
 
@@ -286,7 +293,7 @@ Route::get('test', [LexaAdmin::class, 'test']);
 
 
 
-Route::get('/orders/get_records/{order_id}', [LexaAdmin::class, 'get_records']);
+Route::get('/orders/get_records/{order_id}', [OrderController::class, 'callRecordings']);
 
 Route::get('/support-chat', [LexaAdmin::class, 'supportChat']);
 

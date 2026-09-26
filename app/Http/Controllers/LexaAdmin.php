@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Twilio\Rest\Client;
 use App\User;
 use App\Notifications;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use net\authorize\api\contract\v1 as AnetAPI;
@@ -16,6 +19,7 @@ use Zadarma_API\Api as Zadarma_API;
 use URL;
 use Smalot\PdfParser\Parser;
 use App\Actions\GeocodeAddress;
+use App\Actions\LogUserChanges;
 use App\Actions\RotateSignature;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
@@ -24,6 +28,8 @@ use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 
 class LexaAdmin extends Controller
 {
+    use LoadsOrderLookups;
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -46,7 +52,7 @@ class LexaAdmin extends Controller
         // Render perticular view file by foldername and filename
         if (view()->exists($folderName . "." . $fileName)) {
             $res_view = view($folderName . "." . $fileName);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -487,10 +493,10 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $users = User::where('role','medic')->where('pharmacy_id',$pharmacy_id);
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -502,8 +508,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -521,7 +527,7 @@ class LexaAdmin extends Controller
             }
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('pharmacy.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'title'=>'Pharmacy Users','br1'=>'Pharmacy','br2'=>'Users']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -538,7 +544,10 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
+            if($request->filled('user_id')) {
+                Gate::authorize('manage-account', [$request->input('user_id'), $pharmacy_id]);
+            }
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
             }
@@ -561,8 +570,8 @@ class LexaAdmin extends Controller
                 DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'medic']);
             }
             $users = User::where('role','medic')->where('pharmacy_id',$pharmacy_id);
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -574,8 +583,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -606,12 +615,12 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin'))) {
             $user = DB::table('users')->where('id', $user_id)->first();
             $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('pharmacy.user_edit',['user'=> $user, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -629,12 +638,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
+            Gate::authorize('manage-account', [$user_id, $pharmacy_id]);
             if($request->input('save')>0) {
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                    $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                    $src = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                 } else {
                     $user = DB::table('users')->where('id', $user_id)->first();
                     $src = $user->image;
@@ -666,7 +676,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $input['name']='';
             $input['last_name']='';
             $input['email']='';
@@ -680,7 +690,7 @@ class LexaAdmin extends Controller
             $input['pharmacy']=$pharmacy_id;
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('pharmacy.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -697,7 +707,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->input('save')>0) {
                 if(!empty(DB::table('users')->where('email', $request->input('email'))->first())) {
                     $input['name']=$request->input('name');
@@ -729,8 +739,8 @@ class LexaAdmin extends Controller
                     } else {
                         if($request->hasFile('image')) {
                             $file = $request->file('image');
-                            $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                            $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                            $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                            $src = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                         } else {
                             $src = '';
                         }
@@ -753,7 +763,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
             $pharmacy_areas = DB::table('pharmacys')->where('id', $pharmacy_id)->get();
             $pharmacy_plan = DB::table('plans')->where('id', $pharmacy->plan_id)->first();
@@ -766,7 +776,7 @@ class LexaAdmin extends Controller
                 }   
             }
             $res_view = view('pharmacy.tariff_map',['pharmacy'=>$pharmacy,'polygons'=>$polygons,'pharmacy_plan'=>$pharmacy_plan,'pharmacy_areas'=>$pharmacy_areas,'alert'=>'','title'=>'Tariff Map','br1'=>'Tariff','br2'=>'Tariff Map']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -780,15 +790,15 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $filter = [];
-            if(!empty($_GET['start']) && !empty($_GET['filter'])) {
-                $filter["start"] = $_GET['start'];
+            if(!empty(request()->query('start')) && !empty(request()->query('filter'))) {
+                $filter["start"] = request()->query('start');
             } else {
                 $filter["start"] = "";
             }
-            if(!empty($_GET['end']) && !empty($_GET['filter'])) {
-                $filter["end"] = $_GET['end'];
+            if(!empty(request()->query('end')) && !empty(request()->query('filter'))) {
+                $filter["end"] = request()->query('end');
             } else {
                 if(!empty($filter["start"])) {
                     $filter["end"] = date('m/d/Y');
@@ -796,8 +806,8 @@ class LexaAdmin extends Controller
                     $filter["end"] = "";
                 }
             }
-            if(!empty($_GET['advanced']) && !empty($_GET['filter'])) {
-                $filter["advanced"] = $_GET['advanced'];
+            if(!empty(request()->query('advanced')) && !empty(request()->query('filter'))) {
+                $filter["advanced"] = request()->query('advanced');
             } else {
                 $filter["advanced"] = "";
             }
@@ -805,8 +815,8 @@ class LexaAdmin extends Controller
                 $query->on('pharmacys.id','=','orders.pharmacy_id')
                 ->whereDate('orders.created', '>', date('Y-m-d', strtotime('now -7 day')));
              })->leftJoin('users','pharmacys.admin_id','=','users.id')->select("pharmacys.id","pharmacys.isactive","pharmacys.isblocked","pharmacys.email","pharmacys.phone","pharmacys.name","pharmacys.tariff","pharmacys.address","pharmacys.location","pharmacys.logo","pharmacys.image_front","pharmacys.admin_id",DB::raw("users.isactive as isactiveuser"),"pharmacys.ref_id","pharmacys.balance");
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $pharmacys = $pharmacys->where(function($query) use ($search) {
                     $query->where('pharmacys.name','LIKE','%'.$search.'%')
                           ->orWhere('pharmacys.email','LIKE','%'.$search.'%')
@@ -819,13 +829,13 @@ class LexaAdmin extends Controller
             if(!empty($filter["start"]) && !empty($filter["end"])) {
                 $pharmacys = $pharmacys->whereBetween('pharmacys.created',[\DateTime::createFromFormat('m/d/Y',$filter["start"])->format('Y-m-d'),\DateTime::createFromFormat('m/d/Y',$filter["end"])->format('Y-m-d')]);
             }
-            if(!empty($_GET['without_orders']) || $filter["advanced"]=='without_orders') {
+            if(!empty(request()->query('without_orders')) || $filter["advanced"]=='without_orders') {
                 $pharmacys = $pharmacys->whereNull('orders.id');
             }
-            if(!empty($_GET['pharmacys_balance']) || $filter["advanced"]=='pharmacys_balance') {
+            if(!empty(request()->query('pharmacys_balance')) || $filter["advanced"]=='pharmacys_balance') {
                 $pharmacys = $pharmacys->where('pharmacys.balance','<',0);
             }
-            if(!empty($_GET['pharmacys_blocked']) || $filter["advanced"]=='pharmacys_blocked') {
+            if(!empty(request()->query('pharmacys_blocked')) || $filter["advanced"]=='pharmacys_blocked') {
                 $pharmacys = $pharmacys->where('pharmacys.balance_ban','1');
             }
             if($filter["advanced"]=='pharmacys_blocked_permanently') {
@@ -838,8 +848,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($pharmacys->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -860,8 +870,8 @@ class LexaAdmin extends Controller
             return view('pharmacy.list',$res_arr);
         } else if(Auth::user()->role == 'sale') {
             $pharmacys = DB::table('pharmacys')->where("ref_id",Auth::user()->id);
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $pharmacys = $pharmacys->where(function($query) use ($search) {
                     $query->where('name','LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -874,8 +884,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($pharmacys->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -893,7 +903,7 @@ class LexaAdmin extends Controller
             }
             $pharmacys = $pharmacys->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('pharmacy.list_sale',['pages'=>$pages,'page0'=>$page,'search'=>$search,'pharmacys'=>$pharmacys,'title'=>'Pharmacies List','br1'=>'Pharmacy','br2'=>'List']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -907,7 +917,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('block')>0) {
                 DB::table('pharmacys')->where('id', $request->input('user_id'))->update(['isblocked' => 1]);
             }
@@ -936,7 +946,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
             if(!empty($pharmacy->schedule)){
                 $pharmacy->schedule=json_decode($pharmacy->schedule);
@@ -950,7 +960,7 @@ class LexaAdmin extends Controller
             $admin= DB::table('users')->where('id', $pharmacy->admin_id)->first();
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('pharmacy.pharmacy_edit',['pharmacy'=>$pharmacy,'admin_areas'=>$admin_areas,'pharmacy_areas1'=>$pharmacy_areas1,'pharmacy_areas2'=>$pharmacy_areas2,'pharmacy_areas3'=>$pharmacy_areas3,'plans'=>$plans,'pharmacy_plan'=>$pharmacy_plan,'areas'=>$areas,'admin'=>$admin, 'title'=>'Pharmacy Edit','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -967,12 +977,12 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
-                    $name_f = date('mdHis').$request->file('image')->getClientOriginalName();
+                    $name_f = \App\Support\PublicUpload::name($request->file('image'));
                     $file->move(public_path() . '/images/pharmacys/',$name_f);
                     $src = '/images/pharmacys/'.$name_f;
                 } else {
@@ -980,7 +990,7 @@ class LexaAdmin extends Controller
                 }
                 if($request->hasFile('image_front')) {
                     $file = $request->file('image_front');
-                    $name_f = date('mdHis').$request->file('image_front')->getClientOriginalName();
+                    $name_f = \App\Support\PublicUpload::name($request->file('image_front'));
                     $file->move(public_path() . '/images/pharmacys/',$name_f);
                     $src2 = '/images/pharmacys/'.$name_f;
                 } else {
@@ -1120,7 +1130,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'user') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'user')) {
             $plans = DB::table('plans')->orderBy('id','desc')->get();
             $areas = DB::table('area')->get();
             $input['name']='';
@@ -1141,7 +1151,7 @@ class LexaAdmin extends Controller
             $input['tariff_areas']=[];
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('pharmacy.pharmacy_add',['plans'=>$plans,'areas'=>$areas,'admin_areas'=>$admin_areas,'title'=>'Pharmacy Add','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -1155,7 +1165,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 $tariffSelection = $request->validate([
                     'plan_id' => 'required|integer|exists:plans,id',
@@ -1191,7 +1201,7 @@ class LexaAdmin extends Controller
                     $location = self::pharmacyCreationLocation($request);
                     if($request->hasFile('image')) {
                         $file = $request->file('image');
-                        $name_f = date('mdHis').$request->file('image')->getClientOriginalName();
+                        $name_f = \App\Support\PublicUpload::name($request->file('image'));
                         $file->move(public_path() . '/images/pharmacys/',$name_f);
                         $src = '/images/pharmacys/'.$name_f;
                     } else {
@@ -1199,7 +1209,7 @@ class LexaAdmin extends Controller
                     }
                     if($request->hasFile('image_front')) {
                         $file = $request->file('image_front');
-                        $name_f = date('mdHis').$request->file('image_front')->getClientOriginalName();
+                        $name_f = \App\Support\PublicUpload::name($request->file('image_front'));
                         $file->move(public_path() . '/images/pharmacys/',$name_f);
                         $src2 = '/images/pharmacys/'.$name_f;
                     } else {
@@ -1236,7 +1246,7 @@ class LexaAdmin extends Controller
                 } else {
                     if($request->hasFile('image')) {
                         $file = $request->file('image');
-                        $name_f = date('mdHis').$request->file('image')->getClientOriginalName();
+                        $name_f = \App\Support\PublicUpload::name($request->file('image'));
                         $file->move(public_path() . '/images/pharmacys/',$name_f);
                         $src = '/images/pharmacys/'.$name_f;
                     } else {
@@ -1244,7 +1254,7 @@ class LexaAdmin extends Controller
                     }
                     if($request->hasFile('image_front')) {
                         $file = $request->file('image_front');
-                        $name_f = date('mdHis').$request->file('image_front')->getClientOriginalName();
+                        $name_f = \App\Support\PublicUpload::name($request->file('image_front'));
                         $file->move(public_path() . '/images/pharmacys/',$name_f);
                         $src2 = '/images/pharmacys/'.$name_f;
                     } else {
@@ -1273,8 +1283,8 @@ class LexaAdmin extends Controller
         }
         if((Auth::user()->role == 'superadmin')) {
             $offices = DB::table('offices');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $offices = $offices->where(function($query) use ($search) {
                     $query->where('name','LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -1287,8 +1297,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($offices->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -1306,7 +1316,7 @@ class LexaAdmin extends Controller
             }
             $offices = $offices->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('offices.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'offices'=>$offices,'title'=>'Offices List','br1'=>'Office','br2'=>'List']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -1325,8 +1335,8 @@ class LexaAdmin extends Controller
                 DB::table('offices')->where('id', $request->input('user_id'))->delete();
             }
             $offices = DB::table('offices');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $offices = $offices->where(function($query) use ($search) {
                     $query->where('name','LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -1339,8 +1349,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($offices->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -1358,7 +1368,7 @@ class LexaAdmin extends Controller
             }
             $offices = $offices->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('offices.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'offices'=>$offices,'title'=>'Offices List','br1'=>'Office','br2'=>'List']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -1382,7 +1392,7 @@ class LexaAdmin extends Controller
             }
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas, 'title'=>'Office Edit','br1'=>'Offices','br2'=>'Office','br3'=>'Office Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -1416,8 +1426,8 @@ class LexaAdmin extends Controller
                 } else {
                     if($request->hasFile('image')) {
                         $file = $request->file('image');
-                        $file->move(public_path() . '/images/offices/',date('mdHis').$request->file('image')->getClientOriginalName());
-                        $src = '/images/offices/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                        $file->move(public_path() . '/images/offices/',\App\Support\PublicUpload::name($request->file('image')));
+                        $src = '/images/offices/'.\App\Support\PublicUpload::name($request->file('image'));
                     } else {
                         $office = DB::table('offices')->where('id', $office_id)->first();
                         $src = $office->logo;
@@ -1447,7 +1457,7 @@ class LexaAdmin extends Controller
             $office->zone_id='';
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas,'title'=>'Office Add','br1'=>'Offices','br2'=>'Office','br3'=>'Office Add','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -1476,8 +1486,8 @@ class LexaAdmin extends Controller
                 } else {
                     if($request->hasFile('image')) {
                         $file = $request->file('image');
-                        $file->move(public_path() . '/images/offices/',date('mdHis').$request->file('image')->getClientOriginalName());
-                        $src = '/images/offices/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                        $file->move(public_path() . '/images/offices/',\App\Support\PublicUpload::name($request->file('image')));
+                        $src = '/images/offices/'.\App\Support\PublicUpload::name($request->file('image'));
                     } else {
                         $src = '';
                     }
@@ -1492,324 +1502,14 @@ class LexaAdmin extends Controller
         }
     }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function driversUsers($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $users = User::where('role','driver');
-            if(!empty($_GET['type'])) {
-                $type=$_GET['type'];
-                if($type==[1,2]) {
-                    $users->where(function($query) use ($pharmacy_id) {
-                        $query->where('pharmacy_id',$pharmacy_id)
-                              ->orWhere('pharmacy_id',NULL)
-                              ->orWhere('pharmacy_id','');
-                        });
-                } else if($type==[1]) {
-                    $users->where('pharmacy_id',$pharmacy_id);
-                } else if($type==[2]) {
-                    $users->where(function($query) {
-                        $query->where('pharmacy_id',NULL)
-                              ->orWhere('pharmacy_id','');
-                        });
-                }
-            } else {
-                $users->where('pharmacy_id',$pharmacy_id);
-            }
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
-                $users = $users->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('email','LIKE','%'.$search.'%')
-                          ->orWhere('phone','LIKE','%'.$search.'%');
-                    });
-            } else {
-                $search='';
-            }
-            $countOnPage=30;
-            $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
-            $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            foreach($users as $user) {
-                $loc = DB::table('locations')->where('user_id', $user->id)->orderBy("id","desc")->first();
-                if(!empty($loc))
-                $user->location = $loc->location;
-            }
-            $pharmacylocation = DB::table('pharmacys')->where('id', $pharmacy_id)->value('location') ?? '';
-            $res_view = view('drivers.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'pharmacylocation'=>$pharmacylocation,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'title'=>'Drivers Users','br1'=>'Drivers','br2'=>'Users']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function driversUsersHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('activate')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
-            }
-            if($request->input('block')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 1]);
-            }
-            if($request->input('unblock')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
-            }
-            if($request->input('remove')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['pharmacy_id' => NULL]);
-            }
-            if($request->input('todriver')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'driver']);
-            }
-            if($request->input('touser')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'user']);
-            }
-            if($request->input('tomedic')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'medic']);
-            }
-            return redirect("drivers/$pharmacy_id/users");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $user_id
-     */
-    public static function driversUsersEdit($pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists() || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $user = DB::table('users')->where('id', $user_id)->first();
-            $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
-            $pharmacys = DB::table('pharmacys')->get();
-            $res_view = view('drivers.user_edit',['user'=> $user, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'Drivers Edit','br1'=>'Drivers','br2'=>'Users','br3'=>'Driver Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $user_id
-     */
-    public static function driversUsersEditHandler(Request $request,$pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $user = DB::table('users')->where('id', $user_id)->first();
-            if($request->input('save')>0) {
-                if($request->hasFile('image')) {
-                    $file = $request->file('image');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
-                } else {
-                    $src = $user->image;
-                }
-                if($request->input('remove_photo')>0) {
-                    $src = '/images/users/default-user-image.png';
-                }
-                if($request->hasFile('driving_license_img')) {
-                    $file = $request->file('driving_license_img');
-                    $file->move(public_path() . '/images/driving_license/',date('mdHis').$request->file('driving_license_img')->getClientOriginalName());
-                    $driving_license_img = '/images/driving_license/'.date('mdHis').$request->file('driving_license_img')->getClientOriginalName();
-                } else {
-                    $driving_license_img = $user->driving_license_img;
-                }
-                if($request->hasFile('car_img')) {
-                    $file = $request->file('car_img');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('car_img')->getClientOriginalName());
-                    $car_img = '/images/users/'.date('mdHis').$request->file('car_img')->getClientOriginalName();
-                } else {
-                    $car_img = $user->car_img;
-                }
-                if(!empty($request->input('zip'))) {
-                    $address = $request->input('address').' '.$request->input('zip');
-                } else {
-                    $address = $request->input('address');
-                }
-                $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
-                $address = $data->results[0]->formatted_address;
-                $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                self::action_log_user_check($request,$address,$user_id);
-                DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'transport' => $request->input('transport'),'car_info' => $request->input('car_info'),'car_img' => $car_img,'payment_card' => $request->input('payment_card')]);
-            }
-            $pharmacys = DB::table('pharmacys')->get();
-            $user = DB::table('users')->where('id', $user_id)->first();
-            $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
-            return view('drivers.user_edit',['user'=> $user,'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys,'title'=>'Drivers Edit','br1'=>'Drivers','br2'=>'Users','br3'=>'Driver Edit','alert'=>'']);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function driversUsersAdd($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $input['name']='';
-            $input['last_name']='';
-            $input['email']='';
-            $input['phone']='';
-            $input['image']='';
-            $input['address']='';
-            $input['password']='';
-            $input['zip']='';
-            $input['apartment']='';
-            $input['pharmacy']=$pharmacy_id;
-            $input['driving_license']='';
-            $input['driving_license_img']='';
-            $input['identification_cards']='';
-            $input['transport']='';
-            $input['car_info']='';
-            $input['car_img']='';
-            $input['payment_card']='';
-            $pharmacys = DB::table('pharmacys')->get();
-            $res_view = view('drivers.user_add',['pharmacys'=>$pharmacys,'title'=>'Drivers Add','br1'=>'Drivers','br2'=>'Users','br3'=>'Driver Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function driversUsersAddHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('save')>0) {
-                if(!empty(DB::table('users')->where('email', $request->input('email'))->first())) {
-                    $input['name']=$request->input('name');
-                    $input['last_name']=$request->input('last_name');
-                    $input['email']=$request->input('email');
-                    $input['phone']=$request->input('phone');
-                    $input['image']='';
-                    $input['address']=$request->input('address');
-                    $input['password']=$request->input('password');
-                    $input['zip']=$request->input('zip');
-                    $input['apartment']=$request->input('apartment');
-                    $input['pharmacy']=$pharmacy_id;
-                    $input['driving_license']=$request->input('driving_license');
-                    $input['driving_license_img']='';
-                    $input['identification_cards']=$request->input('identification_cards');
-                    $input['car_info']=$request->input('car_info');
-                    $input['transport']=$request->input('transport');
-                    $input['car_img']='';
-                    $input['payment_card']=$request->input('payment_card');
-                    $pharmacys = DB::table('pharmacys')->get();
-                    return view('drivers.user_add',['pharmacys'=>$pharmacys,'title'=>'Drivers Add','br1'=>'Drivers','br2'=>'Users','br3'=>'Driver Add','alert'=>'User with this email already exists','input'=>$input]);
-                } else {
-                    if(!empty(DB::table('users')->where('phone', $request->input('phone'))->first())) {
-                        $input['name']=$request->input('name');
-                        $input['last_name']=$request->input('last_name');
-                        $input['email']=$request->input('email');
-                        $input['phone']=$request->input('phone');
-                        $input['image']='';
-                        $input['address']=$request->input('address');
-                        $input['password']=$request->input('password');
-                        $input['zip']=$request->input('zip');
-                        $input['apartment']=$request->input('apartment');
-                        $input['pharmacy']=$pharmacy_id;
-                        $input['driving_license']=$request->input('driving_license');
-                        $input['driving_license_img']="";
-                        $input['identification_cards']=$request->input('identification_cards');
-                        $input['car_info']=$request->input('car_info');
-                        $input['transport']=$request->input('transport');
-                        $input['car_img']='';
-                        $input['payment_card']=$request->input('payment_card');
-                        $pharmacys = DB::table('pharmacys')->get();
-                        return view('drivers.user_add',['pharmacys'=>$pharmacys,'title'=>'Drivers Add','br1'=>'Drivers','br2'=>'Users','br3'=>'Driver Add','alert'=>'User with this phone already exists','input'=>$input]);
-                    } else {
-                        if($request->hasFile('image')) {
-                            $file = $request->file('image');
-                            $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                            $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
-                        } else {
-                            $src = '';
-                        }
-                        if($request->hasFile('driving_license_img')) {
-                            $file = $request->file('driving_license_img');
-                            $file->move(public_path() . '/images/driving_license/',date('mdHis').$request->file('driving_license_img')->getClientOriginalName());
-                            $driving_license_img = '/images/driving_license/'.date('mdHis').$request->file('driving_license_img')->getClientOriginalName();
-                        } else {
-                            $driving_license_img = '';
-                        }
-                        if($request->hasFile('car_img')) {
-                            $file = $request->file('car_img');
-                            $file->move(public_path() . '/images/users/',date('mdHis').$request->file('car_img')->getClientOriginalName());
-                            $car_img = '/images/users/'.date('mdHis').$request->file('car_img')->getClientOriginalName();
-                        } else {
-                            $car_img = '';
-                        }
-                        $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
-                        $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                        DB::table('users')->insert(['isactive' => '1', 'role' => 'driver','name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $request->input('address'),'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'transport' => $request->input('transport'),'car_info' => $request->input('car_info'),'car_img' => $car_img,'payment_card' => $request->input('payment_card'),'pharmacy_id' => $pharmacy_id]);
-                    }
-                }
-            }
-            return redirect("drivers/$pharmacy_id/users");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
     public static function pharmacysIntegrations(){
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $pharmacys = DB::table('pharmacys')->where('pharmacys.merchantFunc','1')->where('pharmacys.isactive',1)->where('pharmacys.isblocked',0);
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $pharmacys = $pharmacys->where(function($query) use ($search) {
                     $query->where('pharmacys.name','LIKE','%'.$search.'%')
                           ->orWhere('pharmacys.email','LIKE','%'.$search.'%')
@@ -1823,8 +1523,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($pharmacys->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -1854,9 +1554,9 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->hasFile('merchant_agreement') && !empty($request->input('pharmacy_id'))) {
-                $name=date('mdHis').$request->file('merchant_agreement')->getClientOriginalName();
+                $name=\App\Support\PublicUpload::name($request->file('merchant_agreement'));
                 $file = $request->file('merchant_agreement');
                 $file->move(public_path() . '/agreements/pharmacys/',$name);
                 $src = '/agreements/pharmacys/'.$name;
@@ -1872,7 +1572,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $users = User::get();
             return view('drivers.inquiries',['users'=>$users,'title'=>'Drivers Inquiries','br1'=>'Drivers','br2'=>'Inquiries']);
         } else {
@@ -1887,19 +1587,19 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'driver')) {
             $user = User::find($driver_id);
             $orders = DB::table('cash_log')->where('driver_id',$driver_id)->orderBy('id','desc');
             $max_page = DB::table('cash_log')->where('driver_id',$driver_id);
-            if(!empty($_GET['created'])) {
-                $orders = $orders->whereDate('created','=',$_GET['created']);
-                $max_page = $max_page->whereDate('created','=',$_GET['created']);
+            if(!empty(request()->query('created'))) {
+                $orders = $orders->whereDate('created','=',request()->query('created'));
+                $max_page = $max_page->whereDate('created','=',request()->query('created'));
             }
             $countOnPage=30;
             $max_pages=ceil($max_page->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -1918,743 +1618,11 @@ class LexaAdmin extends Controller
             $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $duty = DB::table('cash_log')->where('driver_id',$driver_id)->where('return','0')->sum('copay');
             $res_view = view('drivers.payouts',['user'=>$user,'orders'=>$orders,'pages'=>$pages,'duty'=>$duty,'title'=>'Drivers Payouts','br1'=>'Drivers','br2'=>'Payouts']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
             }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function patients($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $users = User::where('role','user')->where('pharmacy_id', $pharmacy_id);
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
-                $users = $users->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('email','LIKE','%'.$search.'%')
-                          ->orWhere('phone','LIKE','%'.$search.'%');
-                    });
-            } else {
-                $search='';
-            }
-            $countOnPage=30;
-            $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
-            $users = $users->orderBy("users.id","desc")->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $res_view = view('patients.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'error'=>'','title'=>'Patients','br1'=>'Patients','br2'=>'Users']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function facilitys($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $users = User::where('role','facility')->where('pharmacy_id', $pharmacy_id);
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
-                $users = $users->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('email','LIKE','%'.$search.'%')
-                          ->orWhere('phone','LIKE','%'.$search.'%');
-                    });
-            } else {
-                $search='';
-            }
-            $countOnPage=30;
-            $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
-            $users = $users->orderBy("users.id","desc")->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $res_view = view('facilitys.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'error'=>'','title'=>'Patients','br1'=>'Patients','br2'=>'Users']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function facilitysHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('activate')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
-            }
-            if($request->input('block')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 1]);
-            }
-            if($request->input('unblock')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
-            }
-            if($request->input('remove')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->delete();
-            }
-            return redirect("patients/$pharmacy_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function facilitysAdd($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $input['name']='';
-            $input['last_name']='';
-            $input['email']='';
-            $input['phone']='';
-            $input['home_phone']='';
-            $input['birth_date']='';
-            $input['image']='';
-            $input['address']='';
-            $input['zip']='';
-            $input['apartment']='';
-            $input['pharmacy']=$pharmacy_id;
-            $pharmacys = DB::table('pharmacys')->get();
-            $res_view = view('facilitys.user_add',['pharmacys'=>$pharmacys,'title'=>'Facilitys Add','br1'=>'Facilitys','br2'=>'Patient Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function facilitysAddHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('save')>0) {
-                $email = $request->input('email');
-                if(empty($email)){
-                    $email = 'facilitys'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
-                }
-                if(!empty(DB::table('users')->where('email', $email)->where('pharmacy_id', $pharmacy_id)->first())) {
-                    $input['name']=$request->input('name');
-                    $input['last_name']=$request->input('last_name');
-                    $input['email']=$request->input('email');
-                    $input['phone']=$request->input('phone');
-                    $input['home_phone']=$request->input('home_phone');
-                    $input['birth_date']=$request->input('birth_date');
-                    $input['image']='';
-                    $input['address']=$request->input('address');
-                    $input['zip']=$request->input('zip');
-                    $input['apartment']=$request->input('apartment');
-                    $input['pharmacy']=$pharmacy_id;
-                    $pharmacys = DB::table('pharmacys')->get();
-                    return view('facilitys.user_add',['pharmacys'=>$pharmacys,'title'=>'Patients Add','br1'=>'Patients','br2'=>'Patient Add','alert'=>'User with this email already exists','input'=>$input]);
-                } else if(!empty(DB::table('users')->where('phone', $request->input('phone'))->where('pharmacy_id', $pharmacy_id)->first())) {
-                    $input['name']=$request->input('name'); 
-                    $input['last_name']=$request->input('last_name');
-                    $input['email']=$request->input('email');
-                    $input['phone']=$request->input('phone');
-                    $input['home_phone']=$request->input('home_phone');
-                    $input['birth_date']=$request->input('birth_date');
-                    $input['image']='';
-                    $input['address']=$request->input('address');
-                    $input['zip']=$request->input('zip');
-                    $input['apartment']=$request->input('apartment');
-                    $input['pharmacy']=$pharmacy_id;
-                    $pharmacys = DB::table('pharmacys')->get();
-                    return view('facilitys.user_add',['pharmacys'=>$pharmacys,'title'=>'Patients Add','br1'=>'Patients','br2'=>'Patient Add','alert'=>'User with this phone already exists','input'=>$input]);
-                } else {
-                    if($request->hasFile('image')) {
-                        $file = $request->file('image');
-                        $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                        $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
-                    } else {
-                        $src = '';
-                    }
-                    $user = DB::table('users')->where('phone', $request->input('phone'))->first();
-                    $password = bin2hex(openssl_random_pseudo_bytes(4));
-                    if(!empty($request->input('zip'))) {
-                        $address = $request->input('address').' '.$request->input('zip');
-                    } else {
-                        $address = $request->input('address');
-                    }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
-                    $address = $data->results[0]->formatted_address;
-                    $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                    $home_phone = (($request->input('home_phone')!='') ? $request->input('home_phone') : NULL);
-                    $last_name = ((!empty($request->input('last_name'))) ? $request->input('last_name') : ' ');
-                    $user_id = DB::table('users')->insertGetId(['role'=>'facility','isactive' => '1','name' => $request->input('name'),'last_name' => $last_name,'email' => $email,'phone' => $request->input('phone'),'birth_date' => $request->input('birth_date'),'home_phone'=> $home_phone, 'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $pharmacy_id]);
-                    $user = DB::table('users')->where('id',$user_id)->first();
-                    if(!empty($user->pharmacy_id)) {
-                        $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
-                        if(!empty($pharmacy) && !empty($pharmacy->name)) {
-                            $pharmacy_name = $pharmacy->name;
-                        } else {
-                            $pharmacy_name = "";
-                        }
-                    } else {
-                        $pharmacy_name = "";
-                    }
-                    try {
-                        $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                        if(!empty($pharmacy_name)) {
-                            try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable) {
-                                //throw $th;
-                            }
-                        } else {
-                            try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable) {
-                                //throw $th;
-                            }
-                        }
-                    } catch (\Throwable) {
-                        //
-                    }
-                }
-            }
-            if(!empty($request->input('order_add')) && isset($user_id)) {
-                return redirect("orders/$pharmacy_id/add?facility=$user_id");
-            }
-            return redirect("facilitys/$pharmacy_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $user_id
-     */
-    public static function facilitysEdit($pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists() || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $user = DB::table('users')->where('id', $user_id)->first();
-            $pharmacys = DB::table('pharmacys')->get();
-            $additional_recipients = DB::table('additional_recipients')->where('user_id', $user_id)->get();
-            $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
-            $patients = DB::table('users')->where('pharmacy_id', $pharmacy_id)->where('role','user')->get();
-            $res_view = view('facilitys.user_edit',['user'=> $user, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'additional_recipients'=>$additional_recipients, 'patients'=>$patients, 'title'=>'Patients Edit','br1'=>'Patients','br2'=>'Patients Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $user_id
-     */
-    public static function facilitysEditHandler(Request $request,$pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if(!empty($request->input('patients_db'))) {
-                foreach($request->input('patients_db') as $patient_id) {
-                    $patient = DB::table('users')->where('pharmacy_id', $pharmacy_id)->where('role','user')->where('id',$patient_id)->first();
-                    if(!empty($patient)) {
-                        DB::table('additional_recipients')->insert(['user_id'=>$user_id,'family_type' => 'Additional Recipient','family_name' => $patient->name.' '.$patient->last_name,'family_phone' => $patient->phone]);
-                    }
-                }
-                return redirect("facilitys/$pharmacy_id/edit/$user_id");
-            }
-            if($request->input('additional_recipients')>0) {
-                DB::table('additional_recipients')->insert(['user_id'=>$user_id,'family_type' => $request->input('family_type'),'family_name' => $request->input('family_name').' '.$request->input('family_name2'),'family_phone' => $request->input('family_phone')]);
-                return redirect("facilitys/$pharmacy_id/edit/$user_id");
-            }
-            if($request->input('additional_recipient_remove')>0) {
-                DB::table('additional_recipients')->where('id',$request->input('additional_recipient_remove'))->delete();
-                return redirect("facilitys/$pharmacy_id/edit/$user_id");
-            }
-            if($request->input('save')>0) {
-                $user = DB::table('users')->where('id', $user_id)->first();
-                $email = $request->input('email');
-                if(empty($email)){
-                    $email = 'facilitys'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
-                }
-                if($request->hasFile('image')) {
-                    $file = $request->file('image');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
-                } else {
-                    $user = DB::table('users')->where('id', $user_id)->first();
-                    $src = $user->image;
-                }
-                if($request->input('remove_photo')>0) {
-                    $src = '/images/users/default-user-image.png';
-                }
-                if(!empty($request->input('zip'))) {
-                    $address = $request->input('address').' '.$request->input('zip');
-                } else {
-                    $address = $request->input('address');
-                }
-                $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
-                $address = $data->results[0]->formatted_address;
-                $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                self::action_log_user_check($request,$address,$user_id);
-                $home_phone = (($request->input('home_phone')!='') ? $request->input('home_phone') : NULL);
-                DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'), 'home_phone'=>$home_phone, 'image' => $src,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment')]);
-            }
-            $user = DB::table('users')->where('id', $user_id)->first();
-            return redirect("facilitys/$pharmacy_id/edit/$user_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function patientsRemoved($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $users =  DB::table('deleted_patients')->join('users', 'deleted_patients.user_id', '=', 'users.id')->select('deleted_patients.medic_id','users.name','users.last_name','users.email','users.phone','users.home_phone','users.role','users.os','deleted_patients.reason')->where('users.pharmacy_id', $pharmacy_id);
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
-                $users = $users->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('email','LIKE','%'.$search.'%')
-                          ->orWhere('phone','LIKE','%'.$search.'%');
-                    });
-            } else {
-                $search='';
-            }
-            $countOnPage=30;
-            $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
-            $users = $users->orderBy("users.id","asc")->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $res_view = view('patients.removed',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'error'=>'','title'=>'Removed Patients','br1'=>'Patients','br2'=>'Removed Patients']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function patientsHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('activate')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
-            }
-            if($request->input('block')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 1]);
-            }
-            if($request->input('unblock')>0) {
-                DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
-            }
-            if($request->input('remove')>0) {
-                if(!empty($request->input('user_id'))) {
-                    if(Hash::check($request->input('password'),Auth::user()->password)) {
-                        DB::table('deleted_patients')->insert(['user_id' => $request->input('user_id'),'medic_id' => Auth::user()->id,'reason' => $request->input('reason')]);
-                        DB::table('users')->where('id', $request->input('user_id'))->update(['pharmacy_id' => NULL]);
-                    }
-                }
-            }
-            return redirect("patients/$pharmacy_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $user_id
-     */
-    public static function patientsEdit($pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists() || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $user = DB::table('users')->where('id', $user_id)->first();
-            $pharmacys = DB::table('pharmacys')->get()->keyBy('id');
-            $family_members = DB::table('family_members')->where('user_id', $user_id)->get();
-            $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
-            $user_zone=NULL;
-            if(!empty($user->location)) {
-                $user_zone=DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT('.$user->location.'))')->select("area.id","area.name")->first();
-            }
-            $orders_stat = DB::table('orders')->where('user_id',$user_id)->where('statuse_id',4)->select(DB::raw('count(distinct id) as count'),DB::raw('sum(copay) as copay'))->first();
-            $orders = DB::table('orders')->where('user_id',$user_id)->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as driver', 'orders.driver_id', '=', 'driver.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.driver_id', 'orders.merchantOrder','orders.special_instructions', 'orders.rating','orders.fridge','orders.actual','orders.eta','orders.facility', 'driver.name as drivername', 'driver.last_name as driverlast_name', 'driver.pharmacy_id as driverpharmacy_id', 'orders.count_bags', 'orders.signature','orders.statuse_id', 'orders.pharmacy_id', 'orders.copay', 'users.name as username', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.os as useros', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'orders.tariff', 'statuses.name as statusename','statuses.color as statusecolor','statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->groupBy('orders.id', 'orders.statuse_id', 'orders.merchantOrder', 'orders.actual','orders.eta', 'orders.driver_id', 'orders.rating','orders.signature','orders.fridge','driver.name', 'driver.last_name', 'driver.pharmacy_id','orders.special_instructions', 'orders.count_bags', 'orders.created', 'orders.facility','orders.copay', 'orders.pharmacy_id', 'orders.tariff', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.phone', 'statuses.name','statuses.color','users.last_name', 'statuses_copay.name','statuses_copay.color', 'users.os')->orderBy('orders.id','desc')->limit(8)->get();
-            $res_view = view('patients.user_edit',['user'=> $user, 'orders'=>$orders, 'orders_stat'=>$orders_stat, 'user_zone'=>$user_zone, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'family_members'=>$family_members, 'title'=>'Patients Edit','br1'=>'Patients','br2'=>'Patients Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $user_id
-     */
-    public static function patientsEditHandler(Request $request,$pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('family_members')>0) {
-                $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('family_address'))."&key=".config('app.googlemaps_apikey')));
-                $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                DB::table('family_members')->insert(['user_id'=>$user_id,'family_type' => $request->input('family_type'),'family_name' => $request->input('family_name'),'family_phone' => $request->input('family_phone'),'family_address' => $request->input('family_address'),'location'=>$location]);
-                return redirect("patients/$pharmacy_id/edit/$user_id");
-            }
-            if($request->input('family_member_remove')>0) {
-                DB::table('family_members')->where('id',$request->input('family_member_remove'))->delete();
-                return redirect("patients/$pharmacy_id/edit/$user_id");
-            }
-            if($request->input('save')>0) {
-                $user = DB::table('users')->where('id', $user_id)->first();
-                $email = $request->input('email');
-                if(empty($email)){
-                    $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
-                }
-                if($request->hasFile('image')) {
-                    $file = $request->file('image');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
-                } else {
-                    $user = DB::table('users')->where('id', $user_id)->first();
-                    $src = $user->image;
-                }
-                if($request->input('remove_photo')>0) {
-                    $src = '/images/users/default-user-image.png';
-                }
-                if(!empty($request->input('zip'))) {
-                    $address = $request->input('address').' '.$request->input('zip');
-                } else {
-                    $address = $request->input('address');
-                }
-                if(!empty($request->input('zip2'))) {
-                    $address2 = $request->input('address2').' '.$request->input('zip2');
-                } else {
-                    $address2 = $request->input('address2');
-                }
-                if(!empty($request->input('zip3'))) {
-                    $address3 = $request->input('address3').' '.$request->input('zip3');
-                } else {
-                    $address3 = $request->input('address3');
-                }
-                $primary_address=intval($request->input('primary_address'));
-                if($primary_address<1 || $primary_address>3 || ($primary_address==2 && empty($address2)) || $primary_address==3 && empty($address3)) {
-                    $primary_address=1;
-                }
-                $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
-                $address = $data->results[0]->formatted_address;
-                $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                if(!empty($address2)){
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address2)."&key=".config('app.googlemaps_apikey')));
-                    $address2 = $data->results[0]->formatted_address;
-                    $location2 = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                } else {
-                    $address2=NULL;
-                    $location2=NULL;
-                }
-                if(!empty($address3)){
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address3)."&key=".config('app.googlemaps_apikey')));
-                    $address3 = $data->results[0]->formatted_address;
-                    $location3 = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                } else {
-                    $address3=NULL;
-                    $location3=NULL;
-                }
-                self::action_log_user_check($request,$address,$user_id,$address2,$address3);
-                $home_phone = (($request->input('home_phone')!='') ? $request->input('home_phone') : NULL);
-                DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'), 'home_phone'=>$home_phone, 'image' => $src,'primary_address' => $primary_address,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'address2' => $address2,'location2' => $location2,'zip2' => $request->input('zip2'),'apartment2' => $request->input('apartment2'),'address3' => $address3,'location3' => $location3,'zip3' => $request->input('zip3'),'apartment3' => $request->input('apartment3')]);
-            }
-            return redirect("patients/$pharmacy_id/edit/$user_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $user_id
-     */
-    public static function patients_family($user_id){
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $family_members = DB::table('family_members')->where('user_id', $user_id)->get();
-            echo '<option value="">Select Family member...</option>';
-            foreach($family_members as $family_member) {
-                echo '<option value="'.$family_member->id.'">'.$family_member->family_name.', '.$family_member->family_phone.' ('.$family_member->family_type.'), '.$family_member->family_address.'</option>';
-            }
-            return true;
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $user_id
-     */
-    public static function patients_additional_recipients($user_id){
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $family_members = DB::table('additional_recipients')->where('user_id', $user_id)->get();
-            echo '<option value="">Add Facility patients...</option>';
-            foreach($family_members as $family_member) {
-                echo '<option value="'.$family_member->id.'">'.$family_member->family_name.', '.$family_member->family_phone.' ('.$family_member->family_type.')</option>';
-            }
-            return true;
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function patientsAdd($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $input['name']='';
-            $input['last_name']='';
-            $input['email']='';
-            $input['phone']='';
-            $input['home_phone']='';
-            $input['birth_date']='';
-            $input['image']='';
-            $input['address']='';
-            $input['zip']='';
-            $input['apartment']='';
-            $input['pharmacy']=$pharmacy_id;
-            $pharmacys = DB::table('pharmacys')->get();
-            $res_view = view('patients.user_add',['pharmacys'=>$pharmacys,'title'=>'Patients Add','br1'=>'Patients','br2'=>'Patient Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function patientsAddHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('save')>0) {
-                $email = $request->input('email');
-                if(empty($email)){
-                    $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
-                }
-                if(!empty(DB::table('users')->where('email', $email)->where('pharmacy_id', $pharmacy_id)->first())) {
-                    $input['name']=$request->input('name');
-                    $input['last_name']=$request->input('last_name');
-                    $input['email']=$request->input('email');
-                    $input['phone']=$request->input('phone');
-                    $input['home_phone']=$request->input('home_phone');
-                    $input['birth_date']=$request->input('birth_date');
-                    $input['image']='';
-                    $input['address']=$request->input('address');
-                    $input['zip']=$request->input('zip');
-                    $input['apartment']=$request->input('apartment');
-                    $input['pharmacy']=$pharmacy_id;
-                    $pharmacys = DB::table('pharmacys')->get();
-                    return view('patients.user_add',['pharmacys'=>$pharmacys,'title'=>'Patients Add','br1'=>'Patients','br2'=>'Patient Add','alert'=>'User with this email already exists','input'=>$input]);
-                } else if(!empty(DB::table('users')->where('phone', $request->input('phone'))->where('pharmacy_id', $pharmacy_id)->first())) {
-                    $input['name']=$request->input('name'); 
-                    $input['last_name']=$request->input('last_name');
-                    $input['email']=$request->input('email');
-                    $input['phone']=$request->input('phone');
-                    $input['home_phone']=$request->input('home_phone');
-                    $input['birth_date']=$request->input('birth_date');
-                    $input['image']='';
-                    $input['address']=$request->input('address');
-                    $input['zip']=$request->input('zip');
-                    $input['apartment']=$request->input('apartment');
-                    $input['pharmacy']=$pharmacy_id;
-                    $pharmacys = DB::table('pharmacys')->get();
-                    return view('patients.user_add',['pharmacys'=>$pharmacys,'title'=>'Patients Add','br1'=>'Patients','br2'=>'Patient Add','alert'=>'User with this phone already exists','input'=>$input]);
-                } else {
-                    if($request->hasFile('image')) {
-                        $file = $request->file('image');
-                        $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                        $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
-                    } else {
-                        $src = '';
-                    }
-                    $user = DB::table('users')->where('phone', $request->input('phone'))->first();
-                    $password = bin2hex(openssl_random_pseudo_bytes(4));
-                    if(!empty($request->input('zip'))) {
-                        $address = $request->input('address').' '.$request->input('zip');
-                    } else {
-                        $address = $request->input('address');
-                    }
-                    try {
-                        $geo = app(GeocodeAddress::class)->lookup($address);
-                    } catch (\Illuminate\Validation\ValidationException $e) {
-                        // Same re-render the duplicate e-mail/phone checks use, so the form keeps what was typed.
-                        $input = $request->only(['name', 'last_name', 'email', 'phone', 'home_phone', 'birth_date', 'address', 'zip', 'apartment']) + ['image' => '', 'pharmacy' => $pharmacy_id];
-                        return view('patients.user_add', ['pharmacys' => DB::table('pharmacys')->get(), 'title' => 'Patients Add', 'br1' => 'Patients', 'br2' => 'Patient Add', 'alert' => $e->validator->errors()->first('address'), 'input' => $input]);
-                    }
-                    $address = $geo['formatted_address'];
-                    $location = $geo['location'];
-                    $home_phone = (($request->input('home_phone')!='') ? $request->input('home_phone') : NULL);
-                    $user_id = DB::table('users')->insertGetId(['isactive' => '1','name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'),'birth_date' => $request->input('birth_date'),'home_phone'=> $home_phone, 'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $pharmacy_id]);
-                    $user = DB::table('users')->where('id',$user_id)->first();
-                    if(!empty($user->pharmacy_id)) {
-                        $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
-                        if(!empty($pharmacy) && !empty($pharmacy->name)) {
-                            $pharmacy_name = $pharmacy->name;
-                        } else {
-                            $pharmacy_name = "";
-                        }
-                    } else {
-                        $pharmacy_name = "";
-                    }
-                    try {
-                        $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                        if(!empty($pharmacy_name)) {
-                            try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable) {
-                                //throw $th;
-                            }
-                        } else {
-                            try {
-                                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            } catch (\Throwable) {
-                                //throw $th;
-                            }
-                        }
-                    } catch (\Throwable) {
-                        //
-                    }
-                }
-            }
-            if(!empty($request->input('order_add')) && isset($user_id)) {
-                return redirect("orders/$pharmacy_id/add?patient=$user_id");
-            }
-            return redirect("patients/$pharmacy_id");
         } else {
             return abort(403, self::$err_perm);
         }
@@ -2667,9 +1635,9 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $res_view = view('patients.import',['step'=>"1",'title'=>'Patients Import','br1'=>'Patients','br2'=>'Patient Import','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -2686,13 +1654,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->input('step')==1) {
                 $delimiter = $request->input('delimiter');
                 if($request->hasFile('file')) {
                     $file = $request->file('file');
-                    $file->move(public_path() . '/imports/',date('mdHis').$request->file('file')->getClientOriginalName());
-                    $src = '/imports/'.date('mdHis').$request->file('file')->getClientOriginalName();
+                    $file->move(public_path() . '/imports/',\App\Support\PublicUpload::name($request->file('file')));
+                    $src = '/imports/'.\App\Support\PublicUpload::name($request->file('file'));
                     $csv = file_get_contents(public_path().$src);
                     $rows = explode(PHP_EOL, $csv);
                     $data = explode($delimiter, $rows[0]);
@@ -2820,41 +1788,41 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'medic')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.statuse_id', 'orders.pharmacy_id', 'orders.driver_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.pharmacy_id', 'orders.driver_id', 'delivery_methods.name', 'delivery_times.name', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc');
             $max_page=DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id');
-            if(!empty($_GET['tariff'])) {
-                if($_GET['tariff']=='0.50') {
+            if(!empty(request()->query('tariff'))) {
+                if(request()->query('tariff')=='0.50') {
                     $orders = $orders->where('pharmacys.tariff','0.5');
                     $max_page = $max_page->where('pharmacys.tariff','0.5');
                 }
-                if($_GET['tariff']=='1.00') {
+                if(request()->query('tariff')=='1.00') {
                     $orders = $orders->where('pharmacys.tariff','1');
                     $max_page = $max_page->where('pharmacys.tariff','1');
                 }
-                if($_GET['tariff']=='5.00-7.00') {
+                if(request()->query('tariff')=='5.00-7.00') {
                     $orders = $orders->where('pharmacys.tariff','>=','5')->where('pharmacys.tariff','<=','7');
                     $max_page = $max_page->where('pharmacys.tariff','>=','5')->where('pharmacys.tariff','<=','7');
                 }
-                if($_GET['tariff']=='10.00-12.00') {
+                if(request()->query('tariff')=='10.00-12.00') {
                     $orders = $orders->where('pharmacys.tariff','>=','10')->where('pharmacys.tariff','<=','12');
                     $max_page = $max_page->where('pharmacys.tariff','>=','10')->where('pharmacys.tariff','<=','12');
                 }
             }
-            if(!empty($_GET['statuse'])) {
-                $orders = $orders->whereIn('orders.statuse_id',$_GET['statuse']);
-                $max_page = $max_page->whereIn('orders.statuse_id',$_GET['statuse']);
+            if(!empty(request()->query('statuse'))) {
+                $orders = $orders->whereIn('orders.statuse_id',request()->query('statuse'));
+                $max_page = $max_page->whereIn('orders.statuse_id',request()->query('statuse'));
             } else {
-                $_GET['statuse']=[1,2,3,6];
-                $orders = $orders->whereIn('orders.statuse_id',$_GET['statuse']);
-                $max_page = $max_page->whereIn('orders.statuse_id',$_GET['statuse']);
+                request()->query->set('statuse', [1,2,3,6]);
+                $orders = $orders->whereIn('orders.statuse_id',request()->query('statuse'));
+                $max_page = $max_page->whereIn('orders.statuse_id',request()->query('statuse'));
             }
-            if(!empty($_GET['pharmacy'])) {
-                $orders = $orders->where('orders.pharmacy_id',$_GET['pharmacy']);
-                $max_page = $max_page->where('orders.pharmacy_id',$_GET['pharmacy']);
+            if(!empty(request()->query('pharmacy'))) {
+                $orders = $orders->where('orders.pharmacy_id',request()->query('pharmacy'));
+                $max_page = $max_page->where('orders.pharmacy_id',request()->query('pharmacy'));
             }
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $orders = $orders->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
                         ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
@@ -2873,8 +1841,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($max_page->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -2894,7 +1862,7 @@ class LexaAdmin extends Controller
             $statuses = DB::table('statuses')->get();
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('routes.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'pharmacys'=>$pharmacys,'title'=>'Routes','br1'=>'Routes','br2'=>'List']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -2908,7 +1876,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist' || Auth::user()->role == 'medic') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $routes_logs = DB::table('routes_priority_logs')->whereRaw('Date(routes_priority_logs.created) = CURDATE()')->select(DB::raw('count(distinct routes_priority_logs.type,routes_priority_logs.type_id) as count_delivered'),'driver_id')->groupBy('driver_id');
             $routes_priority = DB::table('routes_priority')->select(DB::raw('count(distinct routes_priority.type,routes_priority.type_id) as count_delivery'),'driver_id')->groupBy('driver_id');
             $users = User::where('role','driver')->where('isactive',1)->where('isblocked',0)->leftJoinSub($routes_priority,'routes_priority',function ($join) {
@@ -2934,8 +1902,8 @@ class LexaAdmin extends Controller
             }
             $users0 = clone $users;
             $users0=$users0->select(DB::raw('count(distinct users.id) as count'));
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -2953,8 +1921,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=20;
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $total_users = DB::query()->fromSub($users0, 'drivers')->count();
             $max_pages=ceil($total_users/$countOnPage);
@@ -2985,10 +1953,11 @@ class LexaAdmin extends Controller
      * @param int|string $order_id
      */
     public static function routesShow($order_id) {
+        Gate::authorize('access-order', $order_id);
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'medic')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.driver_id', 'orders.statuse_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress', 'pharmacys.location as pharmacylocation', 'pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.driver_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.address', 'pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color')->first();
             $locations = DB::table('locations')->join('users', 'locations.user_id', '=', 'users.id')->select('locations.*')->whereIn('locations.id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->get();
             if($order->driver_id>0) {
@@ -2997,7 +1966,7 @@ class LexaAdmin extends Controller
                 $driver="";
             }
             $res_view = view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -3011,10 +1980,11 @@ class LexaAdmin extends Controller
      * @param int|string $order_id
      */
     public static function routesShowHandler(Request $request,$order_id) {
+        Gate::authorize('access-order', $order_id);
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'medic')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             if($request->input('driver_id')>1) {
                 DB::table('orders')->where('id', $order_id)->update(['driver_id'=>$request->input('driver_id'),'statuse_id'=>'2']);
             }
@@ -3026,7 +1996,7 @@ class LexaAdmin extends Controller
                 $driver="";
             }
             $res_view= view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -3040,33 +2010,36 @@ class LexaAdmin extends Controller
      * @param int|string $driver_id
      */
     public static function routesDriver($driver_id) {
+        if(Auth::user()->role == 'medic') {
+            Gate::authorize('manage-pharmacy-driver', [Auth::user()->pharmacy_id, $driver_id]);
+        }
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'medic')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $filter = [];
-            if(!empty($_GET['delivery_time']) && !empty($_GET['filter'])) {
-                $filter["delivery_time"] = $_GET['delivery_time'];
+            if(!empty(request()->query('delivery_time')) && !empty(request()->query('filter'))) {
+                $filter["delivery_time"] = request()->query('delivery_time');
             } else {
                 $filter["delivery_time"] = [];
             }
-            if(!empty($_GET['pharmacy']) && !empty($_GET['filter'])) {
-                $filter["pharmacy"] = $_GET['pharmacy'];
+            if(!empty(request()->query('pharmacy')) && !empty(request()->query('filter'))) {
+                $filter["pharmacy"] = request()->query('pharmacy');
             } else {
                 $filter["pharmacy"] = [];
             }
-            if(!empty($_GET['status']) && !empty($_GET['filter'])) {
-                $filter["status"] = $_GET['status'];
+            if(!empty(request()->query('status')) && !empty(request()->query('filter'))) {
+                $filter["status"] = request()->query('status');
             } else {
                 $filter["status"] = [];
             }
-            if(!empty($_GET['start']) && !empty($_GET['filter'])) {
-                $filter["start"] = $_GET['start'];
+            if(!empty(request()->query('start')) && !empty(request()->query('filter'))) {
+                $filter["start"] = request()->query('start');
             } else {
                 $filter["start"] = "";
             }
-            if(!empty($_GET['end']) && !empty($_GET['filter'])) {
-                $filter["end"] = $_GET['end'];
+            if(!empty(request()->query('end')) && !empty(request()->query('filter'))) {
+                $filter["end"] = request()->query('end');
             } else {
                 $filter["end"] = "";
             }
@@ -3174,7 +2147,7 @@ class LexaAdmin extends Controller
             $show_ids = [];
             $show_priority = [];
             $res_view = view('routes.driver',['orders'=>$orders,'pharmacys'=>$pharmacys,'pharmacys_list'=>$pharmacys_list,'locations'=>$locations,'driver'=>$driver,'delivery_times'=>$delivery_times,'filter'=>$filter,'offices'=>$offices,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'pay_value'=>$pay_value,'type_pay'=>$type_pay,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'order_statuses'=>$order_statuses,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'orders_id'=>$orders_id,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Driver Detail','br1'=>'Routes','br2'=>'Driver Detail']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -3188,10 +2161,18 @@ class LexaAdmin extends Controller
      * @param int|string $driver_id
      */
     public static function routesDriverHandler(Request $request,$driver_id) {
+        if(Auth::user()->role == 'medic') {
+            // Pharmacy users route only their own drivers and their own pharmacy's orders.
+            Gate::authorize('manage-pharmacy-driver', [Auth::user()->pharmacy_id, $driver_id]);
+            $orderIds = array_filter(array_merge([$request->input('confirm_order_id')], ...array_map(fn ($ids) => explode(',', (string) $ids), (array) $request->input('order_id'))));
+            if($orderIds !== []) {
+                Gate::authorize('access-order', array_values($orderIds));
+            }
+        }
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'medic')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             if($request->input('confirm_order_id')>1) {
                 DB::table('orders')->where('id', $request->input('confirm_order_id'))->update(['driver_id'=>$driver_id,'statuse_id'=>'2','ready'=>'2']);
                 $order = DB::table('orders')->where('id', $request->input('confirm_order_id'))->first();
@@ -3558,7 +2539,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'driver') || (Auth::user()->role == 'user' && Auth::user()->pharmacy_id==$pharmacy_id)) {
+        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->can('admin'))) || (Auth::user()->role == 'driver') || (Auth::user()->role == 'user' && Auth::user()->pharmacy_id==$pharmacy_id)) {
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.statuse_id', 'orders.pharmacy_id', 'orders.copay', 'users.name as username', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', DB::raw('case when orders.tariff is null then pharmacys.tariff else orders.tariff end as tariff'),'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id',$pharmacy_id)->where('orders.statuse_id','4')->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', DB::raw('case when orders.tariff is null then pharmacys.tariff else orders.tariff end'), 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->get();
             $sum_amount = 0;
             foreach($orders as $order) {
@@ -3580,7 +2561,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $invoices = DB::table('invoices')->where('pharmacy_id',$pharmacy_id)->where("payed","0")->get();
                 foreach($invoices as $invoice) {
                     $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice->id)->pluck('order_id')->toArray();
@@ -3627,7 +2608,7 @@ class LexaAdmin extends Controller
                 $error = session()->get('error');
                 $pharmacy_plan = DB::table('plans')->where('id', $pharmacy->plan_id)->first();
                 $res_view = view('billing.list',['invoices'=>$invoices,'pharmacy'=>$pharmacy,'pharmacy_plan'=>$pharmacy_plan,'payment_account'=>$payment_account,'error'=>$error,'pharmacy_id'=>$pharmacy_id,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
-                if(isset($_GET['ajax'])) {
+                if(request()->query->has('ajax')) {
                     return $res_view->renderSections();
                 } else {
                     return $res_view;
@@ -3650,7 +2631,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $invoice = DB::table('invoices')->where('pharmacy_id',$pharmacy_id)->where('id',$invoice_id)->first();
                 if(empty($invoice)) {
                     return abort(404, 'Invoice not found');
@@ -3676,7 +2657,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $invoice = DB::table('invoices')->where('invoices.pharmacy_id',$pharmacy_id)->where('invoices.id',$invoice_id)->leftJoin("pharmacy_payments","pharmacy_payments.invoice_id","=","invoices.id")->select("invoices.id","invoices.created","invoices.pharmacy_id","invoices.date_from","invoices.date_to","invoices.count","invoices.amount","invoices.copay","invoices.corrections","invoices.payed","pharmacy_payments.amount as payed_amount")->first();
                 if(empty($invoice)) {
                     return abort(404, 'Invoice not found');
@@ -3732,7 +2713,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $invoice = DB::table('invoices')->where('invoices.pharmacy_id',$pharmacy_id)->where('invoices.id',$invoice_id)->leftJoin("pharmacy_payments","pharmacy_payments.invoice_id","=","invoices.id")->select("invoices.id","invoices.created","invoices.pharmacy_id","invoices.date_from","invoices.date_to","invoices.count","invoices.amount","invoices.copay","invoices.corrections","invoices.payed","pharmacy_payments.amount as payed_amount")->first();
                 if(empty($invoice)) {
                     return abort(404, 'Invoice not found');
@@ -3758,12 +2739,20 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $error='';
-                if(!empty($request->input('pay')) && !empty($request->input('invoice_id'))) {
+                // One payment attempt per invoice at a time, so a double click cannot charge twice.
+                $payment_lock = !empty($request->input('pay')) && !empty($request->input('invoice_id')) ? Cache::lock('pay-invoice:'.$pharmacy_id.':'.$request->input('invoice_id'), 120) : null;
+                if($payment_lock && !$payment_lock->get()) {
+                    $error = "This invoice is already being paid. Please wait a moment and refresh.";
+                    $payment_lock = null;
+                } else if($payment_lock) {
+                  try {
                     $invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->first();
                     $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
-                    if(!empty($invoice)){
+                    if(!empty($invoice) && $invoice->payed=='1'){
+                        $error = "This invoice is already paid.";
+                    } else if(!empty($invoice)){
                         if($pharmacy->copay_bill=='1') {
                             if((($invoice->amount+$invoice->corrections)-$invoice->copay)<0) {
                                 $amount = 0;
@@ -3773,15 +2762,9 @@ class LexaAdmin extends Controller
                         } else {
                             $amount = round(($invoice->amount+$invoice->corrections),2);
                         }
-                        if($amount===0 || floatval($pharmacy->balance)>=$amount) {
-                            if(floatval($pharmacy->balance)>=$amount){
-                                $balance = floatval($pharmacy->balance)-$amount;
-                                DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>'balance','type'=>'pay']);
-                            } else {
-                                $balance = floatval($pharmacy->balance)+$amount;
-                                DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>0,'type'=>'pay']);
-                            }
-                            DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                        // Creating an invoice already debited the balance; a balance of zero or more means it is covered.
+                        if($amount==0 || floatval($pharmacy->balance)>=0) {
+                            DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>'balance','type'=>'pay']);
                             DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
                             $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
                             DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
@@ -3791,7 +2774,7 @@ class LexaAdmin extends Controller
                                 'environment' => config('app.SQUARE_ENVIRONMENT'),
                             ]);
                             $amount_money = new \Square\Models\Money();
-                            $amount_money->setAmount(($amount*100));
+                            $amount_money->setAmount(\App\Support\Money::cents($amount));
                             $amount_money->setCurrency('USD');
                             $unid = uniqid("",true).rand(0,100);
                             $body = new \Square\Models\CreatePaymentRequest(
@@ -3832,7 +2815,7 @@ class LexaAdmin extends Controller
                                     'environment' => config('app.SQUARE_ENVIRONMENT'),
                                 ]);
                                 $amount_money = new \Square\Models\Money();
-                                $amount_money->setAmount(($amount*100));
+                                $amount_money->setAmount(\App\Support\Money::cents($amount));
                                 $amount_money->setCurrency('USD');
                                 $unid = uniqid("",true).rand(0,100);
                                 $body = new \Square\Models\CreatePaymentRequest(
@@ -3874,18 +2857,23 @@ class LexaAdmin extends Controller
                     } else {
                         $error = "Invoice with this ID not found!";
                     }
+                  } finally {
+                    $payment_lock->release();
+                  }
                 }
                 if(!empty($request->input('refill-amount'))) {
                     $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
-                    if(!empty($payment_account)){
-                        $amount = round(floatval($request->input('refill-amount')),2);
+                    $amount = round(floatval($request->input('refill-amount')),2);
+                    if($amount < 1) {
+                        $error = "Enter a refill amount of at least $1.00.";
+                    } else if(!empty($payment_account)){
                         if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
                             $client = new \Square\SquareClient([
                                 'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
                                 'environment' => config('app.SQUARE_ENVIRONMENT'),
                             ]);
                             $amount_money = new \Square\Models\Money();
-                            $amount_money->setAmount(($amount*100));
+                            $amount_money->setAmount(\App\Support\Money::cents($amount));
                             $amount_money->setCurrency('USD');
                             $unid = uniqid("",true).rand(0,100);
                             $body = new \Square\Models\CreatePaymentRequest(
@@ -3920,9 +2908,11 @@ class LexaAdmin extends Controller
                         $error = "PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.";
                     }
                 }
-                if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') && !empty($request->input('paid')) && !empty($request->input('invoice_id'))) {
+                if((Auth::user()->can('admin')) && !empty($request->input('paid')) && !empty($request->input('invoice_id'))) {
                     $invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->first();
-                    if(!empty($invoice)){
+                    if(!empty($invoice) && $invoice->payed=='1'){
+                        $error = "This invoice is already paid.";
+                    } else if(!empty($invoice)){
                         if($pharmacy->copay_bill=='1') {
                             if((($invoice->amount+$invoice->corrections)-$invoice->copay)<0) {
                                 $amount = 0;
@@ -3940,14 +2930,13 @@ class LexaAdmin extends Controller
                         DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                     }
                 }
-                if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') && is_numeric($request->input('balance-change'))) {
+                if((Auth::user()->can('admin')) && is_numeric($request->input('balance-change'))) {
                     if(floatval($request->input('balance-change'))===0){
                         DB::table('pharmacys')->where("id",$pharmacy_id)->update(["balance_ban"=>"0"]);
                     }
                     DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>floatval($request->input('balance-change'))]);
                 }
-                if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') && is_numeric($request->input('corrections-change'))) {
-                    $invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->first();
+                if((Auth::user()->can('admin')) && is_numeric($request->input('corrections-change')) && !empty($invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->first())) {
                     $corrections=floatval($request->input('corrections-change'));
                     DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["corrections"=>$corrections]);
                     if($pharmacy->balance<0) {
@@ -3957,12 +2946,12 @@ class LexaAdmin extends Controller
                     }
                     DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
                 }
-                if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') && !empty($request->input('unblock'))) {
+                if((Auth::user()->can('admin')) && !empty($request->input('unblock'))) {
                     if($request->input('unblock')>0){
                         DB::table('pharmacys')->where("id",$pharmacy_id)->update(["balance_ban"=>"0"]);
                     }
                 }
-                if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') && !empty($request->input('remove')) && !empty($request->input('invoice_id'))) {
+                if((Auth::user()->can('admin')) && !empty($request->input('remove')) && !empty($request->input('invoice_id'))) {
                     $invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->delete();
                     DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->delete();
                 }
@@ -3984,13 +2973,13 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            if((Auth::user()->can('admin'))) {
                 $invoice = new \stdClass();
                 $invoice->date_from="";
                 $invoice->date_to="";
                 $invoice_exclusions=[];
                 $res_view = view('billing.invoice_form',['invoice'=>$invoice,'invoice_exclusions'=>$invoice_exclusions,'alert'=>'','title'=>'Billing Invoice Add','br1'=>'Billings','br2'=>'Invoice Add']);
-                if(isset($_GET['ajax'])) {
+                if(request()->query->has('ajax')) {
                     return $res_view->renderSections();
                 } else {
                     return $res_view;
@@ -4012,7 +3001,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            if((Auth::user()->can('admin'))) {
                 if($request->input('save')>0 && !empty($request->input('date_from')) && !empty($request->input('date_to'))) {
                     $orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->where('invoice_payed','0')->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', date($request->input('date_from')))->whereDate('finish', '<=', date($request->input('date_to')));
                     $invoice_exclusions = [];
@@ -4037,9 +3026,9 @@ class LexaAdmin extends Controller
                             $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
                             $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
                             $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                            $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                            $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                            $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
+                            $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                            $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                            $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
                             if(!empty($zip_tariff)){
                                 if(is_numeric($pharmacy->tariff)) {
                                     $tariff = $pharmacy->tariff;
@@ -4154,14 +3143,14 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            if((Auth::user()->can('admin'))) {
                 $invoice = DB::table('invoices')->where('id', $invoice_id)->where('pharmacy_id', $pharmacy_id)->first();
                 if(empty($invoice)) {
                     return abort(404, 'Invoice not found');
                 }
                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id', $invoice_id)->get();
                 $res_view = view('billing.invoice_form',['invoice'=>$invoice,'invoice_exclusions'=>$invoice_exclusions,'alert'=>'','title'=>'Billing Invoice Edit','br1'=>'Billings','br2'=>'Invoice Edit']);
-                if(isset($_GET['ajax'])) {
+                if(request()->query->has('ajax')) {
                     return $res_view->renderSections();
                 } else {
                     return $res_view;
@@ -4184,7 +3173,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            if((Auth::user()->can('admin'))) {
                 if($request->input('save')>0 && !empty($request->input('date_from')) && !empty($request->input('date_to')) && !empty($request->input('tariff'))) {
                     $count_orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('created', '>=', date($request->input('date_from')))->whereDate('created', '<=', date($request->input('date_to')));
                     $invoice_exclusions = [];
@@ -4212,99 +3201,13 @@ class LexaAdmin extends Controller
         }
     }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public function ordersStatistic($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
-        if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-                $date = date('Y-m-d');
-                $statuse_id = '';
-                $statuses = DB::table('statuses')->get();
-                $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
-                foreach($polygons as $key=>$pol) {
-                    if(!empty($pol->polygon)) {
-                        $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
-                        $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
-                            $join->on('area.polygon','!=','orders.id');
-                            $join->where('area.id',$pol->id);
-                        })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
-                        if(!empty($statuse_id)) {
-                            $polygons[$key]->count=$polygons[$key]->count->where('orders.statuse_id',$statuse_id);
-                        }
-                        if($statuse_id==4) {
-                            $polygons[$key]->count=$polygons[$key]->count->whereRaw('date(finish) = "'.$date.'"');
-                        } else {
-                            $polygons[$key]->count=$polygons[$key]->count->whereRaw('date(created) = "'.$date.'"');
-                        }
-                        $polygons[$key]->count=$polygons[$key]->count->get()->count();
-                    } else {
-                        $polygons[$key]->polygon = "";
-                        $polygons[$key]->count = "0";
-                    }   
-                }
-                return view('orders.statistic',['date'=>$date,'polygons'=>$polygons,'pharmacy'=>$pharmacy,'statuses'=>$statuses,'statuse_id'=>$statuse_id,'alert'=>'','title'=>'Orders Map Statistic','br1'=>'Orders','br2'=>'Map Statistic']);
-            } else {
-                return abort(403, self::$err_perm);
-            }
-        } else {
-            return abort(404, "Not found pharmacy");
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public function ordersStatisticHandler($pharmacy_id,Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
-        if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-                $date = date('Y-m-d',strtotime($request->input('date')));
-                $statuse_id = $request->input('statuse_id');
-                $statuses = DB::table('statuses')->get();
-                $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
-                foreach($polygons as $key=>$pol) {
-                    if(!empty($pol->polygon)) {
-                        $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
-                        $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
-                            $join->on('area.polygon','!=','orders.id');
-                            $join->where('area.id',$pol->id);
-                        })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
-                        if(!empty($statuse_id)) {
-                            $polygons[$key]->count=$polygons[$key]->count->where('orders.statuse_id',$statuse_id);
-                        }
-                        if($statuse_id==4) {
-                            $polygons[$key]->count=$polygons[$key]->count->whereRaw('date(finish) = "'.$date.'"');
-                        } else {
-                            $polygons[$key]->count=$polygons[$key]->count->whereRaw('date(created) = "'.$date.'"');
-                        }
-                        $polygons[$key]->count=$polygons[$key]->count->get()->count();
-                    } else {
-                        $polygons[$key]->polygon = "";
-                        $polygons[$key]->count = "0";
-                    }   
-                }
-                return view('orders.statistic',['date'=>$date,'polygons'=>$polygons,'pharmacy'=>$pharmacy,'statuses'=>$statuses,'statuse_id'=>$statuse_id,'alert'=>'','title'=>'Orders Map Statistic','br1'=>'Orders','br2'=>'Map Statistic']);
-            } else {
-                return abort(403, self::$err_perm);
-            }
-        } else {
-            return abort(404, "Not found pharmacy");
-        }
-    }
 
     public static function searchJson() {
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
+        if((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->can('admin')))) {
             $search = request()->query('search', '');
             $max_res = 100;
             if(!empty($search)) {
@@ -4405,1561 +3308,23 @@ class LexaAdmin extends Controller
         }
     }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function orders($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
-        if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'sale' && Auth::user()->id==$pharmacy->ref_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))) {
-                $orders = DB::table('orders')->where('orders.pharmacy_id',$pharmacy_id)->leftJoin('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.*')->orderBy('orders.id','desc');
-                $filter = [];
-                if(!empty($_GET['delivery_time']) && !empty($_GET['filter'])) {
-                    $filter["delivery_time"] = $_GET['delivery_time'];
-                } else {
-                    $filter["delivery_time"] = [];
-                }
-                if(!empty($_GET['delivery_method']) && !empty($_GET['filter'])) {
-                    $filter["delivery_method"] = $_GET['delivery_method'];
-                } else {
-                    $filter["delivery_method"] = [];
-                }
-                if(!empty($_GET['status']) && !empty($_GET['filter'])) {
-                    $filter["status"] = $_GET['status'];
-                } else {
-                    $filter["status"] = [];
-                }
-                if(!empty($_GET['facility']) && !empty($_GET['filter'])) {
-                    $filter["facility"] = $_GET['facility'];
-                } else {
-                    $filter["facility"] = [];
-                }
-                if(!empty($_GET['create_start']) && !empty($_GET['filter'])) {
-                    $filter["create_start"] = $_GET['create_start'];
-                } else {
-                    $filter["create_start"] = "";
-                }
-                if(!empty($_GET['create_end']) && !empty($_GET['filter'])) {
-                    $filter["create_end"] = $_GET['create_end'];
-                } else {
-                    $filter["create_end"] = "";
-                }
-                if(!empty($_GET['delivered_start']) && !empty($_GET['filter'])) {
-                    $filter["delivered_start"] = $_GET['delivered_start'];
-                } else {
-                    $filter["delivered_start"] = "";
-                }
-                if(!empty($_GET['delivered_end']) && !empty($_GET['filter'])) {
-                    $filter["delivered_end"] = $_GET['delivered_end'];
-                } else {
-                    $filter["delivered_end"] = "";
-                }
-                if(!empty($_GET['need_delivery_start']) && !empty($_GET['filter'])) {
-                    $filter["need_delivery_start"] = $_GET['need_delivery_start'];
-                } else {
-                    $filter["need_delivery_start"] = "";
-                }
-                if(!empty($_GET['need_delivery_end']) && !empty($_GET['filter'])) {
-                    $filter["need_delivery_end"] = $_GET['need_delivery_end'];
-                } else {
-                    $filter["need_delivery_end"] = "";
-                }
-                if(!empty($_GET['micromerchant']) && !empty($_GET['filter'])) {
-                    $filter["micromerchant"] = $_GET['micromerchant'];
-                } else {
-                    $filter["micromerchant"] = "";
-                }
-                if(!empty($filter["delivery_time"])) {
-                    $orders = $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
-                }
-                if(!empty($filter["delivery_method"])) {
-                    $orders = $orders->whereIn("delivery_method_id",$filter["delivery_method"]);
-                }
-                if(!empty($filter["pharmacy"])) {
-                    $orders = $orders->whereIn('orders.pharmacy_id',$filter["pharmacy"]);
-                }
-                if(!empty($filter["status"])) {
-                    $orders = $orders->whereIn('orders.statuse_id',$filter["status"]);
-                }
-                if(count($filter["facility"])==1) {
-                    if($filter["facility"][0]==0) {
-                        $orders = $orders->whereNull('orders.facility');
-                    } else {
-                        $orders = $orders->whereNotNull('orders.facility');
-                    }
-                }
-                if(!empty($filter["micromerchant"])) {
-                    $orders = $orders->where('orders.merchantOrder','1');
-                }
-                if(!empty($filter["create_start"]) && !empty($filter["create_end"])) {
-                    $orders = $orders->whereBetween('orders.created', [\DateTime::createFromFormat('m/d/Y',$filter["create_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["create_end"])->format('Y-m-d')]);
-                }
-                if(!empty($filter["delivered_start"]) && !empty($filter["delivered_end"])) {
-                    $orders = $orders->whereBetween('orders.finish', [\DateTime::createFromFormat('m/d/Y',$filter["delivered_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["delivered_end"])->format('Y-m-d')]);
-                }
-                if(!empty($filter["need_delivery_start"]) && !empty($filter["need_delivery_end"])) {
-                    $orders = $orders->whereBetween('orders.delivery_date', [\DateTime::createFromFormat('m/d/Y',$filter["need_delivery_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["need_delivery_end"])->format('Y-m-d')]);
-                }
-                if(!empty(Auth::user()->zone_id)){
-                    $orders=$orders->where('pharmacys.zone_id',Auth::user()->zone_id);
-                }
-                if(!empty($_GET['search'])) {
-                    $search = $_GET['search'];
-                    $orders = $orders->leftJoin('users', 'orders.user_id', '=', 'users.id')->where(function($query) use ($search) {
-                        $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
-                            ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
-                              ->orWhere('pharmacys.name','LIKE','%'.$search.'%')
-                              ->orWhere('orders.copay','LIKE','%'.$search.'%')
-                              ->orWhere('orders.id','LIKE','%'.$search.'%');
-                        });
-                    $orders0 = clone $orders;
-                    $orders0 = $orders0->select(DB::raw('count(orders.id) as count'))->first();
-                    $orders=$orders->select('orders.*');
-                } else {
-                    $search='';
-                    $orders0 = clone $orders;
-                    $orders0 = $orders0->select(DB::raw('count(orders.id) as count'))->first();
-                }
-                $countOnPage=30;
-                $max_pages=ceil($orders0->count/$countOnPage);
-                $page=1;
-                if(!empty($_GET['page'])) {
-                    $page=intval($_GET['page']);
-                }
-                $pages = array();
-                if($page>2){
-                    array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-                }
-                if($page>1){
-                    array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-                }
-                array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-                if($page+1<=$max_pages){
-                    array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-                }
-                if($page+2<=$max_pages){
-                    array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-                }
-                $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-                $statuses = self::get_statuses();
-                $statuses_copay = self::get_statuses_copay();
-                $delivery_methods = self::get_delivery_methods();
-                $delivery_times = self::get_delivery_times();
-                $pharmacys = DB::table('pharmacys')->get()->keyBy('id');
-                $patients = self::get_patients($orders->pluck('user_id')->toArray());
-                $drivers = self::get_drivers($orders->pluck('driver_id')->toArray());
-                $res_arr = ['pages'=>$pages,'page0'=>$page,'filter'=>$filter,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'statuses_copay'=>$statuses_copay,'delivery_methods'=>$delivery_methods,'delivery_times'=>$delivery_times,'pharmacys'=>$pharmacys,'patients'=>$patients,'drivers'=>$drivers,'pharmacy_id'=>$pharmacy_id,'title'=>'Orders','br1'=>'Orders','br2'=>'List'];
-                return view('orders.list',$res_arr);
-            } else {
-                return abort(403, self::$err_perm);
-            }
-        } else {
-            return abort(404, "Not found pharmacy");
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function ordersHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('remove')>0) {
-                DB::table('orders')->where('id', $request->input('order_id'))->delete();
-                DB::table('rxs')->where('order_id',$request->input('order_id'))->delete();
-            }
-            if($request->input('repeat')>0) {
-                $order = DB::table('orders')->where('id', $request->input('order_id'))->first();
-                $order->id = NULL;
-                $order->medic_id = Auth::id();
-                $order->statuse_id = 1;
-                $order->finish = NULL;
-                $order->rating = NULL;
-                $order->statuse_copay = 1;
-                $order->tariff = NULL;
-                $order->drop_off_photo = NULL;
-                $order->signature_photo = NULL;
-                $order->signature_type = NULL;
-                $order->invoice_payed = NULL;
-                $order->eta = NULL;
-                $order->delivery_date = date("Y-m-d",strtotime(date("Y-m-d H:i:s")." +1 day"));
-                $pharmacy_id = $order->pharmacy_id;
-                $order = json_encode($order);
-                $order = json_decode($order,true);
-                $order_id = DB::table('orders')->insertGetId($order);
-                $rxs = DB::table('rxs')->where('order_id',$request->input('order_id'))->get();
-                foreach($rxs as $rx) {
-                    $rx->id = NULL;
-                    $rx->order_id = $order_id;
-                    $rx = json_encode($rx);
-                    $rx = json_decode($rx,true);
-                    DB::table('rxs')->insert($rx);
-                }
-                return redirect("orders/$pharmacy_id/edit/$order_id");
-            }
-            return redirect("orders/$pharmacy_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    public static function ordersTicketsPrint() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'medic') || (Auth::user()->role == 'superadmin') || (Auth::user()->role == 'admin') || (Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'driver') || (Auth::user()->role == 'logist')) {
-            if(Auth::user()->pharmacy_id>0) {
-                $orders = DB::table('orders')->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->where('orders.statuse_id',1);
-            } else {
-                $orders = DB::table('orders')->where('orders.statuse_id',1);
-            }
-            if(!empty(Auth::user()->zone_id)){
-                $orders=$orders->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
-            }
-            $orders=$orders->get();
-            foreach($orders as $key=>$order){
-                $rxs = DB::table('rxs')->where('order_id',$order->id)->count();
-                $orders[$key]->rxs_count=$rxs;
-            }
-            $pharmacys = self::get_pharmacys();
-            $patients = self::get_patients();
-            $wishs = self::get_wishs();
-            $res_arr = ['orders'=>$orders,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
-            return view('orders.tickets',$res_arr);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    public static function ordersDayPrint() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $date = request()->query('date') ?: date('Y-m-d');
-            $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('users as users2', 'orders.driver_id', '=', 'users2.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.count_bags', 'orders.statuse_id', 'orders.copay', 'orders.finish', 'users.apartment as userapartment', 'users2.name as driver_name', 'users2.last_name as driver_last_name', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.pharmacy_id', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id',4)->whereRaw('date(finish) = "'.$date.'"')->groupBy('orders.id', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.statuse_id', 'orders.driver_id', 'users.apartment', 'orders.count_bags', 'orders.finish', 'orders.created', 'users2.name', 'users2.last_name', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'),'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc')->get();
-            foreach($orders as $key=>$order) {
-                $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
-                foreach($rxs as $key0=>$rx) {
-                    if(empty($rx->rx_id)) {
-                        $rxs[$key0]->rx_id = 'null';
-                    }
-                }
-                $orders[$key]->rxs=$rxs;
-                if($order->driver_id>0) {
-                    $driver = DB::table('users')->where('id',$order->driver_id)->first();
-                } else {
-                    $driver="";
-                }
-                $orders[$key]->driver=$driver;
-            }
-            return view('orders.print',['orders'=>$orders]);
-        } else if (Auth::user()->role == 'medic') {
-            $date = request()->query('date') ?: date('Y-m-d');
-            $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('users as users2', 'orders.driver_id', '=', 'users2.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.count_bags', 'orders.statuse_id', 'orders.copay', 'orders.finish', 'users.apartment as userapartment', 'users2.name as driver_name', 'users2.last_name as driver_last_name', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.pharmacy_id', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id',4)->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->whereRaw('date(finish) = "'.$date.'"')->groupBy('orders.id', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.statuse_id', 'orders.driver_id', 'users.apartment','users2.name', 'users2.last_name', 'orders.count_bags', 'orders.finish', 'orders.created', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc')->get();
-            foreach($orders as $key=>$order) {
-                $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
-                $orders[$key]->rxs=$rxs;
-                if($order->driver_id>0) {
-                    $driver = DB::table('users')->where('id',$order->driver_id)->first();
-                } else {
-                    $driver="";
-                }
-                $orders[$key]->driver=$driver;
-            }
-            return view('orders.print',['orders'=>$orders]);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    public static function ordersTicketPrint() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'medic') || (Auth::user()->role == 'superadmin') || (Auth::user()->role == 'admin') || (Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'driver') || (Auth::user()->role == 'logist')) {
-            $order_id = request()->query('order_id');
-            $order = DB::table('orders')->where('id',$order_id)->first();
-            if(empty($order)) {
-                return abort(404, 'Order not found');
-            }
-            $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
-            foreach($rxs as $key0=>$rx) {
-                if(empty($rx->rx_id)) {
-                    $rxs[$key0]->rx_id = 'null';
-                }
-            }
-            $order->rxs=$rxs;
-            $pharmacys = self::get_pharmacys();
-            $patients = self::get_patients();
-            $wishs = self::get_wishs();
-            $res_arr = ['order'=>$order,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
-            return view('orders.ticket',$res_arr);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    public static function ordersList() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'driver') || (Auth::user()->role == 'logist')) {
-            $orders = DB::table('orders')->leftJoin('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.*')->orderBy('orders.id','desc');
-            $filter = [];
-            if(!empty($_GET['delivery_time']) && !empty($_GET['filter'])) {
-                $filter["delivery_time"] = $_GET['delivery_time'];
-            } else {
-                $filter["delivery_time"] = [];
-            }
-            if(!empty($_GET['delivery_method']) && !empty($_GET['filter'])) {
-                $filter["delivery_method"] = $_GET['delivery_method'];
-            } else {
-                $filter["delivery_method"] = [];
-            }
-            if(!empty($_GET['pharmacy']) && !empty($_GET['filter'])) {
-                $filter["pharmacy"] = $_GET['pharmacy'];
-            } else {
-                $filter["pharmacy"] = [];
-            }
-            if(!empty($_GET['status']) && !empty($_GET['filter'])) {
-                $filter["status"] = $_GET['status'];
-            } else {
-                $filter["status"] = [];
-            }
-            if(!empty($_GET['facility']) && !empty($_GET['filter'])) {
-                $filter["facility"] = $_GET['facility'];
-            } else {
-                $filter["facility"] = [];
-            }
-            if(!empty($_GET['create_start']) && !empty($_GET['filter'])) {
-                $filter["create_start"] = $_GET['create_start'];
-            } else {
-                $filter["create_start"] = "";
-            }
-            if(!empty($_GET['create_end']) && !empty($_GET['filter'])) {
-                $filter["create_end"] = $_GET['create_end'];
-            } else {
-                $filter["create_end"] = "";
-            }
-            if(!empty($_GET['delivered_start']) && !empty($_GET['filter'])) {
-                $filter["delivered_start"] = $_GET['delivered_start'];
-            } else {
-                $filter["delivered_start"] = "";
-            }
-            if(!empty($_GET['delivered_end']) && !empty($_GET['filter'])) {
-                $filter["delivered_end"] = $_GET['delivered_end'];
-            } else {
-                $filter["delivered_end"] = "";
-            }
-            if(!empty($_GET['need_delivery_start']) && !empty($_GET['filter'])) {
-                $filter["need_delivery_start"] = $_GET['need_delivery_start'];
-            } else {
-                $filter["need_delivery_start"] = "";
-            }
-            if(!empty($_GET['need_delivery_end']) && !empty($_GET['filter'])) {
-                $filter["need_delivery_end"] = $_GET['need_delivery_end'];
-            } else {
-                $filter["need_delivery_end"] = "";
-            }
-            if(!empty($filter["delivery_time"])) {
-                $orders = $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
-            }
-            if(!empty($filter["delivery_method"])) {
-                $orders = $orders->whereIn("delivery_method_id",$filter["delivery_method"]);
-            }
-            if(!empty($filter["pharmacy"])) {
-                $orders = $orders->whereIn('orders.pharmacy_id',$filter["pharmacy"]);
-            }
-            if(!empty($filter["status"])) {
-                $orders = $orders->whereIn('orders.statuse_id',$filter["status"]);
-            }
-            if(count($filter["facility"])==1) {
-                if($filter["facility"][0]==0) {
-                    $orders = $orders->whereNull('orders.facility');
-                } else {
-                    $orders = $orders->whereNotNull('orders.facility');
-                }
-            }
-            if(!empty($filter["create_start"]) && !empty($filter["create_end"])) {
-                $orders = $orders->whereBetween('orders.created', [\DateTime::createFromFormat('m/d/Y',$filter["create_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["create_end"])->format('Y-m-d')]);
-            }
-            if(!empty($filter["delivered_start"]) && !empty($filter["delivered_end"])) {
-                $orders = $orders->whereBetween('orders.finish', [\DateTime::createFromFormat('m/d/Y',$filter["delivered_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["delivered_end"])->format('Y-m-d')]);
-            }
-            if(!empty($filter["need_delivery_start"]) && !empty($filter["need_delivery_end"])) {
-                $orders = $orders->whereBetween('orders.delivery_date', [\DateTime::createFromFormat('m/d/Y',$filter["need_delivery_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["need_delivery_end"])->format('Y-m-d')]);
-            }
-            if(!empty($_GET['without_sign'])) {
-                $orders = $orders->where('statuse_id','4')->where('orders.signature','1')->whereNull('orders.signature_photo')->whereDate('orders.created', '>', date('Y-m-d', strtotime('now -1 month')));
-            }
-            if(!empty($_GET['same_day'])) {
-                $orders = $orders->where('delivery_time_id','2')->whereDate('orders.created', '=', date('Y-m-d', strtotime('now')));
-            }
-            if(!empty($_GET['asap'])) {
-                $orders = $orders->whereIn('delivery_time_id',['3','4'])->whereDate('orders.created', '=', date('Y-m-d', strtotime('now')));
-            }
-            if(!empty($_GET['without_photo'])) {
-                $orders = $orders->where('statuse_id','4')->whereNull('orders.drop_off_photo')->whereDate('orders.created', '>', date('Y-m-d', strtotime('now -1 month')));
-            }
-            if(!empty($_GET['copay_process'])) {
-                $orders = $orders->where('statuse_id','4')->where('statuse_copay','2')->where('copay','>','0')->whereDate('orders.created', '>', date('Y-m-d', strtotime('now -1 month')));
-            }
-            if(!empty($_GET['without_driver'])) {
-                $orders = $orders->where('statuse_id','4')->whereNull('driver_id')->whereDate('orders.created', '>', date('Y-m-d', strtotime('now -1 month')));
-            }
-            if(!empty($_GET['orders_without_notes'])) {
-                $orders = $orders->whereIn('orders.statuse_id', ['8','9','10'])->leftJoin('notes','notes.order_id','=','orders.id')->whereNull('notes.id')->whereDate('orders.created', '>', date('Y-m-d', strtotime('now -1 month')));
-            }
-            if(!empty(Auth::user()->zone_id)){
-                $orders=$orders->where('pharmacys.zone_id',Auth::user()->zone_id);
-            }
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
-                $orders = $orders->leftJoin('users', 'orders.user_id', '=', 'users.id')->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
-                        ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('pharmacys.name','LIKE','%'.$search.'%')
-                          ->orWhere('orders.copay','LIKE','%'.$search.'%')
-                          ->orWhere('orders.id','LIKE','%'.$search.'%');
-                    });
-                $orders0 = clone $orders;
-                $orders0 = $orders0->select(DB::raw('count(orders.id) as count'))->first();
-                $orders=$orders->select('orders.*');
-            } else {
-                $search='';
-                $orders0 = clone $orders;
-                $orders0 = $orders0->select(DB::raw('count(orders.id) as count'))->first();
-            }
-            $countOnPage=30;
-            $max_pages=ceil($orders0->count/$countOnPage);
-            $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
-            $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $statuses = self::get_statuses();
-            $statuses_copay = self::get_statuses_copay();
-            $delivery_methods = self::get_delivery_methods();
-            $delivery_times = self::get_delivery_times();
-            $pharmacys = DB::table('pharmacys')->get()->keyBy('id');
-            $patients = self::get_patients($orders->pluck('user_id')->toArray());
-            $drivers = self::get_drivers($orders->pluck('driver_id')->toArray());
-            $pharmacy_id = NULL;
-            $res_arr = ['pages'=>$pages,'page0'=>$page,'filter'=>$filter,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'statuses_copay'=>$statuses_copay,'delivery_methods'=>$delivery_methods,'delivery_times'=>$delivery_times,'pharmacys'=>$pharmacys,'patients'=>$patients,'drivers'=>$drivers,'pharmacy_id'=>$pharmacy_id,'title'=>'Orders','br1'=>'Orders','br2'=>'List'];
-            return view('orders.list',$res_arr);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    public static function ordersListHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if($request->input('remove')>0) {
-                DB::table('orders')->where('id', $request->input('order_id'))->delete();
-                DB::table('rxs')->where('order_id',$request->input('order_id'))->delete();
-            }
-            if($request->input('repeat')>0) {
-                $order = DB::table('orders')->where('id', $request->input('order_id'))->first();
-                $order->id = NULL;
-                $order->medic_id = Auth::id();
-                $order->statuse_id = 1;
-                $order->finish = NULL;
-                $order->rating = NULL;
-                $order->statuse_copay = 1;
-                $order->tariff = NULL;
-                $order->drop_off_photo = NULL;
-                $order->signature_photo = NULL;
-                $order->signature_type = NULL;
-                $order->invoice_payed = NULL;
-                $order->eta = NULL;
-                $order->delivery_date = date("Y-m-d",strtotime(date("Y-m-d H:i:s")." +1 day"));
-                $pharmacy_id = $order->pharmacy_id;
-                $order = json_encode($order);
-                $order = json_decode($order,true);
-                $order_id = DB::table('orders')->insertGetId($order);
-                $rxs = DB::table('rxs')->where('order_id',$request->input('order_id'))->get();
-                foreach($rxs as $rx) {
-                    $rx->id = NULL;
-                    $rx->order_id = $order_id;
-                    $rx = json_encode($rx);
-                    $rx = json_decode($rx,true);
-                    DB::table('rxs')->insert($rx);
-                }
-                return redirect("orders/$pharmacy_id/edit/$order_id");
-            }
-            return redirect('orders');
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $order_id
-     */
-    public static function ordersShow($pharmacy_id,$order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if($pharmacy_id==0) {
-            $order = DB::table('orders')->where('orders.id',$order_id)->first();
-            $pharmacy_id = $order->pharmacy_id;
-        }
-        $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as medic', 'orders.medic_id', '=', 'medic.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id','orders.delivery_address','orders.delivery_location', 'orders.eta', 'orders.created', 'orders.finish', 'orders.family_id', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.statuse_id', 'orders.rating', 'orders.signature', 'orders.fridge', 'orders.facility', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.signature_type', 'orders.medic_id', 'medic.name as medicname', 'medic.last_name as mediclast_name', 'users.name as username', 'users.last_name as last_name', 'users.os as useros', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'users.home_phone as userhomephone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor', 'orders.statuse_copay', 'statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.statuse_id', 'orders.facility', 'orders.created', 'orders.finish', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.driver_id', 'orders.rating', 'orders.family_id', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.signature_type', 'orders.user_id', 'users.name', 'users.last_name', 'medic.name', 'medic.last_name','users.os', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'orders.medic_id', 'users.phone','users.home_phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color', 'orders.statuse_copay', 'statuses_copay.name','statuses_copay.color','orders.delivery_address','orders.delivery_location')->first();
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'driver' && Auth::user()->id==$order->driver_id) || (Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
-            $medicines = DB::table('medicine')->join('medicines', 'medicine.medicine_id', '=', 'medicines.id')->select('medicine.count','medicines.name','medicine.dosage')->where('order_id',$order_id)->get();
-            $rxs = DB::table('rxs')->where('order_id',$order_id)->get();
-            if($order->driver_id>0) {
-                $driver = DB::table('users')->where('id',$order->driver_id)->first();
-            } else {
-                $driver="";
-            }
-            $orders_transitions=DB::table('packages_transitions')->where('order_id',$order_id)->orderBy('id','ASC')->get();
-            $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$order->driver_id)->first();
-            if($order->statuse_id==4 && !empty($order->finish)) {
-                $locationDrivers = DB::table('locations')->where('user_id',$order->driver_id)->whereBetween("created",[date("Y-m-d H:i:s",strtotime($order->finish ?? '')-300),date("Y-m-d H:i:s",strtotime($order->finish ?? '')+300)])->get();
-            } else {
-                $locationDrivers = [];
-            }
-            $dispatcher_notes = DB::table('notes')->where('order_id',$order_id)->where("type","1")->get();
-            $customer_notes = DB::table('notes')->where('order_id',$order_id)->where("type","2")->get();
-            $rxs_id = DB::table('rxs')->where('order_id',$order_id)->pluck('rx_recipient')->toArray();
-            $additional_recipients=DB::table('additional_recipients')->where('user_id',$order->user_id)->whereIn('id',$rxs_id)->get()->keyBy('id');;
-            $family=DB::table('family_members')->where('id',$order->family_id)->first();
-            $res_view = view('orders.show',['order'=>$order,'rxs'=>$rxs,'family'=>$family,'dispatcher_notes'=>$dispatcher_notes,'customer_notes'=>$customer_notes,'additional_recipients'=>$additional_recipients,'orders_transitions'=>$orders_transitions,'medicines'=>$medicines,'driver'=>$driver,'locations'=>$locations,'locationDrivers'=>$locationDrivers,'title'=>'Order Show','br1'=>'Orders','br2'=>'Order Show']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $order_id
-     */
-    public function ordersPreview($order_id)
-    {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as medic', 'orders.medic_id', '=', 'medic.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.created', 'orders.finish', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.statuse_id', 'orders.rating', 'orders.signature', 'orders.fridge', 'orders.facility', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.signature_type', 'orders.medic_id', 'medic.name as medicname', 'medic.last_name as mediclast_name', 'users.name as username', 'users.last_name as last_name', 'users.os as useros', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'users.home_phone as userhomephone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor', 'orders.statuse_copay', 'statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.statuse_id', 'orders.facility', 'orders.created', 'orders.finish', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.driver_id', 'orders.rating', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.signature_type', 'orders.user_id', 'users.name','users.last_name', 'medic.name', 'medic.last_name', 'users.os', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'orders.medic_id','users.phone','users.home_phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color', 'orders.statuse_copay', 'statuses_copay.name','statuses_copay.color')->first();
-        $pharmacy_id = $order->pharmacy_id;
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'driver' && Auth::user()->id==$order->driver_id) || (Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
-            $medicines = DB::table('medicine')->join('medicines', 'medicine.medicine_id', '=', 'medicines.id')->select('medicine.count','medicines.name','medicine.dosage')->where('order_id',$order_id)->get();
-            $rxs = DB::table('rxs')->where('order_id',$order_id)->get();
-            if($order->driver_id>0) {
-                $driver = DB::table('users')->where('id',$order->driver_id)->first();
-            } else {
-                $driver="";
-            }
-            $orders_transitions=DB::table('packages_transitions')->where('order_id',$order_id)->orderBy('id','ASC')->get();
-            $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$order->driver_id)->first();
-            if($order->statuse_id==4 && !empty($order->finish)) {
-                $locationDrivers = DB::table('locations')->where('user_id',$order->driver_id)->whereBetween("created",[date("Y-m-d H:i:s",strtotime($order->finish ?? '')-300),date("Y-m-d H:i:s",strtotime($order->finish ?? '')+300)])->get();
-            } else {
-                $locationDrivers = [];
-            }
-            $dispatcher_notes = DB::table('notes')->where('order_id',$order_id)->where("type","1")->get();
-            $customer_notes = DB::table('notes')->where('order_id',$order_id)->where("type","2")->get();
-            $rxs_id = DB::table('rxs')->where('order_id',$order_id)->pluck('rx_recipient')->toArray();
-            $additional_recipients=DB::table('additional_recipients')->where('user_id',$order->user_id)->whereIn('id',$rxs_id)->get()->keyBy('id');;
-            return view('orders.preview',['order'=>$order,'rxs'=>$rxs,'dispatcher_notes'=>$dispatcher_notes,'customer_notes'=>$customer_notes,'additional_recipients'=>$additional_recipients,'orders_transitions'=>$orders_transitions,'medicines'=>$medicines,'driver'=>$driver,'locations'=>$locations,'locationDrivers'=>$locationDrivers,'title'=>'Order Preview','br1'=>'Orders','br2'=>'Order Preview']);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $order_id
-     */
-    public static function ordersShowHandler(Request $request,$pharmacy_id,$order_id, RotateSignature $rotateSignature) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.signature_type', 'users.name as username', 'users.last_name as last_name', 'users.os as useros', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor', 'orders.statuse_copay', 'statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.signature_type', 'orders.user_id', 'users.name', 'users.last_name', 'users.os', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color', 'orders.statuse_copay', 'statuses_copay.name','statuses_copay.color')->first();
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) ||  (Auth::user()->role == 'logist') || (Auth::user()->role == 'driver' && Auth::user()->id==$order->driver_id) || (Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
-            if(isset($_POST['dispatcher_notes'])) {
-                DB::table('notes')->insert(["order_id"=>$order_id,"user_id"=>Auth::user()->id,"type"=>"1",'note'=>addslashes($request->input('dispatcher_notes'))]);
-                return json_encode([
-                    'message' => 'OK'
-                ]);
-            }
-            if($request->hasFile('drop_off_photo')) {
-                $file = $request->file('drop_off_photo');
-                $file->move(public_path() . '/images/drop_off/',date('mdHis').$request->file('drop_off_photo')->getClientOriginalName());
-                $src = '/images/drop_off/'.date('mdHis').$request->file('drop_off_photo')->getClientOriginalName();
-                DB::table('orders')->where('orders.id',$order_id)->update(['drop_off_photo'=>$src]);
-            }
-            if($request->hasFile('signature_photo')) {
-                $file = $request->file('signature_photo');
-                $file->move(public_path() . '/images/signature/',date('mdHis').$request->file('signature_photo')->getClientOriginalName());
-                $src = '/images/signature/'.date('mdHis').$request->file('signature_photo')->getClientOriginalName();
-                DB::table('orders')->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
-            }
-            if($request->input('rotate_signature')>0 && !empty($order->signature_photo)) {
-                $src = $rotateSignature->handle($order->signature_photo);
-                DB::table('orders')->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
-            }
-            if($request->input('eta_calculate')>0) {
-                if($order->driver_id>0) {
-                    self::eta_calculate($order->driver_id,true);
-                }
-                return redirect()->back()->with('success', "Successfully the route ETA was updated.");
-            }
-            if($request->input('paid')>0) {
-                if(!empty($order->driver_id)){
-                    $cash_log = DB::table('cash_log')->where("order_id",$order_id)->where("driver_id",$order->driver_id)->first();
-                    if(!empty($cash_log)) {
-                        DB::table('cash_log')->where('id',$cash_log->id)->update(["copay"=>$order->copay]);
-                    } else {
-                        DB::table('cash_log')->insert(["order_id"=>$order_id,"driver_id"=>$order->driver_id,"copay"=>$order->copay]);   
-                    }
-                }
-                DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>4]);
-                return redirect()->back()->with('success', "Successfully paid co-pay.");
-            }
-            if($request->input('not_paid')>0) {
-                DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>5]);
-                return redirect()->back()->with('success', "Successfully changed status co-pay.");
-            }
-            return redirect("orders/$pharmacy_id/show/$order_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $order_id
-     */
-    public static function ordersEdit($pharmacy_id,$order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
-            $order = DB::table('orders')->where('id', $order_id)->first();
-            $rxs = DB::table('rxs')->where('order_id', $order_id)->get();
-            $users = DB::table('users')->where('role', 'user')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
-            $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
-            $drivers = DB::table('users')->where('role', 'driver')->whereNull("pharmacy_id")->get();
-            $drivers2 = DB::table('users')->where('role', 'driver')->where("pharmacy_id",$pharmacy_id)->get();
-            $medicines = DB::table('medicines')->get();
-            $delivery_methods = DB::table('delivery_methods')->get();
-            $delivery_times = DB::table('delivery_times')->get();
-            $medicine = DB::table('medicine')->where('order_id', $order_id)->get();
-            $count = count($medicine);
-            $statuses = DB::table('statuses')->get();
-            $family_members = DB::table('family_members')->where('user_id', $order->user_id)->get();
-            $additional_recipients = DB::table('additional_recipients')->where('user_id', $order->user_id)->get();
-            $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
-            $patient=DB::table('users')->where('users.id',$order->user_id)->first();
-            $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-            $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-            $res_view = view('orders.edit',['order'=>$order, 'rxs'=>$rxs, "time_ranges"=>$time_ranges, 'count'=>$count, 'users'=>$users, 'facilitys'=>$facilitys, 'pharmacy'=>$pharmacy, 'zip_tariff'=>$zip_tariff, 'drivers'=>$drivers, 'drivers2'=>$drivers2, 'family_members'=>$family_members, 'additional_recipients'=>$additional_recipients, 'statuses'=>$statuses, 'medicines'=>$medicines, 'medicine'=>$medicine, 'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times, 'title'=>'Order Edit','br1'=>'Orders','br2'=>'Order Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $order_id
-     */
-    public static function ordersEditHandler(Request $request,$pharmacy_id,$order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
-            if(isset($_POST['user_id'])) {
-                $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
-                $patient=DB::table('users')->where('users.id',$request->input('user_id'))->first();
-                if(!empty($patient)){
-                    $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-                    if(!empty($zip_tariff)){
-                        return json_encode([
-                            'message' => 'OK',
-                            'tariff' => $zip_tariff->tariff
-                        ]);
-                    } else {
-                        return json_encode([
-                            'message' => 'OK',
-                            'tariff' => 0
-                        ]);
-                    }
-                } else {
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => 0
-                    ]);
-                }
-            }
-            if($request->input('save')>0) {
-                $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
-                $statuse_copay = (empty($request->input('copay')))?'1':'2';
-                if(!empty($request->input('copay_paid_pharm'))) {
-                    $statuse_copay='6';
-                }
-                $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
-                $order = DB::table('orders')->where('id', $order_id)->first();
-                $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-                DB::table('rxs')->where('order_id',$order_id)->delete();
-                $rx_ids = $request->input('rx_id');
-                $rf_ids = $request->input('rf_id');
-                $rx_dates = $request->input('rx_date');
-                $rx_counts = $request->input('rx_count');
-                $rx_recipients = $request->input('rx_recipient');
-                $data=[];
-                if(!empty($rx_ids)){
-                    foreach(array_keys($rx_ids) as $key){
-                        if(empty($rx_recipients[$key])) {
-                            $rx_recipient=NULL;
-                        } else {
-                            $rx_recipient=$rx_recipients[$key];
-                        }
-                        $data[]=["order_id"=>$order_id,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>$rx_counts[$key],"rx_recipient"=>$rx_recipient];
-                    }
-                }
-                DB::table('rxs')->insert($data);
-                if(!empty($request->input('delivery_date'))){
-                    $delivery_date = date("Y-m-d",strtotime($request->input('delivery_date')));
-                } else {
-                    if($request->input('delivery_time')=="1"){
-                        $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
-                    } else {
-                        $delivery_date = DB::raw("CURDATE()");
-                    }
-                }
-                if($request->input('statuse_copay')==4){
-                    DB::table('orders')->where('id', $order_id)->update(['statuse_copay' => 4]);
-                }
-                if($request->input('type_driver')==2) {
-                    $driver_id = $request->input('driver2');
-                } else {
-                    $driver_id = $request->input('driver');
-                }
-                $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-                if(empty($request->input('delivery_time_range'))) {
-                    $delivery_time_range = $time_ranges[0].";".end($time_ranges);
-                } else {
-                    $delivery_time_range = $request->input('delivery_time_range');
-                }
-                DB::table('orders')->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'statuse_id' => $request->input('statuse'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $request->input('count_bags'), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge, 'family_id' => $request->input('family_id')]);
-                if($request->input('statuse')==1 && ($request->input('delivery_time')==3 || $request->input('delivery_time')==4)) {
-                    $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-                    Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
-                        "Attention!",
-                        "Urgent order No.".$order_id." has been created, which needs to be processed promptly.",
-                        url('/')."orders/".$pharmacy_id."?statuse%5B%5D=1",
-                        "rush_order"
-                    );
-                }
-                if($order->statuse_id!=$request->input('statuse') && ($request->input('statuse')==4 || $request->input('statuse')==8 || $request->input('statuse')==9 || $request->input('statuse')==10)) {
-                    if(!empty($order->bestrx_order_id)){
-                        self::sendToBestRx($order->id);
-                    }
-                    $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
-                    $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
-                    $patient=DB::table('users')->where('users.id',$order->user_id)->first();
-                    $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
-                    $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
-                    $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    if(!empty($zip_tariff)){
-                        if(is_numeric($pharmacy->tariff)) {
-                            $tariff = $pharmacy->tariff;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff;
-                        }
-                    } else if(!empty($zip_tariff2)){
-                        if(is_numeric($pharmacy->tariff_area2)) {
-                            $tariff = $pharmacy->tariff_area2;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area2;
-                        }
-                    } else if(!empty($zip_tariff3)){
-                        if(is_numeric($pharmacy->tariff_area3)) {
-                            $tariff = $pharmacy->tariff_area3;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area3;
-                        }
-                    } else {
-                        if(is_numeric($pharmacy->tariff_area_more)) {
-                            $tariff = $pharmacy->tariff_area_more;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area_more;
-                        }
-                    }
-                    if(is_numeric($pharmacy->tariff_next_day)) {
-                        $tariff_next_day = $pharmacy->tariff_next_day;
-                    } else {
-                        $tariff_next_day = $pharmacy_plan->tariff_next_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_same_day)) {
-                        $tariff_same_day = $pharmacy->tariff_same_day;
-                    } else {
-                        $tariff_same_day = $pharmacy_plan->tariff_same_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_asap)) {
-                        $tariff_asap = $pharmacy->tariff_asap;
-                    } else {
-                        $tariff_asap = $pharmacy_plan->tariff_asap;
-                    }
-                    if(is_numeric($pharmacy->tariff_after_hours)) {
-                        $tariff_after_hours = $pharmacy->tariff_after_hours;
-                    } else {
-                        $tariff_after_hours = $pharmacy_plan->tariff_after_hours;
-                    }
-                    if(is_numeric($pharmacy->tariff_fridge)) {
-                        $tariff_fridge = $pharmacy->tariff_fridge;
-                    } else {
-                        $tariff_fridge = $pharmacy_plan->tariff_fridge;
-                    }
-                    if($order->type_driver==1) {
-                        if($order->delivery_time_id==1) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==2) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==3) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==4) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
-                        } else {
-                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
-                        }
-                        if($order->fridge==1) {
-                            $tariff_res+= floatval($tariff_fridge);
-                        }
-                    } else {
-                        $tariff_res = floatval($tariff);
-                    }
-                    $route = DB::table('routes_priority')->where('order_id',$order_id)->delete();
-                    if($patient->primary_address==3){
-                        $user_address = $patient->address3.', '.$patient->zip3.', Apt '.$patient->apartment3;
-                        $user_location = $patient->location3;
-                    } elseif($patient->primary_address==2){
-                        $user_address = $patient->address2.', '.$patient->zip2.', Apt '.$patient->apartment2;
-                        $user_location = $patient->location2;
-                    } else {
-                        $user_address = $patient->address.', '.$patient->zip.', Apt '.$patient->apartment;
-                        $user_location = $patient->location;
-                    }
-                    $driver_location=$user_location;
-                    DB::table('orders')->where('orders.id',$order_id)->update(['statuse_id'=>$request->input('statuse'),'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'tariff'=>$tariff_res]);
-                } else if($order->statuse_id!=$request->input('statuse') && $request->input('statuse')==3) {
-                    Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
-                } else if($order->statuse_id!=$request->input('statuse') && $request->input('statuse')==4) {
-                    $route = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',$driver_id)->where('type','patient')->first();
-                    $route2 = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',$driver_id)->where('type','pharmacy')->first();
-                    $route3 = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',$driver_id)->where('type','office')->first();
-                    if(!empty($route) && empty($route2) && empty($route3)){
-                        $next_office = DB::table('routes_priority')->where('driver_id',$driver_id)->where('type','office')->first();
-                        if(!empty($next_office)) {
-                            DB::table('routes_priority')->insert(['driver_id'=>$driver_id,'order_id'=>$order_id,'type'=>'office','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
-                        } else {
-                            $last_route = DB::table('routes_priority')->where('driver_id',$driver_id)->max('priority');
-                            if(!empty($routeNeed)) {
-                                DB::table('routes_priority')->insert(['driver_id'=>$driver_id,'order_id'=>$order_id,'type'=>'office','type_id'=>1,'type_pay'=>$routeNeed->type_pay,'pay_value'=>$routeNeed->pay_value,'priority'=>(intval($last_route)+1)]);
-                            }
-                        }
-                    }
-                    DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',$driver_id)->where('type','patient')->delete();
-                }
-                DB::table('medicine')->where('order_id', $order_id)->delete();
-            }
-            return redirect("orders/$pharmacy_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $order_id
-     */
-    public static function ordersFacilitysEdit($pharmacy_id,$order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
-            $order = DB::table('orders')->where('id', $order_id)->first();
-            $rxs = DB::table('rxs')->where('order_id', $order_id)->get();
-            $users = DB::table('users')->where('role', 'user')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
-            $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
-            $drivers = DB::table('users')->where('role', 'driver')->whereNull("pharmacy_id")->get();
-            $drivers2 = DB::table('users')->where('role', 'driver')->where("pharmacy_id",$pharmacy_id)->get();
-            $delivery_methods = DB::table('delivery_methods')->get();
-            $delivery_times = DB::table('delivery_times')->get();
-            $statuses = DB::table('statuses')->get();
-            $family_members = DB::table('family_members')->where('user_id', $order->user_id)->get();
-            $additional_recipients = DB::table('additional_recipients')->where('user_id', $order->user_id)->join('rxs','rxs.rx_recipient','=','additional_recipients.id')->where('rxs.order_id', $order_id)->select('additional_recipients.id','additional_recipients.family_type','additional_recipients.family_name','additional_recipients.family_phone')->groupBy('additional_recipients.id','additional_recipients.family_type','additional_recipients.family_name','additional_recipients.family_phone')->get();
-            $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
-            $patient=DB::table('users')->where('users.id',$order->user_id)->first();
-            $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-            $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-            $res_view = view('facilitys.edit',['order'=>$order, 'rxs'=>$rxs, "time_ranges"=>$time_ranges, 'users'=>$users, 'facilitys'=>$facilitys, 'pharmacy'=>$pharmacy, 'zip_tariff'=>$zip_tariff, 'drivers'=>$drivers, 'drivers2'=>$drivers2, 'family_members'=>$family_members, 'additional_recipients'=>$additional_recipients, 'statuses'=>$statuses, 'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times, 'title'=>'Order Edit','br1'=>'Orders','br2'=>'Order Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     * @param int|string $order_id
-     */
-    public static function ordersFacilitysEditHandler(Request $request,$pharmacy_id,$order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
-            if(isset($_POST['user_id'])) {
-                $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
-                $patient=DB::table('users')->where('users.id',$request->input('user_id'))->first();
-                $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-                if(!empty($zip_tariff)){
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => $zip_tariff->tariff
-                    ]);
-                } else {
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => 0
-                    ]);
-                }
-            }
-            if($request->hasFile('import')) {
-                $request->validate([
-                    'import.*' => 'required|mimes:pdf|max:2048'
-                ]);
-                foreach($request->file('import') as $file) {
-                    $order = DB::table('orders')->where('id', $order_id)->first();
-                    $parser = new Parser();
-                    $pdf = $parser->parseFile($file);
-                    $text = $pdf->getPages()[0]->getDataTm();
-                    $user = new User;
-                    if(strpos($text[11][1],',')===false) {
-                        $user->name=str_replace(' ','',explode(',',$text[12][1])[0]);
-                        $user->last_name=str_replace(' ','',explode(',',$text[12][1])[1]);
-                    } else {
-                        $user->name=str_replace(' ','',explode(',',$text[11][1])[0]);
-                        $user->last_name=str_replace(' ','',explode(',',$text[11][1])[1]);
-                    }
-                    $user->phone=str_replace('Ph#: ','',(strpos($text[2][1],'Cell#: () -')!==false)?str_replace('Ph#: ','',$text[1][1]):str_replace('Cell#: ','',$text[2][1]));
-                    $facility = DB::table('additional_recipients')->where('family_phone',$user->phone)->where('user_id',$order->user_id)->where('family_name',$user->name.' '.$user->last_name)->first();
-                    if(empty($facility)){
-                        $facility_id = DB::table('additional_recipients')->insertGetId(['user_id'=>$order->user_id,'family_type' => 'Additional Recipient','family_name' => $user->name.' '.$user->last_name,'family_phone' => $user->phone]);
-                    } else {
-                        $facility_id = $facility->id;
-                    }
-                    $copay=floatval(preg_replace("/[^-0-9\.]/","",$text[(array_search('Total Rx Count:', array_column($text, 1))+1)][1]));
-                    $rxs = [];
-                    for ($i=(array_search('Rf#', array_column($text, 1))+1); $i < (array_search('Total Rx Count:', array_column($text, 1))-1); $i++) {
-                        if(floatval($text[$i][0][4])>9 && floatval($text[$i][0][4])<20) {
-                            $rx['rx_date']=date("Y-m-d",strtotime($text[$i][1]));
-                            $rx['rx_id']='';
-                            for ($i2=($i+1); $i2 < (array_search('Total Rx Count:', array_column($text, 1))-1); $i2++) {
-                                if(floatval($text[$i2][0][4])>47 && floatval($text[$i2][0][4])<59) {
-                                    $rx['rx_id']=$text[$i2][1];
-                                    for ($i3=($i2+1); $i3 < (array_search('Total Rx Count:', array_column($text, 1))-1); $i3++) {
-                                        if(floatval($text[$i3][0][4])>106 && floatval($text[$i3][0][4])<120) {
-                                            $rx['rx_id'].='-'.$text[$i3][1];
-                                            break;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                            $rxs[]=$rx;
-                        }
-                    }
-                    $data=[];
-                    foreach($rxs as $rx) {
-                        $data[]=["order_id"=>$order_id,"rx_id"=>$rx['rx_id'],"rx_date"=>$rx['rx_date'],"rx_count"=>1,"rx_copay"=>0,"rx_recipient"=>$facility_id];
-                    }
-                    DB::table('rxs')->insert($data);
-                    DB::table('orders')->where('id', $order_id)->update(['copay'=>($order->copay+$copay)]);
-                }
-                return redirect("orders/$pharmacy_id/facilitys_edit/$order_id");
-            }
-            if($request->input('save')>0) {
-                $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
-                $statuse_copay = (empty($request->input('copay')))?'1':'2';
-                if(!empty($request->input('copay_paid_pharm'))) {
-                    $statuse_copay='6';
-                }
-                $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
-                $order = DB::table('orders')->where('id', $order_id)->first();
-                $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-                DB::table('rxs')->where('order_id',$order_id)->delete();
-                $rx_ids = $request->input('rx_id');
-                $rf_ids = $request->input('rf_id');
-                $rx_dates = $request->input('rx_date');
-                $rx_counts = $request->input('rx_count');
-                $rx_recipients = $request->input('rx_recipient');
-                $rx_copays = $request->input('rx_copay');
-                $data=[];
-                if(!empty($rx_ids)){
-                    foreach(array_keys($rx_ids) as $key){
-                        if(empty($rx_recipients[$key])) {
-                            $rx_recipient=NULL;
-                        } else {
-                            $rx_recipient=$rx_recipients[$key];
-                        }
-                        if(empty($rx_copays[$key])) {
-                            $rx_copay=0;
-                        } else {
-                            $rx_copay=$rx_copays[$key];
-                        }
-                        $data[]=["order_id"=>$order_id,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>intval($rx_counts[$key]),"rx_copay"=>$rx_copay,"rx_recipient"=>$rx_recipient];
-                    }
-                }
-                DB::table('rxs')->insert($data);
-                if($request->input('delivery_time')=="1"){
-                    $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
-                } else {
-                    $delivery_date = DB::raw("CURDATE()");
-                }
-                if($request->input('statuse_copay')==4){
-                    DB::table('orders')->where('id', $order_id)->update(['statuse_copay' => 4]);
-                }
-                $driver_id = $request->input('driver');
-                $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-                if(empty($request->input('delivery_time_range'))) {
-                    $delivery_time_range = $time_ranges[0].";".end($time_ranges);
-                } else {
-                    $delivery_time_range = $request->input('delivery_time_range');
-                }
-                DB::table('orders')->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'statuse_id' => $request->input('statuse'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $request->input('count_bags'), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge]);
-                if($request->input('statuse')==1 && ($request->input('delivery_time')==3 || $request->input('delivery_time')==4)) {
-                    $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-                    Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
-                        "Attention!",
-                        "Urgent order No.".$order_id." has been created, which needs to be processed promptly.",
-                        url('/')."orders/".$pharmacy_id."?statuse%5B%5D=1",
-                        "rush_order"
-                    );
-                }
-                if($order->statuse_id!=$request->input('statuse') && ($request->input('statuse')==4 || $request->input('statuse')==8 || $request->input('statuse')==9 || $request->input('statuse')==10)) {
-                    $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
-                    $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
-                    $patient=DB::table('users')->where('users.id',$order->user_id)->first();
-                    $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
-                    $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
-                    $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    if(!empty($zip_tariff)){
-                        if(is_numeric($pharmacy->tariff)) {
-                            $tariff = $pharmacy->tariff;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff;
-                        }
-                    } else if(!empty($zip_tariff2)){
-                        if(is_numeric($pharmacy->tariff_area2)) {
-                            $tariff = $pharmacy->tariff_area2;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area2;
-                        }
-                    } else if(!empty($zip_tariff3)){
-                        if(is_numeric($pharmacy->tariff_area3)) {
-                            $tariff = $pharmacy->tariff_area3;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area3;
-                        }
-                    } else {
-                        if(is_numeric($pharmacy->tariff_area_more)) {
-                            $tariff = $pharmacy->tariff_area_more;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area_more;
-                        }
-                    }
-                    if(is_numeric($pharmacy->tariff_next_day)) {
-                        $tariff_next_day = $pharmacy->tariff_next_day;
-                    } else {
-                        $tariff_next_day = $pharmacy_plan->tariff_next_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_same_day)) {
-                        $tariff_same_day = $pharmacy->tariff_same_day;
-                    } else {
-                        $tariff_same_day = $pharmacy_plan->tariff_same_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_asap)) {
-                        $tariff_asap = $pharmacy->tariff_asap;
-                    } else {
-                        $tariff_asap = $pharmacy_plan->tariff_asap;
-                    }
-                    if(is_numeric($pharmacy->tariff_after_hours)) {
-                        $tariff_after_hours = $pharmacy->tariff_after_hours;
-                    } else {
-                        $tariff_after_hours = $pharmacy_plan->tariff_after_hours;
-                    }
-                    if(is_numeric($pharmacy->tariff_fridge)) {
-                        $tariff_fridge = $pharmacy->tariff_fridge;
-                    } else {
-                        $tariff_fridge = $pharmacy_plan->tariff_fridge;
-                    }
-                    if($order->type_driver==1) {
-                        if($order->delivery_time_id==1) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==2) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==3) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==4) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
-                        } else {
-                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
-                        }
-                        if($order->fridge==1) {
-                            $tariff_res+= floatval($tariff_fridge);
-                        }
-                    } else {
-                        $tariff_res = floatval($tariff);
-                    }
-                    $route = DB::table('routes_priority')->where('order_id',$order_id);
-                    $route->delete();
-                    if($patient->primary_address==3){
-                        $user_address = $patient->address3.', '.$patient->zip3.', Apt '.$patient->apartment3;
-                        $user_location = $patient->location3;
-                    } elseif($patient->primary_address==2){
-                        $user_address = $patient->address2.', '.$patient->zip2.', Apt '.$patient->apartment2;
-                        $user_location = $patient->location2;
-                    } else {
-                        $user_address = $patient->address.', '.$patient->zip.', Apt '.$patient->apartment;
-                        $user_location = $patient->location;
-                    }
-                    $driver_location=$user_location;
-                    DB::table('orders')->where('orders.id',$order_id)->update(['statuse_id'=>$request->input('statuse'),'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'tariff'=>$tariff_res]);
-                } else if($order->statuse_id!=$request->input('statuse') && $request->input('statuse')==3) {
-                    Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
-                }
-                DB::table('medicine')->where('order_id', $order_id)->delete();
-            }
-            return redirect("orders/$pharmacy_id");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function ordersAdd($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-            abort_unless($pharmacy, 404, 'Pharmacy not found.');
-            $users = DB::table('users')->where('role', 'user')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
-            $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
-            $medicines = DB::table('medicines')->get();
-            $drivers = DB::table('users')->where('role', 'driver')->where("pharmacy_id",$pharmacy_id)->get();
-            $delivery_methods = DB::table('delivery_methods')->get();
-            $delivery_times = DB::table('delivery_times')->get();
-            $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-            $res_view = view('orders.add',['users'=>$users,'facilitys'=>$facilitys,'medicines'=>$medicines,'drivers'=>$drivers,'pharmacy'=>$pharmacy,'time_ranges'=>$time_ranges,'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times,'title'=>'Order Add','br1'=>'Orders','br2'=>'Order Add','alert'=>'']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function ordersAddHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if(isset($_POST['user_id'])) {
-                $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
-                $patient=DB::table('users')->where('users.id',$request->input('user_id'))->first();
-                if(!empty($patient) && !empty($pharmacy)) {
-                    $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-                    if(!empty($zip_tariff)){
-                        return json_encode([
-                            'message' => 'OK',
-                            'tariff' => $zip_tariff->tariff
-                        ]);
-                    } else {
-                        return json_encode([
-                            'message' => 'OK',
-                            'tariff' => 0
-                        ]);
-                    }
-                } else {
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => 0
-                    ]);
-                }
-            }
-            if($request->input('save')>0) {
-                // rxs.rx_id is varchar(20) and stores "<RX#>-<Rf#>", so RX# (15) + "-" + Rf# (4) fits.
-                $request->validate([
-                    'user' => ['required_without:facility', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('users', 'id')->where('pharmacy_id', $pharmacy_id)],
-                    'count_bags' => ['nullable', 'integer', 'min:1', 'max:10'],
-                    'copay' => ['nullable', 'numeric', 'min:0'],
-                    'delivery_method' => ['required', 'integer', 'exists:delivery_methods,id'],
-                    'delivery_time' => ['required', 'integer', 'exists:delivery_times,id'],
-                    'delivery_date' => ['nullable', 'date'],
-                    'type_driver' => ['nullable', 'in:1,2'],
-                    'driver' => ['nullable', 'integer', 'exists:users,id'],
-                    'special_instructions' => ['nullable', 'string', 'max:1000'],
-                    'rx_id' => ['required', 'array', 'min:1'],
-                    'rx_id.*' => ['required', 'string', 'max:15'],
-                    'rf_id.*' => ['nullable', 'regex:/^\d{1,4}$/'],
-                    'rx_count.*' => ['nullable', 'integer', 'min:1'],
-                    'rx_date.*' => ['nullable', 'date'],
-                ], [
-                    'user.required_without' => 'Choose a customer.',
-                    'user.exists' => 'The selected customer does not belong to this pharmacy.',
-                    'delivery_method.required' => 'Choose a delivery option.',
-                    'delivery_time.required' => 'Choose a preferred delivery time.',
-                    'rx_id.required' => 'Add at least one RX#.',
-                    'rx_id.*.required' => 'Every RX row needs an RX#.',
-                    'rx_id.*.max' => 'RX# can be at most 15 characters.',
-                    'rf_id.*.regex' => 'Rf# must be a number of up to 4 digits.',
-                    'rx_count.*.min' => 'Qty must be at least 1.',
-                ]);
-                $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
-                $statuse_copay = (empty($request->input('copay')))?'1':'2';
-                if(!empty($request->input('copay_paid_pharm'))) {
-                    $statuse_copay='6';
-                }
-                $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
-                $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-                $rx_ids = $request->input('rx_id');
-                $rf_ids = $request->input('rf_id');
-                $rx_counts = $request->input('rx_count');
-                $rx_dates = $request->input('rx_date');
-                $rx_recipients = $request->input('rx_recipient');
-                $data=[];
-                foreach(array_keys($rx_ids) as $key){
-                    if(empty($rx_recipients[$key])) {
-                        $rx_recipient=NULL;
-                    } else {
-                        $rx_recipient=$rx_recipients[$key];
-                    }
-                    $data[]=["rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.($rf_ids[$key] ?? ''),"rx_date"=>$rx_dates[$key] ?? null,"rx_count"=>$rx_counts[$key] ?? 1,"rx_recipient"=>$rx_recipient];
-                }
-                if(!empty($request->input('delivery_date'))){
-                    $delivery_date = date("Y-m-d",strtotime($request->input('delivery_date')));
-                } else {
-                    // Use the app's timezone; the database server's CURDATE() is UTC.
-                    $delivery_date = $request->input('delivery_time')=="1" ? now()->addDay()->toDateString() : now()->toDateString();
-                }
-                $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-                if(empty($request->input('delivery_time_range'))) {
-                    $delivery_time_range = $time_ranges[0].";".end($time_ranges);
-                } else {
-                    $delivery_time_range = $request->input('delivery_time_range');
-                }
-                if(!empty($request->input('driver'))) {
-                    $driver_id = $request->input('driver');
-                } else {
-                    $driver_id = NULL;
-                }
-                $order_row = !empty($request->input('facility'))
-                    ? ['pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]
-                    : ['pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('user'), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')];
-                $id_max = DB::transaction(function () use ($order_row, $data) {
-                    $order_id = DB::table('orders')->insertGetId($order_row);
-                    DB::table('rxs')->insert(array_map(fn ($rx) => ['order_id' => $order_id] + $rx, $data));
-                    return $order_id;
-                });
-                if(!empty($request->input('facility'))){
-                    $us = DB::table('users')->where('id',$request->input('facility'))->first();
-                } else {
-                    $us = DB::table('users')->where('id',$request->input('user'))->first();
-                }
-                if($us->primary_address==3){
-                    if(!empty($us->apartment)){
-                        $user_address = $us->address3.' Apt '.$us->apartment3;
-                    } else {
-                        $user_address = $us->address3;
-                    }
-                } elseif($us->primary_address==2){
-                    if(!empty($us->apartment)){
-                        $user_address = $us->address2.' Apt '.$us->apartment2;
-                    } else {
-                        $user_address = $us->address2;
-                    }
-                } else {
-                    if(!empty($us->apartment)){
-                        $user_address = $us->address.' Apt '.$us->apartment;
-                    } else {
-                        $user_address = $us->address;
-                    }
-                }
-                Notifications::send_push($request->input('user'),"QuikMedix","created your order #$id_max (medicines), which will be delivered to: $user_address. If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
-                if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
-                    $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-                    Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
-                        "Attention!",
-                        "Urgent order No.".$id_max." has been created, which needs to be processed promptly.",
-                        url('/')."/orders/".$pharmacy_id."?statuse%5B%5D=1",
-                        "rush_order"
-                    );
-                }
-                if($pharmacy_id==185) {
-                    self::add_row_to_google_sheeds($id_max);
-                }
-            }
-            return redirect("orders/$pharmacy_id".(isset($id_max) ? "?added=$id_max" : ""));
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function ordersFacilitysAdd($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-            abort_unless($pharmacy, 404, 'Pharmacy not found.');
-            $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->get();
-            $delivery_methods = DB::table('delivery_methods')->get();
-            $delivery_times = DB::table('delivery_times')->get();
-            $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-            $res_view = view('facilitys.add',['facilitys'=>$facilitys,'pharmacy'=>$pharmacy,'time_ranges'=>$time_ranges,'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times,'title'=>'Order Facilitys Add','br1'=>'Orders','br2'=>'Order Facilitys Add','alert'=>'']);
-            if(isset($_GET['ajax'])) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public static function ordersFacilitysAddHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if(Auth::user()->pharmacy_balance_ban()) {
-            return redirect("billing/".Auth::user()->pharmacy_id, 302);
-        }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
-            if(isset($_POST['user_id'])) {
-                $patient=DB::table('users')->where('users.id',$request->input('user_id'))->first();
-                $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-                if(!empty($zip_tariff)){
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => $zip_tariff->tariff
-                    ]);
-                } else {
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => 0
-                    ]);
-                }
-            }
-            if($request->input('save')>0) {
-                $id_max = DB::table('orders')->max('id')+1;
-                $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
-                $statuse_copay = (empty($request->input('copay')))?'1':'2';
-                if(!empty($request->input('copay_paid_pharm'))) {
-                    $statuse_copay='6';
-                }
-                $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
-                $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-                $rx_ids = $request->input('rx_id');
-                $rf_ids = $request->input('rf_id');
-                $rx_counts = $request->input('rx_count');
-                $rx_dates = $request->input('rx_date');
-                $rx_copays = $request->input('rx_copay');
-                $rx_recipients = $request->input('rx_recipient');
-                $data=[];
-                if(!empty($rx_ids)){
-                    foreach(array_keys($rx_ids) as $key){
-                        if(empty($rx_recipients[$key])) {
-                            $rx_recipient=NULL;
-                        } else {
-                            $rx_recipient=$rx_recipients[$key];
-                        }
-                        if(empty($rx_copays[$key])) {
-                            $rx_copay=0;
-                        } else {
-                            $rx_copay=$rx_copays[$key];
-                        }
-                        $data[]=["order_id"=>$id_max,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>intval($rx_counts[$key]),"rx_copay"=>$rx_copay,"rx_recipient"=>$rx_recipient];
-                    }
-                    DB::table('rxs')->insert($data);
-                }
-                if($request->input('delivery_time')=="1"){
-                    $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
-                } else {
-                    $delivery_date = DB::raw("CURDATE()");
-                }
-                $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-                if(empty($request->input('delivery_time_range'))) {
-                    $delivery_time_range = $time_ranges[0].";".end($time_ranges);
-                } else {
-                    $delivery_time_range = $request->input('delivery_time_range');
-                }
-                if(!empty($request->input('driver'))) {
-                    $driver_id = $request->input('driver');
-                } else {
-                    $driver_id = NULL;
-                }
-                DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
-                if(!empty($request->input('facility'))){
-                    $us = DB::table('users')->where('id',$request->input('facility'))->first();
-                } else {
-                    $us = DB::table('users')->where('id',$request->input('user'))->first();
-                }
-                if($us->primary_address==3){
-                    if(!empty($us->apartment)){
-                        $user_address = $us->address3.' Apt '.$us->apartment3;
-                    } else {
-                        $user_address = $us->address3;
-                    }
-                } elseif($us->primary_address==2){
-                    if(!empty($us->apartment)){
-                        $user_address = $us->address2.' Apt '.$us->apartment2;
-                    } else {
-                        $user_address = $us->address2;
-                    }
-                } else {
-                    if(!empty($us->apartment)){
-                        $user_address = $us->address.' Apt '.$us->apartment;
-                    } else {
-                        $user_address = $us->address;
-                    }
-                }
-                Notifications::send_push($request->input('user'),"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user_address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
-                if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
-                    Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
-                        "Attention!",
-                        "Urgent order No.".$id_max." has been created, which needs to be processed promptly.",
-                        url('/')."/orders/".$pharmacy_id."?statuse%5B%5D=1",
-                        "rush_order"
-                    );
-                }
-            }
-            if($request->hasFile('import')) {
-                $request->validate([
-                    'import.*' => 'required|mimes:pdf|max:2048'
-                ]);
-                $order_id = $id_max;
-                foreach($request->file('import') as $file) {
-                    $order = DB::table('orders')->where('id', $order_id)->first();
-                    $parser = new Parser();
-                    $pdf = $parser->parseFile($file);
-                    $text = $pdf->getPages()[0]->getDataTm();
-                    $user = new User;
-                    if(strpos($text[11][1],',')===false) {
-                        $user->name=str_replace(' ','',explode(',',$text[12][1])[0]);
-                        $user->last_name=str_replace(' ','',explode(',',$text[12][1])[1]);
-                    } else {
-                        $user->name=str_replace(' ','',explode(',',$text[11][1])[0]);
-                        $user->last_name=str_replace(' ','',explode(',',$text[11][1])[1]);
-                    }
-                    $user->phone=str_replace('Ph#: ','',(strpos($text[2][1],'Cell#: () -')!==false)?str_replace('Ph#: ','',$text[1][1]):str_replace('Cell#: ','',$text[2][1]));
-                    $facility = DB::table('additional_recipients')->where('family_phone',$user->phone)->where('user_id',$order->user_id)->where('family_name',$user->name.' '.$user->last_name)->first();
-                    if(empty($facility)){
-                        $facility_id = DB::table('additional_recipients')->insertGetId(['user_id'=>$order->user_id,'family_type' => 'Additional Recipient','family_name' => $user->name.' '.$user->last_name,'family_phone' => $user->phone]);
-                    } else {
-                        $facility_id = $facility->id;
-                    }
-                    $copay=floatval(preg_replace("/[^-0-9\.]/","",$text[(array_search('Total Rx Count:', array_column($text, 1))+1)][1]));
-                    $rxs = [];
-                    for ($i=(array_search('Rf#', array_column($text, 1))+1); $i < (array_search('Total Rx Count:', array_column($text, 1))-1); $i++) {
-                        if(floatval($text[$i][0][4])>9 && floatval($text[$i][0][4])<20) {
-                            $rx['rx_date']=date("Y-m-d",strtotime($text[$i][1]));
-                            $rx['rx_id']='';
-                            for ($i2=($i+1); $i2 < (array_search('Total Rx Count:', array_column($text, 1))-1); $i2++) {
-                                if(floatval($text[$i2][0][4])>47 && floatval($text[$i2][0][4])<59) {
-                                    $rx['rx_id']=$text[$i2][1];
-                                    for ($i3=($i2+1); $i3 < (array_search('Total Rx Count:', array_column($text, 1))-1); $i3++) {
-                                        if(floatval($text[$i3][0][4])>106 && floatval($text[$i3][0][4])<120) {
-                                            $rx['rx_id'].='-'.$text[$i3][1];
-                                            break;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                            $rxs[]=$rx;
-                        }
-                    }
-                    $data=[];
-                    foreach($rxs as $rx) {
-                        $data[]=["order_id"=>$order_id,"rx_id"=>$rx['rx_id'],"rx_date"=>$rx['rx_date'],"rx_count"=>1,"rx_copay"=>0,"rx_recipient"=>$facility_id];
-                    }
-                    DB::table('rxs')->insert($data);
-                    DB::table('orders')->where('id', $order_id)->update(['copay'=>($order->copay+$copay)]);
-                }
-            }
-            return redirect("orders/$pharmacy_id/facilitys_edit/$id_max");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
     public static function settingsAdmins() {
         if(Auth::user()->isblocked_or_isactive()) {
@@ -5967,8 +3332,8 @@ class LexaAdmin extends Controller
         }
         if((Auth::user()->role == 'superadmin')) {
             $users = User::where('role','admin');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -5977,14 +3342,14 @@ class LexaAdmin extends Controller
             } else {
                 $search='';
             }
-            if(!empty($_GET['without_app'])) {
+            if(!empty(request()->query('without_app'))) {
                 $users = $users->whereNull('os')->whereDate('created_at', '>', date('Y-m-d', strtotime('now -7 day')));
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6150,10 +3515,10 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $users = User::where('role','!=','driver')->where('role','!=','logist')->where('role','!=','medic');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6162,14 +3527,14 @@ class LexaAdmin extends Controller
             } else {
                 $search='';
             }
-            if(!empty($_GET['without_app'])) {
+            if(!empty(request()->query('without_app'))) {
                 $users = $users->whereNull('os')->whereDate('created_at', '>', date('Y-m-d', strtotime('now -7 day')));
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6187,7 +3552,7 @@ class LexaAdmin extends Controller
             }
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.users',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -6201,7 +3566,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
+            if($request->filled('user_id')) {
+                Gate::authorize('manage-account', [$request->input('user_id')]);
+            }
+            if($request->input('touseradmin')>0) {
+                Gate::authorize('assign-role', 'admin');
+            }
             $alert='';
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
@@ -6235,8 +3606,8 @@ class LexaAdmin extends Controller
                 }
             }
             $users = User::where('role','!=','driver')->where('role','!=','logist')->where('role','!=','medic');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6248,8 +3619,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6276,10 +3647,10 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $users = User::where('role','medic');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6291,8 +3662,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6310,7 +3681,7 @@ class LexaAdmin extends Controller
             }
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.medics',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -6324,7 +3695,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
+            if($request->filled('user_id')) {
+                Gate::authorize('manage-account', [$request->input('user_id')]);
+            }
+            if($request->input('touseradmin')>0) {
+                Gate::authorize('assign-role', 'admin');
+            }
             $alert='';
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
@@ -6358,8 +3735,8 @@ class LexaAdmin extends Controller
                 }
             }
             $users = User::where('role','medic');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6371,8 +3748,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6399,10 +3776,10 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $users = User::where('role','driver');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6414,8 +3791,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6433,7 +3810,7 @@ class LexaAdmin extends Controller
             }
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.drivers',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -6447,7 +3824,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
+            if($request->filled('user_id')) {
+                Gate::authorize('manage-account', [$request->input('user_id')]);
+            }
+            if($request->input('touseradmin')>0) {
+                Gate::authorize('assign-role', 'admin');
+            }
             $alert='';
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
@@ -6488,8 +3871,8 @@ class LexaAdmin extends Controller
                 }
             }
             $users = User::where('role','driver');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6501,8 +3884,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6529,10 +3912,10 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $users = User::where('role','logist');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6544,8 +3927,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6563,7 +3946,7 @@ class LexaAdmin extends Controller
             }
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.logists',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -6577,7 +3960,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
+            if($request->filled('user_id')) {
+                Gate::authorize('manage-account', [$request->input('user_id')]);
+            }
+            if($request->input('touseradmin')>0) {
+                Gate::authorize('assign-role', 'admin');
+            }
             $alert='';
             if($request->input('activate')>0) {
                 DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
@@ -6611,8 +4000,8 @@ class LexaAdmin extends Controller
                 }
             }
             $users = User::where('role','logist');
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -6624,8 +4013,8 @@ class LexaAdmin extends Controller
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -6655,13 +4044,14 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
+            Gate::authorize('manage-account', [$user_id]);
             $user = DB::table('users')->where('id', $user_id)->first();
             $pharmacys = DB::table('pharmacys')->get();
             $user_actions = DB::table('action_log')->where('user_id', $user_id)->get(); 
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Settings','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -6678,13 +4068,17 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
+            Gate::authorize('manage-account', [$user_id]);
             $user = DB::table('users')->where('id', $user_id)->first();
+            if($request->filled('role') && $request->input('role') !== $user->role) {
+                Gate::authorize('assign-role', $request->input('role'));
+            }
             if($request->input('save')>0) {
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                    $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                    $src = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                 } else {
                     $src = $user->image;
                 }
@@ -6693,19 +4087,19 @@ class LexaAdmin extends Controller
                 }
                 if($request->hasFile('driving_license_img')) {
                     $file = $request->file('driving_license_img');
-                    $file->move(public_path() . '/images/driving_license/',date('mdHis').$request->file('driving_license_img')->getClientOriginalName());
-                    $driving_license_img = '/images/driving_license/'.date('mdHis').$request->file('driving_license_img')->getClientOriginalName();
+                    $file->move(public_path() . '/images/driving_license/',\App\Support\PublicUpload::name($request->file('driving_license_img')));
+                    $driving_license_img = '/images/driving_license/'.\App\Support\PublicUpload::name($request->file('driving_license_img'));
                 } else {
                     $driving_license_img = $user->driving_license_img;
                 }
                 if($request->hasFile('car_img')) {
                     $file = $request->file('car_img');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('car_img')->getClientOriginalName());
-                    $car_img = '/images/users/'.date('mdHis').$request->file('car_img')->getClientOriginalName();
+                    $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('car_img')));
+                    $car_img = '/images/users/'.\App\Support\PublicUpload::name($request->file('car_img'));
                 } else {
                     $car_img = $user->car_img;
                 }
-                if(!empty($request->input('role'))) {
+                if(!empty($request->input('role')) && $request->input('role') !== $user->role) {
                     $role = $request->input('role');
                     DB::table('action_log')->insert(['type'=>'change role ('.$role.')','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
                 } else {
@@ -6766,7 +4160,7 @@ class LexaAdmin extends Controller
         $user = Auth::user();
         $admin_areas = DB::table('admin_areas')->get();
         $res_view = view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas,'pharmacys'=>$pharmacys,'title'=>'Profile','br1'=>'Profile','alert'=>'']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -6782,8 +4176,8 @@ class LexaAdmin extends Controller
             if($request->input('save')>0) {
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                    $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                    $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                    $src = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                 } else {
                     $src = Auth::user()->image;
                 }
@@ -6792,8 +4186,8 @@ class LexaAdmin extends Controller
                 }
                 if($request->hasFile('driving_license_img')) {
                     $file = $request->file('driving_license_img');
-                    $file->move(public_path() . '/images/driving_license/',date('mdHis').$request->file('driving_license_img')->getClientOriginalName());
-                    $driving_license_img = '/images/driving_license/'.date('mdHis').$request->file('driving_license_img')->getClientOriginalName();
+                    $file->move(public_path() . '/images/driving_license/',\App\Support\PublicUpload::name($request->file('driving_license_img')));
+                    $driving_license_img = '/images/driving_license/'.\App\Support\PublicUpload::name($request->file('driving_license_img'));
                 } else {
                     $driving_license_img = Auth::user()->driving_license_img;
                 }
@@ -6835,99 +4229,13 @@ class LexaAdmin extends Controller
         }
     }
 
-    /**
-     * @param int|string $order_id
-     */
-    private static function add_row_to_google_sheeds($order_id) {
-        $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as medic', 'orders.medic_id', '=', 'medic.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id','orders.delivery_address','orders.delivery_location', 'orders.eta', 'orders.created', 'orders.finish', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.statuse_id', 'orders.rating', 'orders.signature', 'orders.fridge', 'orders.facility', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.signature_type', 'orders.medic_id', 'medic.name as medicname', 'medic.last_name as mediclast_name', 'users.name as username', 'users.last_name as last_name', 'users.os as useros', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'users.home_phone as userhomephone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor', 'orders.statuse_copay', 'statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.statuse_id', 'orders.facility', 'orders.created', 'orders.finish', 'orders.delivery_date', 'orders.delivery_time_range', 'orders.driver_id', 'orders.rating', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.signature_type', 'orders.user_id', 'users.name', 'users.last_name', 'medic.name', 'medic.last_name','users.os', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'orders.medic_id', 'users.phone','users.home_phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color', 'orders.statuse_copay', 'statuses_copay.name','statuses_copay.color','orders.delivery_address','orders.delivery_location')->first();
-        if(!empty($order)){
-            // configure the Google Client
-            $client = new \Google_Client();
-            $client->setApplicationName('Google Sheets API');
-            $client->setScopes([\Google_Service_Sheets::SPREADSHEETS]);
-            $client->setAccessType('offline');
-            // credentials.json is the key file we downloaded while setting up our Google Sheets API
-            $path = resource_path().'/data/credentials.json';
-            $client->setAuthConfig($path);
-            // configure the Sheets Service
-            $service = new \Google_Service_Sheets($client);
-            $spreadsheetId = '1MD4F0Xvz3uUc0kr7qt0vYd-QtNtPxjnMBha7PZrIhHY';
-            $service->spreadsheets->get($spreadsheetId);
-            $range = 'XBC-1'; // here we use the name of the Sheet to get all the rows
-            $newRow = [
-                '',
-                $order->last_name.' '.$order->username,
-                date('m/d/Y'),
-                date('m/d/Y'),
-                '',
-                '',
-                '',
-                'TOPAZ',
-                '',
-                'BY A2B',
-                'FALSE',
-                'DEVICE XBC-1',
-                $order->special_instructions,
-                'FALSE',
-                '',
-                $order->userphone,
-                $order->useraddress.' '.$order->userzip,
-                $order->userapartment,
-                '',
-                '',
-                '',
-                '',
-                ''
-            ];
-            $rows = [array_map('strval', $newRow)]; // you can append several rows at once
-            $valueRange = new \Google_Service_Sheets_ValueRange();
-            $valueRange->setValues($rows);
-            $options = ['valueInputOption' => 'USER_ENTERED'];
-            $service->spreadsheets_values->append($spreadsheetId, $range, $valueRange, $options);
-            return true;
-        }
-        return false;
-    }
 
     /**
      * @param string|null $address
      * @param int|string $user_id
      */
     private static function action_log_user_check(Request $request,$address,$user_id,$address2=NULL,$address3=NULL) {
-        $user = DB::table('users')->where('id', $user_id)->first();
-        if($request->input('name')!=$user->name) {
-            DB::table('action_log')->insert(['type'=>'change name','comment'=>'from '.$user->name.' to '.$request->input('name'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('last_name')!=$user->last_name) {
-            DB::table('action_log')->insert(['type'=>'change last_name','comment'=>'from '.$user->last_name.' to '.$request->input('last_name'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('email')!=$user->email) {
-            DB::table('action_log')->insert(['type'=>'change email','comment'=>'from '.$user->email.' to '.$request->input('email'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('phone')!=$user->phone) {
-            DB::table('action_log')->insert(['type'=>'change phone','comment'=>'from '.$user->phone.' to '.$request->input('phone'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($address!=$user->address) {
-            DB::table('action_log')->insert(['type'=>'change address','comment'=>'from '.$user->address.' to '.$request->input('address'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($address2!=$user->address2) {
-            DB::table('action_log')->insert(['type'=>'change address','comment'=>'from '.$user->address.' to '.$request->input('address'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($address3!=$user->address3) {
-            DB::table('action_log')->insert(['type'=>'change address','comment'=>'from '.$user->address.' to '.$request->input('address'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('zip')!=$user->zip) {
-            DB::table('action_log')->insert(['type'=>'change zip','comment'=>'from '.$user->zip.' to '.$request->input('zip'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('apartment')!=$user->apartment) {
-            DB::table('action_log')->insert(['type'=>'change apartment','comment'=>'from '.$user->apartment.' to '.$request->input('apartment'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if(!empty($request->input('car_info')) && $request->input('car_info')!=$user->car_info) {
-            DB::table('action_log')->insert(['type'=>'change car_info','comment'=>'from '.$user->car_info.' to '.$request->input('car_info'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if(!empty($request->input('pharmacy_id')) && $request->input('pharmacy_id')!=$user->pharmacy_id) {
-            DB::table('action_log')->insert(['type'=>'change pharmacy_id','comment'=>'from '.$user->pharmacy_id.' to '.$request->input('pharmacy_id'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
+        app(LogUserChanges::class)->handle($request, $address, $user_id, $address2, $address3);
         return true;
     }
 
@@ -6935,7 +4243,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $input['name']='';
             $input['last_name']='';
             $input['email']='';
@@ -6948,7 +4256,7 @@ class LexaAdmin extends Controller
             $input['pharmacy']='';
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('settings.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Settings','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -6962,7 +4270,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 if(!empty(DB::table('users')->where('email', $request->input('email'))->where('pharmacy_id', $request->input('pharmacy'))->first())) {
                     $input['name']=$request->input('name');
@@ -6994,8 +4302,8 @@ class LexaAdmin extends Controller
                     } else {
                         if($request->hasFile('image')) {
                             $file = $request->file('image');
-                            $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                            $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                            $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                            $src = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                         } else {
                             $src = '';
                         }
@@ -7021,7 +4329,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
             $success='';
             $error='';
@@ -7035,7 +4343,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $success='';
             $error='';
             if(!empty($request->input('ncard')) && !empty($request->input('name')) && !empty($request->input('expire')) && !empty($request->input('ccv')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
@@ -7184,7 +4492,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id)) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
                 $success='';
                 $error='';
@@ -7206,7 +4514,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id)) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $success='';
                 $error='';
                 if(!empty($request->input('type')) && !empty($request->input('name')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
@@ -7264,7 +4572,7 @@ class LexaAdmin extends Controller
                     }
                     if($type=="card") {
                         $amount_money = new \Square\Models\Money();
-                        $amount_money->setAmount(($amount*100));
+                        $amount_money->setAmount(\App\Support\Money::cents($amount));
                         $amount_money->setCurrency('USD');
                         $unid = uniqid("",true).rand(0,100);
                         $body = new \Square\Models\CreatePaymentRequest(
@@ -7342,7 +4650,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id)) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $success='';
                 $error='';
                 if(!empty($request->input('ncard')) && !empty($request->input('name')) && !empty($request->input('expire')) && !empty($request->input('ccv')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
@@ -7494,7 +4802,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id)) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
                 $success='';
                 $error='';
@@ -7516,7 +4824,7 @@ class LexaAdmin extends Controller
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || (Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id)) {
+            if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
                 $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
                 $success='';
                 $error='';
@@ -7553,7 +4861,7 @@ class LexaAdmin extends Controller
                                 $balance = round(floatval($amount+floatval($pharmacy->balance)),2);
                                 DB::table('pharmacys')->where('id',$pharmacy_id)->update(['balance'=>$balance]);
                                 DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'amount'=>$amount,'transaction_id'=>$tresponse->getTransId(),'type'=>'refill']);
-                                exit('<script>window.close();</script><a href="/billing/'.$pharmacy_id.'">Go Back</a> OR Close Window');
+                                return response('<script>window.close();</script><a href="/billing/'.$pharmacy_id.'">Go Back</a> OR Close Window');
                             } else {
                                 $error= "Transaction Failed: ";
                                 if($tresponse->getErrors() != null) {
@@ -7758,8 +5066,8 @@ class LexaAdmin extends Controller
         $countOnPage=30;
         $max_pages=ceil(DB::table('notifications')->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page=1;
-        if(!empty($_GET['page'])) {
-            $page=intval($_GET['page']);
+        if(!empty(request()->query('page'))) {
+            $page=intval(request()->query('page'));
         }
         $pages = array();
         if($page>2){
@@ -7779,7 +5087,7 @@ class LexaAdmin extends Controller
         DB::table('notifications')->whereIn('id',DB::table('notifications')->where('user_id', Auth::user()->id)->orderBy('id','desc')->pluck('id')->toArray())->update(['viewed' => 1]);
         Redis::del(request()->getHttpHost().':notification_count:'.Auth::user()->id);
         $res_view = view('notifications.list',['notifications'=>$notifications,'pages'=>$pages,'title'=>'Notifications','br1'=>'Notifications','br2'=>'List']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -7818,7 +5126,7 @@ class LexaAdmin extends Controller
             } else {
                 $bag = 1;
             }
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            if((Auth::user()->can('admin'))) {
                 $order = DB::table('orders')->where('id',$order_id)->where('driver_id', $driver_id)->whereIn('statuse_id', [1,2,3,5,6,7,8,9])->first();
                 if(isset($order)) {
                     $count_added = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','in')->count();
@@ -7996,9 +5304,9 @@ class LexaAdmin extends Controller
                             $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
                             $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
                             $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                            $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                            $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                            $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
+                            $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                            $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                            $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
                             if(!empty($zip_tariff)){
                                 if(is_numeric($pharmacy->tariff)) {
                                     $tariff = $pharmacy->tariff;
@@ -8129,7 +5437,7 @@ class LexaAdmin extends Controller
      * @param int|string $driver_id
      */
     public function driversBagsOrder($order_id, $bag, $driver_id, $count=1) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $order = DB::table('orders')->where('id',$order_id)->where('driver_id', $driver_id)->whereIn('statuse_id', [1,2,3,5,6,7,8,9])->first();
             if(isset($order)) {
                 $count_added = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','in')->count();
@@ -8302,9 +5610,9 @@ class LexaAdmin extends Controller
                         $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
                         $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
                         $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                        $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                        $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                        $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
+                        $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                        $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                        $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
                         if(!empty($zip_tariff)){
                             if(is_numeric($pharmacy->tariff)) {
                                 $tariff = $pharmacy->tariff;
@@ -8430,9 +5738,9 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->hasAnyRole('medic', 'superadmin', 'admin', 'dispadmin')) {
             $driver = DB::table('users')->where('id', $user_id)->first();
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+            if((Auth::user()->can('admin'))) {
                 $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $user_id)->where('type', 'office')->where('type_id', Auth::user()->office_id)->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->first();
                 if(empty($routes_priority0)) {
                     $routes_priority0 = new \stdClass();
@@ -8464,7 +5772,7 @@ class LexaAdmin extends Controller
                 $need_cash = DB::table('cash_log')->where('driver_id', $user_id)->where("return","0")->sum('copay');
             }
             $res_view = view('drivers.packages',['driver'=>$driver,'need_cash'=>$need_cash,'orders_transfer'=>$orders_transfer,'orders_pick_up'=>$orders_pick_up,'title'=>'Drivers Packages','br1'=>'Drivers','br2'=>'Drivers Packages','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -8481,13 +5789,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->hasAnyRole('medic', 'superadmin', 'admin', 'dispadmin')) {
             if($request->input('confirm_receipt')>0) {
                 $driver_id = $user_id;
                 $orders = DB::table('cash_log')->where('driver_id', $driver_id)->where("return","0")->get();
                 foreach($orders as $order0) {
                     $order =  DB::table('orders')->where('id',$order0->order_id)->first();
-                    if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+                    if((Auth::user()->can('admin'))) {
                         $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('type','office');
                     } else {
                         $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('type','pharmacy');
@@ -8513,7 +5821,7 @@ class LexaAdmin extends Controller
                 DB::table('cash_log')->where('driver_id', $user_id)->where("return","0")->update(["return_at"=>DB::raw('NOW()'),"return"=>"1","admin_id"=>Auth::user()->id]);
             }
             if($request->input('massiveBagsTransfer')>0) {
-                if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+                if((Auth::user()->can('admin'))) {
                     $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $user_id)->where('type', 'office')->where('type_id', Auth::user()->office_id)->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->first();
                     if(empty($routes_priority0)) {
                         $routes_priority0 = new \stdClass();
@@ -8549,12 +5857,12 @@ class LexaAdmin extends Controller
         }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
-            if(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') && $order->copay>0) {
+            if(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->can('admin')) || Auth::user()->role == 'logist') && $order->copay>0) {
                 $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
                 $success='';
                 $error='';
                 $res_view = view('card.pay-copay',['payment_account'=>$payment_account,'order'=>$order,'success'=>$success,'error'=>$error,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
-                if(isset($_GET['ajax'])) {
+                if(request()->query->has('ajax')) {
                     return $res_view->renderSections();
                 } else {
                     return $res_view;
@@ -8577,7 +5885,7 @@ class LexaAdmin extends Controller
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
             $user = DB::table('users')->where('id',$order->user_id)->first();
-            if(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
+            if(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->can('admin')) || Auth::user()->role == 'logist') && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                 $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
                 $success='';
                 $error='';
@@ -8612,7 +5920,7 @@ class LexaAdmin extends Controller
                             if ($tresponse != null && $tresponse->getMessages() != null) {
                                 DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>3]);
                                 DB::table('payments')->insert(['order_id'=>$order_id,'transaction_id'=>$tresponse->getTransId(),'type'=>'copay']);
-                                exit("<script>window.close();</script>");
+                                return response("<script>window.close();</script>");
                             } else {
                                 $error= "Transaction Failed: ";
                                 if($tresponse->getErrors() != null) {
@@ -8786,7 +6094,7 @@ class LexaAdmin extends Controller
         }
         $user = DB::table('users')->where('id',$user_id)->first();
         if(!empty($user)) {
-            if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist'  || Auth::user()->role == 'medic') {
+            if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
                 $password = bin2hex(openssl_random_pseudo_bytes(4));
                 DB::table('users')->where('id',$user_id)->update(['password'=>Hash::make($password)]);
                 DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
@@ -8845,8 +6153,8 @@ class LexaAdmin extends Controller
         $countOnPage=20;
         $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page=1;
-        if(!empty($_GET['page'])) {
-            $page=intval($_GET['page']);
+        if(!empty(request()->query('page'))) {
+            $page=intval(request()->query('page'));
         }
         $pages = array();
         if($page>2){
@@ -8873,7 +6181,7 @@ class LexaAdmin extends Controller
             }
         }
         $res_view = view('news.list',['news'=>$news,'pages'=>$pages,'title'=>'News','br1'=>'News','br2'=>'List']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -8884,12 +6192,12 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $input['link']='';
             $input['title']='';
             $input['text']='';
             $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -8903,7 +6211,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
                 DB::table('news')->insert(["user_id"=>Auth::user()->id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
             }
@@ -8917,8 +6225,8 @@ class LexaAdmin extends Controller
         $countOnPage=20;
         $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page=1;
-        if(!empty($_GET['page'])) {
-            $page=intval($_GET['page']);
+        if(!empty(request()->query('page'))) {
+            $page=intval(request()->query('page'));
         }
         $pages = array();
         if($page>2){
@@ -8936,7 +6244,7 @@ class LexaAdmin extends Controller
         }
         $news = DB::table('news_patient')->where("pharmacy_id",Auth::user()->pharmacy_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('news.list_patient',['news'=>$news,'pages'=>$pages,'title'=>'Patients','br1'=>'News','br2'=>'List']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -8952,7 +6260,7 @@ class LexaAdmin extends Controller
             $input['title']='';
             $input['text']='';
             $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -8977,12 +6285,12 @@ class LexaAdmin extends Controller
     }
 
     public function settingsWishesCategory() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('wishes_category')->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -9000,7 +6308,7 @@ class LexaAdmin extends Controller
             }
             $wishes_categorys = DB::table('wishes_category')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('wishes.category',['wishes_categorys'=>$wishes_categorys,'pages'=>$pages,'title'=>'Print Text Category','br1'=>'Print Text','br2'=>'Category']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9011,7 +6319,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsWishesCategoryHandler(Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('remove')>0) {
                 DB::table('wishes')->where('category_id', $request->input('wishes_category_id'))->delete();
                 DB::table('wishes_category')->where('id', $request->input('wishes_category_id'))->delete();
@@ -9032,7 +6340,7 @@ class LexaAdmin extends Controller
      * @param int|string $driver_id
      */
     public function driversProfile($driver_id) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $user = DB::table('users')->where('id', $driver_id)->where('role','driver')->first();
             if(!empty($user)){
                 $pharmacys = DB::table('pharmacys')->get()->keyBy('id');
@@ -9042,7 +6350,7 @@ class LexaAdmin extends Controller
                 $last_cash = DB::table('cash_log')->where('driver_id',$driver_id)->where('return','1')->orderBy('return_at','desc')->first();
                 $orders = DB::table('orders')->where('user_id',$driver_id)->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as driver', 'orders.driver_id', '=', 'driver.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.driver_id', 'orders.merchantOrder','orders.special_instructions', 'orders.rating','orders.fridge','orders.actual','orders.eta','orders.facility', 'driver.name as drivername', 'driver.last_name as driverlast_name', 'driver.pharmacy_id as driverpharmacy_id', 'orders.count_bags', 'orders.signature','orders.statuse_id', 'orders.pharmacy_id', 'orders.copay', 'users.name as username', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.os as useros', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'orders.tariff', 'statuses.name as statusename','statuses.color as statusecolor','statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->groupBy('orders.id', 'orders.statuse_id', 'orders.merchantOrder', 'orders.actual','orders.eta', 'orders.driver_id', 'orders.rating','orders.signature','orders.fridge','driver.name', 'driver.last_name', 'driver.pharmacy_id','orders.special_instructions', 'orders.count_bags', 'orders.created', 'orders.facility','orders.copay', 'orders.pharmacy_id', 'orders.tariff', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.phone', 'statuses.name','statuses.color','users.last_name', 'statuses_copay.name','statuses_copay.color', 'users.os')->orderBy('orders.id','desc')->limit(8)->get();
                 $res_view = view('drivers.profile',['user'=>$user,'pharmacys'=>$pharmacys,'duty'=>$duty,'last_cash'=>$last_cash,'user_actions'=>$user_actions,'orders_stat'=>$orders_stat,'orders'=>$orders,'alert'=>'','title'=>'Driver Profile','br1'=>'Drivers','br2'=>'Profile']);
-                if(isset($_GET['ajax'])) {
+                if(request()->query->has('ajax')) {
                     return $res_view->renderSections();
                 } else {
                     return $res_view;
@@ -9058,15 +6366,15 @@ class LexaAdmin extends Controller
      * @param int|string $driver_id
      */
     public function driversProfileHandler(Request $request,$driver_id) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $user = DB::table('users')->where('id', $driver_id)->where('role','driver')->first();
             if(!empty($user)){
                 $user_id=$driver_id;
                 if($request->input('save')>0) {
                     if($request->hasFile('image')) {
                         $file = $request->file('image');
-                        $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                        $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                        $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                        $src = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                     } else {
                         $src = $user->image;
                     }
@@ -9075,15 +6383,15 @@ class LexaAdmin extends Controller
                     }
                     if($request->hasFile('driving_license_img')) {
                         $file = $request->file('driving_license_img');
-                        $file->move(public_path() . '/images/driving_license/',date('mdHis').$request->file('driving_license_img')->getClientOriginalName());
-                        $driving_license_img = '/images/driving_license/'.date('mdHis').$request->file('driving_license_img')->getClientOriginalName();
+                        $file->move(public_path() . '/images/driving_license/',\App\Support\PublicUpload::name($request->file('driving_license_img')));
+                        $driving_license_img = '/images/driving_license/'.\App\Support\PublicUpload::name($request->file('driving_license_img'));
                     } else {
                         $driving_license_img = $user->driving_license_img;
                     }
                     if($request->hasFile('car_img')) {
                         $file = $request->file('car_img');
-                        $file->move(public_path() . '/images/users/',date('mdHis').$request->file('car_img')->getClientOriginalName());
-                        $car_img = '/images/users/'.date('mdHis').$request->file('car_img')->getClientOriginalName();
+                        $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('car_img')));
+                        $car_img = '/images/users/'.\App\Support\PublicUpload::name($request->file('car_img'));
                     } else {
                         $car_img = $user->car_img;
                     }
@@ -9100,7 +6408,7 @@ class LexaAdmin extends Controller
                 }
                 if($request->input('ajax_stat')>0) {
                     $date=date("Y-m-d",strtotime($request->input('date_stat')));
-                    $routes_logs = DB::table('routes_priority_logs')->where('driver_id',$driver_id)->whereRaw("DATE(created)='$date'")->orderBy('id','asc')->get();
+                    $routes_logs = DB::table('routes_priority_logs')->where('driver_id',$driver_id)->whereDate('created', $date)->orderBy('id','asc')->get();
                     $id=1;
                     $routes_logs_group = [];
                     $order_ids=[];
@@ -9122,7 +6430,7 @@ class LexaAdmin extends Controller
                             if($row->type=='office'){
                                 $loc = DB::table('offices')->where('id',$row->type_id)->first();
                                 if(!empty($loc)){
-                                    $area = DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT('.$loc->location.'))')->select("area.name")->first();
+                                    $area = DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($loc->location))->select("area.name")->first();
                                     if(!empty($area)){
                                         $row->area_name = $area->name;
                                     }
@@ -9131,7 +6439,7 @@ class LexaAdmin extends Controller
                             if($row->type=='patient'){
                                 $loc = DB::table('users')->where('id',$row->type_id)->first();
                                 if(!empty($loc)){
-                                    $area = DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT('.$loc->location.'))')->select("area.name")->first();
+                                    $area = DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($loc->location))->select("area.name")->first();
                                     if(!empty($area)){
                                         $row->area_name = $area->name;
                                     }
@@ -9140,7 +6448,7 @@ class LexaAdmin extends Controller
                             if($row->type=='pharmacy'){
                                 $loc = DB::table('pharmacys')->where('id',$row->type_id)->first();
                                 if(!empty($loc)){
-                                    $area = DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT('.$loc->location.'))')->select("area.name")->first();
+                                    $area = DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($loc->location))->select("area.name")->first();
                                     if(!empty($area)){
                                         $row->area_name = $area->name;
                                     }
@@ -9168,10 +6476,10 @@ class LexaAdmin extends Controller
     }
 
     public function settingsWishesCategoryAdd() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $input['name']='';
             $res_view = view('wishes.category_add',['input'=>$input,'alert'=>'','title'=>'Print Text Category Add','br1'=>'Print Text','br2'=>'Category Add']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9182,7 +6490,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsWishesCategoryAddHandler(Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 if(!empty(DB::table('wishes_category')->where('name', $request->input('name'))->first())) {
                     $input['name']=$request->input('name');
@@ -9201,12 +6509,12 @@ class LexaAdmin extends Controller
      * @param int|string $wish_id
      */
     public function settingsWishes($wish_id) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('wishes')->where("category_id",$wish_id)->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -9224,7 +6532,7 @@ class LexaAdmin extends Controller
             }
             $wishes = DB::table('wishes')->where("category_id",$wish_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('wishes.wishes',['wishes'=>$wishes,'wish_id'=>$wish_id,'pages'=>$pages,'title'=>'Print Text','br1'=>'Print Text','br2'=>'List']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9238,7 +6546,7 @@ class LexaAdmin extends Controller
      * @param int|string $wish_id
      */
     public function settingsWishesHandler($wish_id,Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('remove')>0) {
                 DB::table('wishes')->where('id', $request->input('wishes_id'))->delete();
             }
@@ -9249,10 +6557,10 @@ class LexaAdmin extends Controller
     }
 
     public function settingsWishesAdd() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $input['text']='';
             $res_view = view('wishes.add',['input'=>$input,'alert'=>'','title'=>'Print Text Add','br1'=>'Print Text','br2'=>'Add']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9266,7 +6574,7 @@ class LexaAdmin extends Controller
      * @param int|string $wish_id
      */
     public function settingsWishesAddHandler($wish_id,Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 DB::table('wishes')->insert(['category_id'=>$wish_id,'text' => $request->input('text')]);
             }
@@ -9277,12 +6585,12 @@ class LexaAdmin extends Controller
     }
 
     public function settingsStates() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('area')->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -9300,7 +6608,7 @@ class LexaAdmin extends Controller
             }
             $areas = DB::table('area')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('area.list',['areas'=>$areas,'pages'=>$pages,'title'=>'Area Tariff List','br1'=>'Area','br2'=>'Tariff List']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9311,7 +6619,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsStatesHandler(Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('remove')>0) {
                 DB::table('area')->where('id', $request->input('area_id'))->delete();
                 DB::table('area_zip')->where("area_id",$request->input('area_id'))->delete();
@@ -9323,7 +6631,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsStatesAdd() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $area = new \stdClass();
             $area->name="";
             $area->state="";
@@ -9339,7 +6647,7 @@ class LexaAdmin extends Controller
                 }   
             }
             $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Add','br1'=>'Area','br2'=>'Tariff Add']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9350,7 +6658,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsStatesAddHandler(Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 $area_id = DB::table('area')->insertGetId($this->tariffAreaData($request));
                 if(!empty($request->input('zip'))){
@@ -9372,7 +6680,7 @@ class LexaAdmin extends Controller
      * @param int|string $area_id
      */
     public function settingsStatesEdit($area_id) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $area = DB::table('area')->where('id', $area_id)->select('id','name','state','tariff',DB::raw('ST_AsText(polygon) as polygon'))->first();
             if(!empty($area->polygon)) {
                 $polygon = $this->encodePolygon($area->polygon);
@@ -9390,7 +6698,7 @@ class LexaAdmin extends Controller
             $states = DB::table('area_zip')->where('area_id', $area_id)->get();
             $states_list = DB::table('states')->get();
             $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Edit','br1'=>'Area','br2'=>'Tariff Edit']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9404,7 +6712,7 @@ class LexaAdmin extends Controller
      * @param int|string $area_id
      */
     public function settingsStatesEditHandler($area_id, Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 DB::table('area')->where("id",$area_id)->update($this->tariffAreaData($request));
                 //DB::table('area_zip')->where("area_id",$area_id)->delete();
@@ -9498,26 +6806,16 @@ class LexaAdmin extends Controller
      * @param string $polygon_str
      */
     function encodePolygon2($polygon_str) {
-        $polygon_json = [];
-        $data = explode(',',str_replace(['POLYGON((','))'],'',$polygon_str));
-        foreach($data as $key=>$row) {
-            if($key<count($data)-1) {
-                $a = explode(' ',$row);
-                if(count($a)>1) {
-                    array_push($polygon_json,[floatval($a[0]),floatval($a[1])]);
-                }
-            }
-        }
-        return json_encode($polygon_json);
+        return \App\Support\WktPolygon::toJsonPoints($polygon_str);
     }
 
     public function settingsPlans() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('plans')->count()/$countOnPage);
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $pages = array();
             if($page>2){
@@ -9535,7 +6833,7 @@ class LexaAdmin extends Controller
             }
             $plans = DB::table('plans')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('plans.list',['plans'=>$plans,'pages'=>$pages,'title'=>'Tariff Plans List','br1'=>'Tariff','br2'=>'Tariff Plans']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9546,7 +6844,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsPlansHandler(Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('remove')>0) {
                 DB::table('plans')->where('id', $request->input('plan_id'))->delete();
             }
@@ -9557,7 +6855,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsPlansAdd() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $plan = new \stdClass();
             $plan->name="";
             $plan->order_rate="";
@@ -9571,7 +6869,7 @@ class LexaAdmin extends Controller
             $plan->tariff_area3="";
             $plan->tariff_area_more="";
             $res_view = view('plans.form',['plan'=>$plan,'alert'=>'','title'=>'Tariff Plan Add','br1'=>'Tariff','br2'=>'Tariff Plan Add']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9582,7 +6880,7 @@ class LexaAdmin extends Controller
     }
 
     public function settingsPlansAddHandler(Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 DB::table('plans')->insertGetId(['name' => $request->input('name'),'order_rate' => $request->input('order_rate'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more')]);
             }
@@ -9596,10 +6894,10 @@ class LexaAdmin extends Controller
      * @param int|string $plan_id
      */
     public function settingsPlansEdit($plan_id) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $plan = DB::table('plans')->where('id', $plan_id)->first();
             $res_view = view('plans.form',['plan'=>$plan,'alert'=>'','title'=>'Tariff Plan Edit','br1'=>'Tariff','br2'=>'Tariff Plan Edit']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9613,7 +6911,7 @@ class LexaAdmin extends Controller
      * @param int|string $plan_id
      */
     public function settingsPlansEditHandler($plan_id, Request $request) {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 DB::table('plans')->where("id",$plan_id)->update(['name' => $request->input('name'),'order_rate' => $request->input('order_rate'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more')]);
             }
@@ -9623,30 +6921,6 @@ class LexaAdmin extends Controller
         }
     }
 
-    /**
-     * @param int|string $order_id
-     */
-    public function get_records($order_id) {
-        $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id', 'orders.created', 'users.phone as userphone')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.created','users.phone')->first();
-        if(!empty($order)) {
-            $api = new Zadarma_API("35add9dd339d64c38f55", "a444d1a5d8ea9ca6eb43");
-            $last_calls = DB::table('calls')->where("to",preg_replace('/[^0-9]/', '', $order->userphone))->where("created",">=",$order->created)->orderBy('created','desc')->get();
-            $record_links = [];
-            foreach($last_calls as $last_call) {
-                try {
-                    $result = $api->getPbxRecord(null,$last_call->call_id,3600);
-                    if(!empty($result) && !empty($result->links)) {
-                        $record_link["created"] = date('m/d/Y g:i A', strtotime($last_call->created ?? ''));
-                        $record_link["link"] = $result->links[0];
-                        $record_links[] = $record_link;
-                    }
-                } catch (\Throwable) {}
-            }
-            return response()->json($record_links);
-        } else {
-            abort(404);
-        }
-    }
 
     /**
      * @param int|string $pharmacy_id
@@ -9658,7 +6932,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->pharmacy_balance_ban()) {
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             return view('import.step1',['alert'=>'','title'=>'Import Order','br1'=>'Import','br2'=>'Import Order']);
         } else {
             return abort(403, self::$err_perm);
@@ -9675,7 +6949,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->pharmacy_balance_ban()) {
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }
-        if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->input('step2')>0) {
                 $request->validate([
                     'import' => 'required|mimes:pdf|max:2048'
@@ -9848,9 +7122,9 @@ class LexaAdmin extends Controller
                 $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
                 $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
                 $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
+                $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
                 if(!empty($zip_tariff)){
                     if(is_numeric($pharmacy->tariff)) {
                         $tariff = $pharmacy->tariff;
@@ -9932,7 +7206,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $accessTokenDb = DB::table('quickbook')->where('id',1)->value('data');
             try {
                 $accessToken = !empty($accessTokenDb) ? unserialize($accessTokenDb) : null;
@@ -9967,7 +7241,7 @@ class LexaAdmin extends Controller
                 $userInfo = $oauthLoginHelper->getUserInfo($accessToken->getAccessToken());
             }
             $res_view = view('quickbook.index',['alert'=>'','title'=>'Quickbook','br1'=>'Quickbook','br2'=>'Index','authUrl'=>$authUrl,'userInfo'=>$userInfo]);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -9981,7 +7255,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $dataService = DataService::Configure(array(
                 'auth_mode' => 'oauth2',
                 'ClientID' => config('app.quick_client_id'),
@@ -9992,13 +7266,13 @@ class LexaAdmin extends Controller
             ));
             $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
             assert($OAuth2LoginHelper instanceof OAuth2LoginHelper);
-            if(isset($_GET['code']) && isset($_GET['realmId'])) {
-                $accessToken = $OAuth2LoginHelper->exchangeAuthorizationCodeForToken($_GET['code'], $_GET['realmId']);
+            if(request()->query->has('code') && request()->query->has('realmId')) {
+                $accessToken = $OAuth2LoginHelper->exchangeAuthorizationCodeForToken(request()->query('code'), request()->query('realmId'));
                 $dataService->updateOAuth2Token($accessToken);
                 DB::table('quickbook')->where('id',1)->update(["data"=>serialize($accessToken)]);
-                exit("<script>window.close();</script>");
+                return response("<script>window.close();</script>");
             }
-            dd($_GET);
+            return abort(400, 'QuickBooks authorization was not completed.');
         } else {
             return abort(403, self::$err_perm);
         }
@@ -10006,7 +7280,7 @@ class LexaAdmin extends Controller
 
     public function reports() {
         $res_view = view('reports.index',['alert'=>'','title'=>'Reports','br1'=>'Reports','br2'=>'Index']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10018,8 +7292,8 @@ class LexaAdmin extends Controller
         $countOnPage=30;
         $max_pages=ceil($payments->count()/$countOnPage);
         $page=1;
-        if(!empty($_GET['page'])) {
-            $page=intval($_GET['page']);
+        if(!empty(request()->query('page'))) {
+            $page=intval(request()->query('page'));
         }
         $pages = array();
         if($page>2){
@@ -10062,7 +7336,7 @@ class LexaAdmin extends Controller
             }
         }
         $res_view = view('reports.billing',['payments'=>$payments,'pages'=>$pages,'alert'=>'','title'=>'Reports Billing','br1'=>'Reports','br2'=>'Billing']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10071,7 +7345,7 @@ class LexaAdmin extends Controller
 
     public function reportsApps() {
         $res_view = view('reports.apps',['alert'=>'','title'=>'Reports Apps','br1'=>'Reports','br2'=>'Apps']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10081,7 +7355,7 @@ class LexaAdmin extends Controller
     public function reportsInvoices() {
         $chartData = DB::table('invoices')->select(DB::raw('CONCAT(date_from," ",date_to) as y'),DB::raw('ROUND(sum((amount+corrections)),2) as a'),DB::raw('count(id) as b'),DB::raw('ROUND(sum(count),2) as c'))->groupBy(DB::raw('CONCAT(date_from," ",date_to)'))->orderBy(DB::raw('CONCAT(date_from," ",date_to)'),'desc')->limit(46)->get();
         $res_view = view('reports.invoices',['chartData'=>$chartData,'alert'=>'','title'=>'Reports Invoices','br1'=>'Reports','br2'=>'Invoices']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10090,7 +7364,7 @@ class LexaAdmin extends Controller
 
     public function reportsDrivers() {
         $res_view = view('reports.drivers',['alert'=>'','title'=>'Reports Drivers','br1'=>'Reports','br2'=>'Drivers']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10099,7 +7373,7 @@ class LexaAdmin extends Controller
 
     public function reportsPharmacies() {
         $res_view = view('reports.pharmacies',['alert'=>'','title'=>'Reports Pharmacies','br1'=>'Reports','br2'=>'Pharmacies']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10110,7 +7384,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $date = date('Y-m-d');
             $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
@@ -10120,7 +7394,7 @@ class LexaAdmin extends Controller
                         $join->on('area.polygon','!=','orders.id');
                         $join->where('area.id',$pol->id);
                     })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
-                    $polygons[$key]->count=$polygons[$key]->count->whereRaw('date(created) = "'.$date.'"');
+                    $polygons[$key]->count=$polygons[$key]->count->whereDate('created', $date);
                     $polygons[$key]->count=$polygons[$key]->count->get()->count();
                 } else {
                     $polygons[$key]->polygon = "";
@@ -10137,7 +7411,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $date = date('Y-m-d',strtotime($request->input('date')));
             $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
@@ -10147,7 +7421,7 @@ class LexaAdmin extends Controller
                         $join->on('area.polygon','!=','orders.id');
                         $join->where('area.id',$pol->id);
                     })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
-                    $polygons[$key]->count=$polygons[$key]->count->whereRaw('date(created) = "'.$date.'"');
+                    $polygons[$key]->count=$polygons[$key]->count->whereDate('created', $date);
                     $polygons[$key]->count=$polygons[$key]->count->get()->count();
                 } else {
                     $polygons[$key]->polygon = "";
@@ -10178,7 +7452,7 @@ class LexaAdmin extends Controller
             } 
         }
         $res_view = view('reports.customers',['areas'=>$areas,'count_all'=>$count_all,'alert'=>'','title'=>'Reports Customers','br1'=>'Reports','br2'=>'Customers']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10187,7 +7461,7 @@ class LexaAdmin extends Controller
 
     public function feedback() {
         $res_view = view('feedback.index',['alert'=>'','title'=>'Feedback','br1'=>'Feedback','br2'=>'Index']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10195,12 +7469,12 @@ class LexaAdmin extends Controller
     }
 
     public function deliveryCalendar() {
-        if(isset($_GET['get_zones']) && !empty($_GET['get_zones']) && isset($_GET['state']) && !empty($_GET['state'])){
-            $zones = DB::table('area')->where('state',$_GET['state'])->select('id','name')->get();
+        if(request()->query->has('get_zones') && !empty(request()->query('get_zones')) && request()->query->has('state') && !empty(request()->query('state'))){
+            $zones = DB::table('area')->where('state',request()->query('state'))->select('id','name')->get();
             return json_encode($zones);
         }
-        if(isset($_GET['month']) && !empty($_GET['month'])){
-            $month = date("Y-m",strtotime($_GET['month'])).'-01';
+        if(request()->query->has('month') && !empty(request()->query('month'))){
+            $month = date("Y-m",strtotime(request()->query('month'))).'-01';
         } else {
             $month = date("Y-m").'-01';
         }
@@ -10214,13 +7488,13 @@ class LexaAdmin extends Controller
             $dayOfWeek0 = $date->format('w');
             $dates["Week $week"][$dayOfWeek0]= $date->format('Y-m-d');
             if(Auth::user()->role=='medic'){
-                if(isset($_GET['state'])) {
-                    $state = $_GET['state'];
+                if(request()->query->has('state')) {
+                    $state = request()->query('state');
                     $pol_id=0;
-                    if(isset($_GET['zone'])) {
-                        $pol_id = $_GET['zone'];
+                    if(request()->query->has('zone')) {
+                        $pol_id = request()->query('zone');
                     }
-                    $orders = DB::table('users')->join('orders','orders.user_id','=','users.id')->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->whereRaw("DATE(delivery_date) = '".$date->format('Y-m-d')."'")->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc')->join('area', function($join) use($state,$pol_id) {
+                    $orders = DB::table('users')->join('orders','orders.user_id','=','users.id')->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->whereDate('delivery_date', $date->format('Y-m-d'))->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc')->join('area', function($join) use($state,$pol_id) {
                         $join->on('area.polygon','!=','orders.id');
                         if(!empty($state)) {
                             $join->where('area.state',$state);
@@ -10230,17 +7504,17 @@ class LexaAdmin extends Controller
                         }
                     })->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
                 } else {
-                    $orders = DB::table('orders')->where('pharmacy_id',Auth::user()->pharmacy_id)->whereRaw("DATE(delivery_date) = '".$date->format('Y-m-d')."'")->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc');
+                    $orders = DB::table('orders')->where('pharmacy_id',Auth::user()->pharmacy_id)->whereDate('delivery_date', $date->format('Y-m-d'))->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc');
                 }
                 $stats[$date->format('Y-m-d')]= $orders->get();
             } else {
-                if(isset($_GET['state'])) {
-                    $state = $_GET['state'];
+                if(request()->query->has('state')) {
+                    $state = request()->query('state');
                     $pol_id=0;
-                    if(isset($_GET['zone'])) {
-                        $pol_id = $_GET['zone'];
+                    if(request()->query->has('zone')) {
+                        $pol_id = request()->query('zone');
                     }
-                    $orders = DB::table('users')->join('orders','orders.user_id','=','users.id')->whereRaw("DATE(delivery_date) = '".$date->format('Y-m-d')."'")->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc')->join('area', function($join) use($state,$pol_id) {
+                    $orders = DB::table('users')->join('orders','orders.user_id','=','users.id')->whereDate('delivery_date', $date->format('Y-m-d'))->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc')->join('area', function($join) use($state,$pol_id) {
                         $join->on('area.polygon','!=','orders.id');
                         if(!empty($state)) {
                             $join->where('area.state',$state);
@@ -10250,7 +7524,7 @@ class LexaAdmin extends Controller
                         }
                     })->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
                 } else {
-                    $orders = DB::table('orders')->whereRaw("DATE(delivery_date) = '".$date->format('Y-m-d')."'")->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc');
+                    $orders = DB::table('orders')->whereDate('delivery_date', $date->format('Y-m-d'))->whereIn('statuse_id',[1,7,4,3,8,9])->join('statuses','statuses.id','=','orders.statuse_id')->select('statuses.id','statuses.name',DB::raw('count(distinct orders.id) as count'))->groupBy('statuses.id','statuses.name')->orderBy('statuses.id','asc');
                 }
                 if(!empty(Auth::user()->zone_id)){
                     $orders=$orders->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
@@ -10275,7 +7549,7 @@ class LexaAdmin extends Controller
 
     public function happyHolidays() {
         $res_view = view('happyHolidays.index',['alert'=>'','title'=>'happyHolidays','br1'=>'happyHolidays','br2'=>'Index']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10283,15 +7557,16 @@ class LexaAdmin extends Controller
     }
     public function ads() {
         $res_view = view('ads.index',['alert'=>'','title'=>'ads','br1'=>'ads','br2'=>'Index']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
         }
     }
     public function payroll() {
+        Gate::authorize('admin');
         $res_view = view('payroll.index',['alert'=>'','title'=>'payroll','br1'=>'payroll','br2'=>'Index']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10305,7 +7580,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $orders = User::where('users.role','driver')->where('users.work_now','1')->where('users.isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->join("orders","routes_priority.order_id","=","orders.id")->leftJoin("try_call","orders.id","=","try_call.order_id")->leftJoin("notes", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes.order_id');$leftJoin->where('notes.type', '=', 1);})->leftJoin("notes as notes2", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes2.order_id');$leftJoin->where('notes2.type', '=', 2);})->join("users as users2","orders.user_id","=","users2.id")->join("pharmacys","orders.pharmacy_id","=","pharmacys.id")->where('routes_priority.type','patient')->where('orders.actual','0')->havingRaw("max(try_call.created) < (now() - interval 10 minute) OR COUNT(try_call.id) = 0")
             ->select("users.id as driver_id","routes_priority.priority",DB::raw("CONCAT(users.name, ' ', users.last_name) as driver_name"),"users.phone as driver_phone",DB::raw("CONCAT(users2.name, ' ', users2.last_name) as patient_name"),"users2.phone as patient_phone","users2.address as patient_address","users2.location as patient_location","users2.apartment as patient_apartment","orders.eta","orders.copay","orders.special_instructions",DB::raw("GROUP_CONCAT(DISTINCT CONCAT(notes.created,'!-',notes.note) SEPARATOR ';/') as notes_dispetch"),DB::raw("GROUP_CONCAT(CONCAT(notes2.created,'!-',notes2.note) SEPARATOR ';/') as notes_cust"),DB::raw("GROUP_CONCAT(DISTINCT routes_priority.order_id SEPARATOR ',') as order_id"),"routes_priority.type_id",DB::raw("GROUP_CONCAT(DISTINCT(pharmacys.name) SEPARATOR ',') as pharmacy_name"),DB::raw("GROUP_CONCAT(DISTINCT(pharmacys.phone) SEPARATOR ',') as pharmacy_phone"),DB::raw("count(DISTINCT try_call.id)/count(DISTINCT routes_priority.order_id) as count_call"),DB::raw("case when max(try_call.created) >= now() - interval 10 minute then 1 else 0 end as call_disabled"))
             ->groupBy("users.id","users.name","users.last_name","users.phone","users2.name","users2.last_name","users2.phone","users2.address","users2.apartment","users2.location","routes_priority.type_id","routes_priority.priority","orders.eta","orders.copay","orders.special_instructions")->orderBy(DB::raw("0 - orders.eta"),"desc")->limit(30);
@@ -10328,8 +7603,8 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
-            if(isset($_POST['dispatcher_notes'])) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
+            if(request()->request->has('dispatcher_notes')) {
                 foreach(explode(',',$request->input('order_id')) as $order_id) {
                     DB::table('notes')->insert(["order_id"=>$order_id,"user_id"=>Auth::user()->id,"type"=>"1",'note'=>addslashes($request->input('dispatcher_notes'))]);
                 }
@@ -10408,7 +7683,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $driver = DB::table('users')->where('users.id',$driver_id)->leftJoin('drivers_eta', function($query) {
                 $query->on('users.id','=','drivers_eta.driver_id')
                 ->whereRaw('drivers_eta.id IN (select MAX(a2.id) from drivers_eta as a2 join users as u2 on u2.id = a2.driver_id group by u2.id)');
@@ -10449,7 +7724,7 @@ class LexaAdmin extends Controller
             $show_ids = [];
             $show_priority = [];
             $res_view = view('dispatching.show',['orders'=>$orders,'locations'=>$locations,'driver'=>$driver,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Process Detail','br1'=>'Process','br2'=>'Process Detail']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -10466,7 +7741,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             if($request->input('eta_calculate')>0) {
                 self::eta_calculate($driver_id);
                 return redirect()->back()->with('success', "Successfully the route ETA was updated.");
@@ -10480,8 +7755,8 @@ class LexaAdmin extends Controller
         $countOnPage=20;
         $max_pages=ceil(DB::table('faqs')->count()/$countOnPage);
         $page=1;
-        if(!empty($_GET['page'])) {
-            $page=intval($_GET['page']);
+        if(!empty(request()->query('page'))) {
+            $page=intval(request()->query('page'));
         }
         $pages = array();
         if($page>2){
@@ -10499,7 +7774,7 @@ class LexaAdmin extends Controller
         }
         $faqs = DB::table('faqs')->orderBy('id','asc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('faq.index',['faqs'=>$faqs,'pages'=>$pages,'title'=>'Faqs','br1'=>'FAQ','br2'=>'List']);
-        if(isset($_GET['ajax'])) {
+        if(request()->query->has('ajax')) {
             return $res_view->renderSections();
         } else {
             return $res_view;
@@ -10510,7 +7785,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('remove')>0 && !empty($request->input('faq_id'))) {
                 DB::table('faqs')->where("id",$request->input('faq_id'))->delete();
             }
@@ -10524,11 +7799,11 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             $input['title']='';
             $input['text']='';
             $res_view = view('faq.add',['title'=>'FAQ Add','br1'=>'FAQ','br2'=>'FAQS','br3'=>'FAQ Add','alert'=>'','input'=>$input]);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -10542,7 +7817,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if((Auth::user()->can('admin'))) {
             if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
                 DB::table('faqs')->insert(["user_id"=>Auth::user()->id,"title"=>$request->input('title'),"text"=>$request->input('text')]);
             }
@@ -10708,7 +7983,7 @@ class LexaAdmin extends Controller
             Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
             return $response->access_token;
         } else {
-            dd('Error when update access token HERE!');
+            throw new \RuntimeException('Could not refresh the HERE Maps access token.');
         }
     } 
 
@@ -10716,13 +7991,13 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'medic' || Auth::user()->role == 'logist' || Auth::user()->role == 'sale') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'medic', 'logist', 'sale')) {
             $locations = DB::table('locations')->join('users',function ($join) {
                 $join->on('locations.user_id', '=', 'users.id');
                 $join->whereNull("users.pharmacy_id");
             })->select('locations.*',DB::raw("CONCAT(users.name, ' ', users.last_name) as name"), "users.phone")->whereIn('locations.id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->get();
             $res_view = view('drivers.map',['locations'=>$locations, 'title'=>'QuikMedix Drivers','br1'=>'QuikMedix Drivers','br2'=>'Drivers','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -10736,14 +8011,14 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $orders = DB::table("orders")->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->where("orders.ready",'1')->where("orders.statuse_id",1)->select(DB::raw("max(orders.created) as created"), "pharmacys.name as pharmacyname", 'orders.pharmacy_id', DB::raw("count(orders.id) as count"))->groupBy("orders.pharmacy_id","pharmacys.name");
             if(!empty(Auth::user()->zone_id)){
                 $orders=$orders->where('pharmacys.zone_id',Auth::user()->zone_id);
             }
             $orders=$orders->get();
             $res_view = view('routes.pharmacys',['orders'=>$orders, 'title'=>'Ready Orders Pharmacys','br1'=>'Routes','br2'=>'Ready Orders Pharmacys','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -10753,22 +8028,6 @@ class LexaAdmin extends Controller
         }
     }
 
-    /**
-     * @param int|string $pharmacy_id
-     */
-    public function ordersReadyHandler($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'medic') {
-            DB::table("orders")->where("pharmacy_id",$pharmacy_id)->where("orders.ready",'0')->where("orders.statuse_id",1)->update(["ready"=>'1']);
-            return json_encode([
-                'message' => 'OK'
-            ]);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
 
     /**
      * @param int|string $pharmacy_id
@@ -10777,7 +8036,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) {
+        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $etas = DB::table('drivers_eta')->select(DB::raw("MAX(id) as id"))->groupBy("driver_id")->pluck('id');
             $users = User::where('role','driver')->where('pharmacy_id',$pharmacy_id)->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->leftJoin('routes_priority_logs',function ($join) {
                 $join->on('routes_priority_logs.driver_id', '=' , 'users.id') ;
@@ -10786,8 +8045,8 @@ class LexaAdmin extends Controller
                $query->on('users.id','=','drivers_eta.driver_id')
                ->whereIn('drivers_eta.id',$etas);
             })->having(DB::raw("count(distinct routes_priority.type,routes_priority.type_id)+count(distinct routes_priority_logs.type,routes_priority_logs.type_id)"),">",0)->select("users.id","users.image", "users.car_img", "users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os",DB::raw("count(distinct routes_priority.type,routes_priority.type_id) as count_delivery"), DB::raw("count(distinct routes_priority_logs.type,routes_priority_logs.type_id) as count_delivered"), "drivers_eta.eta")->groupBy("users.id","users.image","users.car_img","users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os","drivers_eta.eta");
-            if(!empty($_GET['search'])) {
-                $search = $_GET['search'];
+            if(!empty(request()->query('search'))) {
+                $search = request()->query('search');
                 $users = $users->where(function($query) use ($search) {
                     $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
                           ->orWhere('email','LIKE','%'.$search.'%')
@@ -10799,8 +8058,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=100;
             $page=1;
-            if(!empty($_GET['page'])) {
-                $page=intval($_GET['page']);
+            if(!empty(request()->query('page'))) {
+                $page=intval(request()->query('page'));
             }
             $max_pages=ceil(1/$countOnPage);
             $users = $users->orderBy(DB::raw("count(distinct routes_priority.id)+count(distinct routes_priority_logs.id)"),"desc")->orderBy(DB::raw("count(distinct routes_priority.id)"),"asc");
@@ -10820,7 +8079,7 @@ class LexaAdmin extends Controller
             }
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('process.drivers',['users'=>$users,'pharmacy_id'=>$pharmacy_id,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Process','br1'=>'Drivers','br2'=>'Process','alert'=>'']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -10838,7 +8097,7 @@ class LexaAdmin extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'medic')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'medic')) {
             $driver = DB::table('users')->where('users.id',$driver_id)->leftJoin('drivers_eta', function($query) {
                 $query->on('users.id','=','drivers_eta.driver_id')
                 ->whereRaw('drivers_eta.id IN (select MAX(a2.id) from drivers_eta as a2 join users as u2 on u2.id = a2.driver_id group by u2.id)');
@@ -10880,7 +8139,7 @@ class LexaAdmin extends Controller
             $show_ids = [];
             $show_priority = [];
             $res_view = view('process.show',['orders'=>$orders,'locations'=>$locations,'driver'=>$driver,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Process Detail','br1'=>'Process','br2'=>'Process Detail']);
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;
@@ -10891,7 +8150,7 @@ class LexaAdmin extends Controller
     }
 
     public function ready_call() {
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $user = Auth::user();
             if($user->call_ready=='1') {
                 $user->call_ready='0';
@@ -10905,93 +8164,14 @@ class LexaAdmin extends Controller
         }
     }
 
-    /**
-     * @param string $key
-     */
-    private static function get_cached_value($key) {
-        $cached = Redis::get($key);
-        if(!is_string($cached) || $cached === '') {
-            return null;
-        }
-        try {
-            return unserialize($cached);
-        } catch (\Throwable) {
-            Redis::del($key);
-            return null;
-        }
-    }
 
-    static function get_statuses() {
-        $statuses = self::get_cached_value(request()->getHttpHost().':statuses');
-        if(empty($statuses)) {
-            $statuses = DB::table('statuses')->get()->keyBy('id');
-            Redis::setex(request()->getHttpHost().':statuses', 3600, serialize($statuses));
-        }
-        return $statuses;
-    }
 
-    static function get_statuses_copay() {
-        $statuses_copay = self::get_cached_value(request()->getHttpHost().':statuses_copay');
-        if(empty($statuses_copay)) {
-            $statuses_copay = DB::table('statuses_copay')->get()->keyBy('id');
-            Redis::setex(request()->getHttpHost().':statuses_copay', 3600, serialize($statuses_copay));
-        }
-        return $statuses_copay;
-    }
 
-    static function get_delivery_methods() {
-        $delivery_methods = self::get_cached_value(request()->getHttpHost().':delivery_methods');
-        if(empty($delivery_methods)) {
-            $delivery_methods = DB::table('delivery_methods')->get()->keyBy('id');
-            Redis::setex(request()->getHttpHost().':delivery_methods', 3600, serialize($delivery_methods));
-        }
-        return $delivery_methods;
-    }
 
-    static function get_delivery_times() {
-        $delivery_times = self::get_cached_value(request()->getHttpHost().':delivery_times');
-        if(empty($delivery_times)) {
-            $delivery_times = DB::table('delivery_times')->get()->keyBy('id');
-            Redis::setex(request()->getHttpHost().':delivery_times', 3600, serialize($delivery_times));
-        }
-        return $delivery_times;
-    }
 
-    static function get_pharmacys($ids = NULL) {
-        if(!empty($ids)){
-            $pharmacys = DB::table('pharmacys')->whereIn('id',$ids)->select('id','name','phone')->get()->keyBy('id');
-        } else {
-            $pharmacys = DB::table('pharmacys')->select('id','name','phone')->get()->keyBy('id');
-        }
-        return $pharmacys;
-    }
 
-    static function get_patients($ids = NULL){
-        if(!empty($ids)){
-            $patients = DB::table('users')->whereIn('id',$ids)->select('id','name','last_name','phone','os','address','zip','apartment')->whereIn('role',['user','facility'])->get()->keyBy('id');
-        } else {
-            $patients = DB::table('users')->select('id','name','last_name','phone','os','address','zip','apartment')->whereIn('role',['user','facility'])->get()->keyBy('id');
-        }
-        return $patients;
-    }
 
-    static function get_drivers($ids = NULL){
-        if(!empty($ids)){
-            $drivers = DB::table('users')->whereIn('id',$ids)->select('id','name','last_name','phone','pharmacy_id')->where('role','driver')->get()->keyBy('id');
-        } else {
-            $drivers = DB::table('users')->select('id','name','last_name','phone','pharmacy_id')->where('role','driver')->get()->keyBy('id');
-        }
-        return $drivers;
-    }
 
-    static function get_wishs(){
-        $wishs = self::get_cached_value(request()->getHttpHost().':orders_wishs');
-        if(empty($wishs)) {
-            $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();
-            Redis::setex(request()->getHttpHost().':orders_wishs', 3600, serialize($wishs));
-        }
-        return $wishs;
-    }
 
     /**
      * @param int|string $driver_id
@@ -11042,113 +8222,5 @@ class LexaAdmin extends Controller
         return true;
     }
 
-    /**
-     * @param int|string $order_id
-     */
-    static function sendToBestRx($order_id){
-        $order = DB::table('orders')->where('id',$order_id)->first();
-        if(!empty($order) && !empty($order->bestrx_order_id)) {
-            $pharmacy = DB::table('pharmacys')->where('id',$order->pharmacy_id)->first();
-            $stat_id='1';
-            $stat_name='Ready for pick up';
-            if($order->statuse_id==2) {
-                $stat_id='2';
-                $stat_name='In process';
-            }
-            if($order->statuse_id==3) {
-                $stat_id='6';
-                $stat_name='On the way';
-            }
-            if($order->statuse_id==4) {
-                $stat_id='8';
-                $stat_name='Delivered';
-            }
-            if($order->statuse_id==5) {
-                $stat_id='3';
-                $stat_name='Canceled';
-            }
-            if($order->statuse_id==6) {
-                $stat_id='4';
-                $stat_name='Picked up';
-            }
-            if($order->statuse_id==7) {
-                $stat_id='5';
-                $stat_name='Office';
-            }
-            if($order->statuse_id==8) {
-                $stat_id='9';
-                $stat_name='Unavailable';
-            }
-            if($order->statuse_id==9) {
-                $stat_id='9';
-                $stat_name='Refused';
-            }
-            if($order->statuse_id==10) {
-                $stat_id='10';
-                $stat_name='Back to Pharmacy';
-            }
-            $signature_url='';
-            $signer_info = [];
-            if($order->signature_type=='Patient' || empty($order->signature_type)) {
-                $signer_type = '1';
-                $signer_name = 'Patient';
-            } else if($order->signature_type=='Mother' || $order->signature_type=='Father' || $order->signature_type=='Grandmother' || $order->signature_type=='Son' || $order->signature_type=='Daughter' || $order->signature_type=='Sister' || $order->signature_type=='Brother') {
-                $signer_type = '2';
-                $signer_name = $order->signature_type;
-            } else if($order->signature_type=='Boyfriend'){
-                $signer_type = '3';
-                $signer_name = 'Boyfriend';
-            } else {
-                $signer_type = '99';
-                $signer_name = $order->signature_type;
-            }
-            if(!empty($order->signature_photo)){
-                $signature_url = url('/').$order->signature_photo;
-                $signer_info = [
-                    "relation"=> $signer_type,
-                    "first_name"=> $signer_name,
-                    "last_name"=> "",
-                    "jurisdiction"=> "IL",
-                    "id_type"=> "6",
-                    "id_no"=> ""
-                ];
-            }
-            $dt = new \DateTime();
-            $dt->setTimeZone(new \DateTimeZone('UTC'));
-            $data = [
-                'bestrx_pharmacy_id'=>$pharmacy->bestrx_pharmacy_id,
-                'bestrx_order_id'=>$order->bestrx_order_id,
-                'provider_order_id'=>strval($order_id),
-                'tracking_id'=>strval($order_id),
-                'order_status'=>[
-                    'date'=>$dt->format('Y-m-d\TH:i:s.\0\0\0\0\0\0\0\Z'),
-                    'status_code'=>$stat_id,
-                    'status_code_description'=>$stat_name,
-                    'status_notes'=>''
-                ],
-                "signature_url"=> $signature_url,
-                "signer_info"=> $signer_info
-            ];
-            $json = json_encode($data);
-            $curl = curl_init();
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => "https://developer.bestrxconnect.com/TestDispenseService/Order/UpdateOrderStatus",
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => "POST",
-                CURLOPT_POSTFIELDS => $json,
-                CURLOPT_HTTPHEADER => array(
-                    "Authorization: Basic QTJCUnhfU2hpcHBpbmc6dzRtVEhSWng2dVU5TVlEdkQ3MlU=",
-                    "cache-control: no-cache",
-                    "content-type: application/json",
-                ),
-            ));
-            curl_exec($curl);
-        }
-        return true;
-    }
 
 }

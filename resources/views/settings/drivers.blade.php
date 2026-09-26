@@ -63,7 +63,7 @@
                                                             <td><button class="btn btn-success">Active</button></td>
                                                         @endif
                                                         <td class="action">
-                                                        @if($user->id != 1)
+                                                        @if(Auth::user()->can('manage-account', [$user->id]))
                                                             <a href="users/edit/{{$user->id}}"><button class="btn btn-warning">Edit</button></a>
                                                             <a href="/drivers/{{ $user->id }}/payouts/"><button class="btn btn-success">Payouts</button></a>
                                                             @if($user->isblocked == 1)

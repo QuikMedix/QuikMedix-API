@@ -26,7 +26,7 @@ class RouteTemplatesController extends Controller
         if(Auth::user()->isblocked_or_isactive()) {
             return abort(403, self::$err_act_ban);
         }
-        if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist' || Auth::user()->role == 'medic') {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             
             $templates = DB::table('route_templates')
                 ->select('route_templates.*', DB::raw('(select count(*) from route_template_items where route_template_items.route_template_id = route_templates.id) as items_count'))
@@ -85,7 +85,7 @@ class RouteTemplatesController extends Controller
             return abort(403, self::$err_act_ban);
         }
         // Similar permissions as routesDriver
-        if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) || (Auth::user()->role == 'logist') || (Auth::user()->role == 'medic')) {
+        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             
             $template = DB::table('route_templates')->where('id', $id)->first();
             if(!$template) {
@@ -152,7 +152,7 @@ class RouteTemplatesController extends Controller
                 'br2' => 'Template Edit'
             ]);
 
-            if(isset($_GET['ajax'])) {
+            if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
                 return $res_view;

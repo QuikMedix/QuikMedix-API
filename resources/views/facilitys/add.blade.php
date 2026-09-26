@@ -164,7 +164,7 @@
                                 <div class="card-body">
 									<div class="row">
                                         <div class="col-12">
-                                            <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">New Order</h5>
+                                            <h5 class="qm-section-title">New Order</h5>
                                         </div>
                                     </div>									
                                     <form method="post" enctype="multipart/form-data" id="form">
@@ -175,14 +175,14 @@
                                         @endif
                                         <div class="row">
                                             <div class="col-5">
-                                                    <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
+                                                    <h5 class="qm-section-title" style="margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
                                                     <div class="row">
                                                         <div class="col-12">
                                                             <div id="facilitys-b">
                                                                 <select id="facilitys" placeholder="Facility..." name="facility" required>
                                                                     <option value="">Facility...</option>
                                                                     @foreach($facilitys as $user)
-                                                                        @if(isset($_GET["facility"]) && $_GET["facility"]==$user->id)
+                                                                        @if(request()->has('facility') && request()->query('facility')==$user->id)
                                                                         <option value="{{ $user->id }}" selected>{{ $user->name }} {{ $user->last_name }} - {{ $user->phone }}</option>
                                                                         @else
                                                                         <option value="{{ $user->id }}">{{ $user->name }} {{ $user->last_name }} - {{ $user->phone }}</option>
@@ -248,13 +248,13 @@
                                                         </div>  
                                                         
                                                         <div class="col-sm-12 mt-5" >
-                                                            <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
+                                                            <h5 class="qm-section-title" style="margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
                                                             <textarea class="form-control" name="special_instructions" rows="3"></textarea>
                                                         </div>                                        
                                                 </div>
                                             </div>
                                             <div class="col-7">
-                                                <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Recipients</h5>
+                                                <h5 class="qm-section-title" style="margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Recipients</h5>
                                                 <div class="row">  
                                                     <div class="col-12">
                                                         <select name="rx_recipients[]" class="form-control rx_recipient float-left" style="width:290px;">

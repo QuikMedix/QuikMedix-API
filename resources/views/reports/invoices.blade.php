@@ -68,7 +68,7 @@
 <script src="{{ URL::asset('/libs/morris.js/morris.js.min.js')}}"></script>
 <script src="{{ URL::asset('/libs/raphael/raphael.min.js')}}"></script>
 <script>
-    var chartData = JSON.parse('{!!json_encode($chartData)!!}');
+    var chartData = JSON.parse('@json($chartData)');
     !function(e) {
     "use strict";
     function a() {}

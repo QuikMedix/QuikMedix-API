@@ -199,7 +199,7 @@
                                                 <input class="form-control" required type="text" name="zip" value="{{ $user->zip }}">
                                             </div>
                                         </div>
-                                        @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin'))
+                                        @if((Auth::user()->hasAnyRole('superadmin', 'admin')))
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Role</label>
                                             <div class="col-sm-10">
@@ -210,6 +210,7 @@
                                                     <option value="logist" @if($user->role=='logist') selected @endif>Dispatcher</option>
                                                     <option value="sale" @if($user->role=='sale') selected @endif>Sale Manager</option>
                                                     @if(Auth::user()->role == 'superadmin')
+                                                    <option value="superadmin" @if($user->role=='superadmin') selected @endif>Super Admin</option>
                                                     <option value="dispadmin" @if($user->role=='dispadmin') selected @endif>Dispatcher Admin</option>
                                                     <option value="admin" @if($user->role=='admin') selected @endif>Admin</option>
                                                     @endif

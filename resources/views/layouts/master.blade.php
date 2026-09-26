@@ -140,7 +140,7 @@
         @include('layouts/partials/footer')
 
     </div>
-    @if(Auth::user()->role=='superadmin' || Auth::user()->role=='admin' || Auth::user()->role=='medic')
+    @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'medic'))
     <div class="scan-qr">
         <img src="{{ URL::asset('/images/qr_new.svg') }}" alt="qr scan">
     </div>    
@@ -182,7 +182,7 @@
 
 
 
-    @if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist') && Auth::user()->call_ready=='1')
+    @if(((Auth::user()->can('admin')) || Auth::user()->role == 'logist') && Auth::user()->call_ready=='1')
     <script src="https://my.zadarma.com/webphoneWebRTCWidget/v8/js/loader-phone-lib.js?sub_v=61"></script>
     <script src="https://my.zadarma.com/webphoneWebRTCWidget/v8/js/loader-phone-fn.js?sub_v=61"></script>
     <script>
@@ -532,7 +532,7 @@
         });
     </script>
     @endif
-    @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist')
+    @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist'))
     <script>
     $(".call_patient").on("click",function(){
         var phone = $(this).data("phone").replace("(","").replace(")","").replace(" ","").replace("-","");

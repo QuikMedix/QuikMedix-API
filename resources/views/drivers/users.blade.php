@@ -47,17 +47,18 @@
                             <div class="card" style="height: 100%;">
                                 <div style="margin-top: 1.25rem;position: absolute;text-align: center;width: 100%;">Pages: 
                                     @foreach ($pages as $page)
+                                        <x-flash-messages />
                                         <form class="filter-form" style="display: inline-block;">
                                             <input type="hidden" name="page" value="{{ $page['id'] }}">
                                             <input type="hidden" name="search" value="{{ $search }}">
-                                            @if(!empty($_GET['type']))
-                                                @if($_GET['type']==[1,2])
+                                            @if(!empty(request()->query('type')))
+                                                @if(request()->query('type')==[1,2])
                                                 <input type="hidden" name="type[]" value="1" checked>
                                                 <input type="hidden" name="type[]" value="2" checked>
-                                                @elseif($_GET['type']==[1])
+                                                @elseif(request()->query('type')==[1])
                                                 <input type="hidden" name="type[]" value="1" checked>
                                                 <input type="hidden" name="type[]" value="2">
-                                                @elseif($_GET['type']==[2])
+                                                @elseif(request()->query('type')==[2])
                                                 <input type="hidden" name="type[]" value="1">
                                                 <input type="hidden" name="type[]" value="2" checked>
                                                 @endif
@@ -79,14 +80,14 @@
                                                         <th data-priority="1" class="types_filter">Type <i class="fa fa-filter" aria-hidden="true"></i>
                                                             <div class="types" style="display:none;">
                                                                 <form>
-                                                                @if(!empty($_GET['page']))
+                                                                @if(!empty(request()->query('page')))
                                                                     <input type="hidden" name="page" value="{{ $page0 }}">
                                                                 @endif
-                                                                @if(!empty($_GET['search']))
+                                                                @if(!empty(request()->query('search')))
                                                                     <input type="hidden" name="search" value="{{ $search }}">
                                                                 @endif                                                   
-                                                                @if(!empty($_GET['type']))
-                                                                    @if($_GET['type']==[1,2])
+                                                                @if(!empty(request()->query('type')))
+                                                                    @if(request()->query('type')==[1,2])
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" name="type[]" value="1" checked class="col-form-label status" id="exampleinput1">
                                                                         <label for="exampleinput1" class="col-form-label">Pharmacy drivers</label>
@@ -95,7 +96,7 @@
                                                                         <input type="checkbox" name="type[]" value="2" checked class="col-form-label status" id="exampleinput2">
                                                                         <label for="exampleinput2" class="col-form-label">QuikMedix drivers</label>
                                                                     </div>
-                                                                    @elseif($_GET['type']==[1])
+                                                                    @elseif(request()->query('type')==[1])
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" name="type[]" value="1" checked class="col-form-label status" id="exampleinput1">
                                                                         <label for="exampleinput1" class="col-form-label">Pharmacy drivers</label>
@@ -104,7 +105,7 @@
                                                                         <input type="checkbox" name="type[]" value="2" class="col-form-label status" id="exampleinput2">
                                                                         <label for="exampleinput2" class="col-form-label">QuikMedix drivers</label>
                                                                     </div>
-                                                                    @elseif($_GET['type']==[2])
+                                                                    @elseif(request()->query('type')==[2])
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" name="type[]" value="1" class="col-form-label status" id="exampleinput1">
                                                                         <label for="exampleinput1" class="col-form-label">Pharmacy drivers</label>
@@ -128,6 +129,7 @@
                                                                 </form>
                                                             </div>
                                                         </th>
+                                                        <th data-priority="1">Status</th>
                                                         <th data-priority="3">Action</th>
                                                     </tr>
                                                 </thead>
@@ -142,8 +144,25 @@
                                                         @else 
                                                         <td class="name-column">Pharmacy driver</td>
                                                         @endif
+                                                        <td>
+                                                            @if($user->isblocked == 1)
+                                                                <span class="badge badge-danger">Blocked</span>
+                                                            @elseif($user->isactive == 0)
+                                                                <span class="badge badge-warning">Pending approval</span>
+                                                            @else
+                                                                <span class="badge badge-success">Active</span>
+                                                            @endif
+                                                        </td>
                                                         <td class="action">
                                                         @if($user->id != 1 && ($user->pharmacy_id != NULL || $user->pharmacy_id != ''))
+                                                            @if($user->isactive == 0 && $user->isblocked != 1)
+                                                            <form method="post" style="display: inline-block;">
+                                                                @csrf
+                                                                <input type="hidden" name="user_id" value="{{$user->id}}">
+                                                                <input type="hidden" name="activate" value="1">
+                                                                <button class="btn btn-success">Approve</button>
+                                                            </form>
+                                                            @endif
                                                             <a href="/drivers/{{ $pharmacy_id }}/users/edit/{{$user->id}}"><button class="btn btn-warning">Edit</button></a>
                                                             <form method="post" style="display: inline-block;">
                                                                     @csrf
@@ -167,14 +186,14 @@
                                         <form class="filter-form" style="display: inline-block;">
                                             <input type="hidden" name="page" value="{{ $page['id'] }}">
                                             <input type="hidden" name="search" value="{{ $search }}">
-                                            @if(!empty($_GET['type']))
-                                                @if($_GET['type']==[1,2])
+                                            @if(!empty(request()->query('type')))
+                                                @if(request()->query('type')==[1,2])
                                                 <input type="hidden" name="type[]" value="1" checked>
                                                 <input type="hidden" name="type[]" value="2" checked>
-                                                @elseif($_GET['type']==[1])
+                                                @elseif(request()->query('type')==[1])
                                                 <input type="hidden" name="type[]" value="1" checked>
                                                 <input type="hidden" name="type[]" value="2">
-                                                @elseif($_GET['type']==[2])
+                                                @elseif(request()->query('type')==[2])
                                                 <input type="hidden" name="type[]" value="1">
                                                 <input type="hidden" name="type[]" value="2" checked>
                                                 @endif

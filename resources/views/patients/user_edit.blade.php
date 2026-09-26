@@ -164,6 +164,8 @@
                                                 @if($alert!='') 
                                                     <div class="alert alert-danger" role="alert">{{ $alert }}</div>
                                                 @endif
+                                                <x-flash-messages />
+                                                <x-form-errors />
                                                 <div class="mb-2">
                                                     <label for="first-name-text">First Name</label>
                                                     <input class="form-control" required type="text" name="name" value="{{ $user->name }}">

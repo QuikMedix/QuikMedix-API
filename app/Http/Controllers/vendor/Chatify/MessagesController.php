@@ -312,15 +312,10 @@ class MessagesController extends Controller
     {
         User::where('id', Auth::user()->id)->update(['active_status' => DB::raw('now()')]);
         $favoritesList = null;
-        $favorites = Favorite::where('user_id', Auth::user()->id)->whereNotIn('favorite_id',[12322,1]);
-        $user=User::where('users.id', 12322)->leftJoin('pharmacys','pharmacys.id','=','users.pharmacy_id')->select('users.id','users.name','users.last_name','users.phone','users.image','users.role','pharmacys.name as pharmacy_name', 'users.pharmacy_id',DB::raw('case when active_status is null or active_status < now() - interval 10 minute then 0 else 1 end as active_status'))->first();
-        if(!empty($user)){
-            $favoritesList .= view('Chatify::layouts.favorite', [
-                'user' => $user,
-            ]);
-        }
-        $user=User::where('users.id', 1)->leftJoin('pharmacys','pharmacys.id','=','users.pharmacy_id')->select('users.id','users.name','users.last_name','users.phone','users.image','users.role','pharmacys.name as pharmacy_name', 'users.pharmacy_id',DB::raw('case when active_status is null or active_status < now() - interval 10 minute then 0 else 1 end as active_status'))->first();
-        if(!empty($user)){
+        $supportIds = User::supportContactIds();
+        $favorites = Favorite::where('user_id', Auth::user()->id)->whereNotIn('favorite_id', $supportIds);
+        foreach ($supportIds as $supportId) {
+            $user=User::where('users.id', $supportId)->leftJoin('pharmacys','pharmacys.id','=','users.pharmacy_id')->select('users.id','users.name','users.last_name','users.phone','users.image','users.role','pharmacys.name as pharmacy_name', 'users.pharmacy_id',DB::raw('case when active_status is null or active_status < now() - interval 10 minute then 0 else 1 end as active_status'))->first();
             $favoritesList .= view('Chatify::layouts.favorite', [
                 'user' => $user,
             ]);
@@ -334,8 +329,8 @@ class MessagesController extends Controller
         }
         // send the response
         return Response::json([
-            'count' => $favorites->count()+2,
-            'favorites' => $favorites->count()+2 > 0
+            'count' => $favorites->count()+count($supportIds),
+            'favorites' => $favorites->count()+count($supportIds) > 0
                 ? $favoritesList
                 : 0,
         ], 200);
@@ -362,12 +357,10 @@ class MessagesController extends Controller
         if(Auth::user()->role=='medic') {
             $records=$records->where('pharmacy_id',Auth::user()->pharmacy_id);
         } else {
-            if(!empty(Auth::user()->pharmacy_id)){
-                $records=$records->whereIn('users.id',[Auth::user()->pharmacy_id,1,12322]);
-            } else {
-                $records=$records->whereIn('users.id',[1,12322]);
-            }
-        } 
+            // Support staff, plus the staff of the user's own pharmacy.
+            $records=$records->where(fn ($query) => $query->whereIn('users.id', User::supportContactIds())
+                ->when(Auth::user()->pharmacy_id, fn ($query, $pharmacyId) => $query->orWhere(fn ($staff) => $staff->where('users.role', 'medic')->where('users.pharmacy_id', $pharmacyId))));
+        }
         $records=$records->paginate($request->per_page ?? $this->perPage);
         foreach ($records->items() as $record) {
             $getRecords .= view('Chatify::layouts.listItem', [
@@ -472,7 +465,7 @@ class MessagesController extends Controller
             if ($file->getSize() < Chatify::getMaxUploadSize()) {
                 if (in_array(strtolower($file->extension()), $allowed_images)) {
                     $file = $request->file('avatar');
-                    $name = date('mdHis').$request->file('avatar')->getClientOriginalName();
+                    $name = \App\Support\PublicUpload::name($request->file('avatar'));
                     $file->move(public_path() . '/images/users/',$name);
                     $src = '/images/users/'.$name;
                     $update = User::where('id', Auth::user()->id)->update(['image' => $src]);

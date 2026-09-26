@@ -399,7 +399,7 @@ label {
                                             </div>
                                             <div class="right mt-2">
                                                 <a href="/orders/{{ $order->pharmacy_id }}/show/{{ $order->id }}"><button class="btn btn-success">View order</button></a>
-                                                @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')))
+                                                @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->hasAnyRole('superadmin', 'admin'))))
                                                     <a href="/orders/{{ $order->pharmacy_id }}/edit/{{ $order->id }}"><button class="btn btn-warning">Edit</button></a>
                                                 @endif
                                             </div>

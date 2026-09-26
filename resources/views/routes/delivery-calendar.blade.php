@@ -33,7 +33,7 @@
                         <select class="form-control select2" name="state">
                             <option value="">All states</option>
                             @foreach($states as $state)
-                            <option value="{{$state->name}}" @if(isset($_GET['state']) && $_GET['state']==$state->name){{'selected'}}@endif>{{$state->name}}</option>
+                            <option value="{{$state->name}}" @if(request()->has('state') && request()->query('state')==$state->name){{'selected'}}@endif>{{$state->name}}</option>
                             @endforeach
                         </select>
                     </div>
@@ -41,10 +41,10 @@
                         <label class="control-label">Zone</label>
                         <select class="form-control select2" name="zone">
                             <option value="">All zones</option>
-                            @if(isset($_GET['state']) && !empty($_GET['state']))
+                            @if(request()->has('state') && !empty(request()->query('state')))
                             @foreach($zones as $zone)
-                            @if($zone->state==$_GET['state'])
-                            <option value="{{$zone->id}}" @if(isset($_GET['zone']) && $_GET['zone']==$zone->id){{'selected'}}@endif>{{$zone->name}}</option>
+                            @if($zone->state==request()->query('state'))
+                            <option value="{{$zone->id}}" @if(request()->has('zone') && request()->query('zone')==$zone->id){{'selected'}}@endif>{{$zone->name}}</option>
                             @endif
                             @endforeach
                             @endif
