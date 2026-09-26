@@ -63,7 +63,7 @@
                                                             <td><button class="btn btn-success">Active</button></td>
                                                         @endif
                                                         <td class="action">
-                                                        @if($user->id != 1)
+                                                        @if($user->id != Auth::user()->id)
                                                             <form method="post" style="display: inline-block;">
                                                                 @csrf
                                                                 <input type="hidden" name="user_id" value="{{$user->id}}">

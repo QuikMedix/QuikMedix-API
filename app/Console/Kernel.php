@@ -223,14 +223,12 @@ class Kernel extends ConsoleKernel
                     }
                     $balance = floatval($pharmacy->balance)-$amount2;
                     $invoice_id = DB::table('invoices')->insertGetId(['pharmacy_id'=>$pharmacy_id,'date_from' => $date_from,'date_to' => $date_to, 'count'=>$count_orders, 'amount'=>$sum_amount, 'copay'=>$sum_copay]);
-                    if(in_array($pharmacy_id,[123])===false) {
-                        DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                        if(floatval($pharmacy->balance)>=$amount2) {
-                            DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice_id,'amount'=>$amount2,'transaction_id'=>'balance','type'=>'pay']);
-                            DB::table('invoices')->where('id',$invoice_id)->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
-                            $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice_id)->pluck('order_id')->toArray();
-                            DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $date_from)->whereDate('finish', '<=', $date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
-                        }
+                    DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                    if(floatval($pharmacy->balance)>=$amount2) {
+                        DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice_id,'amount'=>$amount2,'transaction_id'=>'balance','type'=>'pay']);
+                        DB::table('invoices')->where('id',$invoice_id)->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
+                        $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice_id)->pluck('order_id')->toArray();
+                        DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $date_from)->whereDate('finish', '<=', $date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                     }
                 } catch (\Throwable) {
                     //throw $th;
@@ -294,7 +292,7 @@ class Kernel extends ConsoleKernel
             Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
             return $response->access_token;
         } else {
-            dd('Error when update access token HERE!');
+            throw new \RuntimeException('Could not refresh the HERE Maps access token.');
         }
     }
 

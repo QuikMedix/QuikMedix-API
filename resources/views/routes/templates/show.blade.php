@@ -103,18 +103,7 @@
 @section('content')
 <div class="row">
     <div class="col-12">
-        @if(\Session::has('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {!! \Session::get('success') !!}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        @if(\Session::has('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {!! \Session::get('error') !!}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        <x-flash-messages dismissible />
         
         <div class="page-title-box d-flex align-items-center justify-content-between">
             <h4 class="mb-0">{{ $title }}</h4>

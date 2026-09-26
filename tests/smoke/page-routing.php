@@ -163,9 +163,10 @@ foreach (['/pharmacys/add', '/offices/add', '/settings/users/add', '/drivers/1/u
     [$controller, $action] = explode('@', $route->getActionName());
     check(method_exists($controller, $action), "$path must resolve to a callable action.");
 }
-foreach (['/orders/1/add', '/orders/1/facilitys_add'] as $path) {
+foreach (['/orders/1/add' => 'App\\Http\\Controllers\\OrderController@store', '/orders/1/facilitys_add' => 'App\\Http\\Controllers\\FacilityOrderController@store'] as $path => $expectedAction) {
     $route = $app['router']->getRoutes()->match(Request::create($path, 'POST'));
-    check(str_ends_with($route->getActionName(), 'Handler'), 'Existing scoped POST handler must remain registered.');
+    [$controller, $action] = explode('@', $route->getActionName());
+    check($route->getActionName() === $expectedAction && method_exists($controller, $action), "Scoped POST $path must stay registered to its save action.");
 }
 
 DB::table('pharmacys')->delete();

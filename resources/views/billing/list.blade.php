@@ -43,7 +43,7 @@
                                         <h5 class="mt-2"><i class="mdi mdi-medical-bag"></i> {{$pharmacy->name}} - <i class="mdi mdi-google-maps"></i> {{$pharmacy->address}}</h5> 
                                     </div> 
                                     <div class="col-4 text-right">
-                                    @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))
+                                    @if((Auth::user()->can('admin')))
                                         @if($pharmacy->balance_ban>0)
                                         <form method="post" style="display: inline-block;">
                                             @csrf

@@ -84,6 +84,50 @@ class User extends Authenticatable implements OAuthenticatable
         }
     }
 
+    /**
+     * Whether the user has one of the given roles.
+     */
+    public function hasAnyRole(string ...$roles): bool
+    {
+        return in_array($this->role, $roles, true);
+    }
+
+    /**
+     * Every role an account can have.
+     */
+    public const ROLES = ['superadmin', 'admin', 'dispadmin', 'logist', 'sale', 'medic', 'driver', 'user', 'facility'];
+
+    /**
+     * QuikMedix administration staff.
+     */
+    public const ADMIN_ROLES = ['superadmin', 'admin', 'dispadmin'];
+
+    /**
+     * QuikMedix administration staff: superadmin, admin and dispatch admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasAnyRole(...self::ADMIN_ROLES);
+    }
+
+    /**
+     * Accounts every chat user sees as "support": the QuikMedix superadmins.
+     *
+     * @return list<int>
+     */
+    public static function supportContactIds(): array
+    {
+        return static::where('role', 'superadmin')->orderBy('id')->pluck('id')->map(fn ($id): int => (int) $id)->all();
+    }
+
+    /**
+     * Administration staff, or a pharmacy user (medic) working for this pharmacy.
+     */
+    public function canManagePharmacy(int|string|null $pharmacyId): bool
+    {
+        return $this->isAdmin() || ($this->role == 'medic' && $this->pharmacy_id == $pharmacyId);
+    }
+
     public function get_unread_mess() {
         $count_noread=ChMessage::where('to_id',$this->id)->where('seen',0)->count();
         return $count_noread;
@@ -274,13 +318,12 @@ class User extends Authenticatable implements OAuthenticatable
     }
 
     public function zadarma_key() {
-        if($this->role == 'superadmin' || $this->role == 'admin' || $this->role == 'logist') {
-            $api = new Zadarma_API("35add9dd339d64c38f55", "a444d1a5d8ea9ca6eb43");
-            $zadarma_sip = "329486-100";
+        $zadarma_key = '';
+        $zadarma_sip = '';
+        if(($this->role == 'superadmin' || $this->role == 'admin' || $this->role == 'logist') && config('services.zadarma.key')) {
+            $api = new Zadarma_API(config('services.zadarma.key'), config('services.zadarma.secret'));
+            $zadarma_sip = config('services.zadarma.sip');
             $zadarma_key = $api->getWebrtcKey($zadarma_sip);
-        } else {
-            $zadarma_key = '';
-            $zadarma_sip = '';
         }
         return json_encode(["zadarma_sip"=>$zadarma_sip,"zadarma_key"=>$zadarma_key]);
     }

@@ -69,8 +69,8 @@
                                                         <th data-priority="1" class="statuse_filter">Status <i class="fa fa-filter" aria-hidden="true"></i>
                                                             <div class="statuses" style="display:none;">
                                                             @foreach($statuses as $n=>$statuse)
-                                                                @if(!empty($_GET['statuse']))
-                                                                    @if(in_array($statuse->id,$_GET['statuse']))
+                                                                @if(!empty(request()->query('statuse')))
+                                                                    @if(in_array($statuse->id,request()->query('statuse')))
                                                                         <div style="margin-bottom:5px;">
                                                                             <input type="checkbox" checked class="col-form-label status" id="exampleinput{{$n}}">
                                                                             <label for="exampleinput{{$n}}" class="col-form-label">{{ $statuse->name }}</label>
@@ -96,8 +96,8 @@
                                                                 <select id="select-state" placeholder="Select Pharmacy..." name="user" required>
                                                                     <option value="">Select Pharmacy...</option>
                                                                     @foreach($pharmacys as $pharmacy)
-                                                                        @if(!empty($_GET['pharmacy']))
-                                                                            @if($_GET['pharmacy']==$pharmacy->id)
+                                                                        @if(!empty(request()->query('pharmacy')))
+                                                                            @if(request()->query('pharmacy')==$pharmacy->id)
                                                                                 <option value="{{ $pharmacy->id }}" selected>{{ $pharmacy->name }}, {{ $pharmacy->phone }}, {{ $pharmacy->address }}</option>
                                                                             @else
                                                                                 <option value="{{ $pharmacy->id }}">{{ $pharmacy->name }}, {{ $pharmacy->phone }}, {{ $pharmacy->address }}</option>
@@ -127,7 +127,7 @@
                                                             <td style="color:red;">No</td>
                                                         @endif
                                                         <td class="action">
-                                                        @if((Auth::user()->role == 'logist' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin')) && ($order->statuse_id!=4 && $order->statuse_id!=5))
+                                                        @if((Auth::user()->role == 'logist' || (Auth::user()->can('admin'))) && ($order->statuse_id!=4 && $order->statuse_id!=5))
                                                             <a href="/routes-list/show/{{ $order->id }}"><button class="btn btn-warning">Open</button></a>
                                                         @endif
                                                         </td>
@@ -141,8 +141,8 @@
                                                 <input type="checkbox" name="tariff" id="tariff">
                                                 <input type="checkbox" name="pharmacy" id="pharmacy">
                                                 @foreach($statuses as $n=>$statuse)
-                                                    @if(!empty($_GET['statuse']))
-                                                        @if(in_array($statuse->id,$_GET['statuse']))
+                                                    @if(!empty(request()->query('statuse')))
+                                                        @if(in_array($statuse->id,request()->query('statuse')))
                                                             <input type="checkbox" name="statuse[]" checked value="{{ $statuse->id }}" class="col-form-label exampleinput{{$n}}">
                                                         @else
                                                             <input type="checkbox" name="statuse[]" value="{{ $statuse->id }}" class="col-form-label exampleinput{{$n}}">
@@ -184,34 +184,34 @@
             <script>
                 var role = "{{ Auth::user()->role }}";
                 $(document).ready(function(){
-                    @if(empty($_GET['tariff']))
+                    @if(empty(request()->query('tariff')))
                         $('.focus-btn-group').append('<button class="btn btn-primary tariff" data-value="all">All</button>');
                         $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="0.50">0.50$</button>');
                         $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="1.00">1.00$</button>');
                         $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="5.00-7.00">5.00-7.00$</button>');
                         $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="10.00-12.00">10.00-12.00$</button>');
                     @else
-                        @if($_GET['tariff']=='all')
+                        @if(request()->query('tariff')=='all')
                             $('.focus-btn-group').append('<button class="btn btn-primary tariff" data-value="all">All</button>');
                         @else
                             $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="all">All</button>');
                         @endif
-                        @if($_GET['tariff']=='0.50')
+                        @if(request()->query('tariff')=='0.50')
                             $('.focus-btn-group').append('<button class="btn btn-primary tariff" data-value="0.50">0.50$</button>');
                         @else
                             $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="0.50">0.50$</button>');
                         @endif
-                        @if($_GET['tariff']=='1.00')
+                        @if(request()->query('tariff')=='1.00')
                             $('.focus-btn-group').append('<button class="btn btn-primary tariff" data-value="1.00">1.00$</button>');
                         @else
                             $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="1.00">1.00$</button>');
                         @endif
-                        @if($_GET['tariff']=='5.00-7.00')
+                        @if(request()->query('tariff')=='5.00-7.00')
                             $('.focus-btn-group').append('<button class="btn btn-primary tariff" data-value="5.00-7.00">5.00-7.00$</button>');
                         @else
                             $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="5.00-7.00">5.00-7.00$</button>');
                         @endif
-                        @if($_GET['tariff']=='10.00-12.00')
+                        @if(request()->query('tariff')=='10.00-12.00')
                             $('.focus-btn-group').append('<button class="btn btn-primary tariff" data-value="10.00-12.00">10.00-12.00$</button>');
                         @else
                             $('.focus-btn-group').append('<button class="btn btn-secondary tariff" data-value="10.00-12.00">10.00-12.00$</button>');

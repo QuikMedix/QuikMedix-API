@@ -110,7 +110,7 @@ class RegisterController extends Controller
         $request = request();
         if($request->hasFile('pharmacyLogo')) {
             $file = $request->file('pharmacyLogo');
-            $name_f = date('mdHis').$request->file('pharmacyLogo')->getClientOriginalName();
+            $name_f = \App\Support\PublicUpload::name($request->file('pharmacyLogo'));
             $file->move(public_path() . '/images/pharmacys/',$name_f);
             $src = '/images/pharmacys/'.$name_f;
         } else {

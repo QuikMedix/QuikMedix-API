@@ -168,7 +168,7 @@
                                 <div class="card-body">
 									<div class="row">
                                         <div class="col-12">
-                                            <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">New Order</h5>
+                                            <h5 class="qm-section-title">New Order</h5>
                                         </div>
                                     </div>									
                                     <form method="post" enctype="multipart/form-data" id="form">
@@ -185,14 +185,14 @@
                                         @endif
 							<div class="row">
                                 <div class="col-5">
-										<h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
+										<h5 class="qm-section-title" style="margin-bottom: 24px;"><i class="mdi mdi-information-outline"></i> Details</h5>
                                            <div class="row">
                                              <div class="col-8">
                                                 <div id="users-b">
                                                     <select id="select-state" placeholder="Customer..." name="user">
                                                         <option value="">Customer...</option>
                                                         @foreach($users as $user)
-                                                            @if((isset($_GET["patient"]) && $_GET["patient"]==$user->id) || old('user')==$user->id)
+                                                            @if((request()->has('patient') && request()->query('patient')==$user->id) || old('user')==$user->id)
                                                             <option value="{{ $user->id }}" selected>{{ $user->name }} {{ $user->last_name }} - {{ $user->phone }}</option>
                                                             @else
                                                             <option value="{{ $user->id }}">{{ $user->name }} {{ $user->last_name }} - {{ $user->phone }}</option>
@@ -281,7 +281,7 @@
 									</div>
 							    </div>
 								<div class="col-7">
-                                    <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Order Items</h5>
+                                    <h5 class="qm-section-title" style="margin-bottom: 24px;"><i class="mdi mdi-package-variant-closed"></i> Order Items</h5>
                                     <div class="row">                                            
                                         <div class="col-sm-12 rx-list">
                                             @foreach(old('rx_id', ['']) as $i => $rx_value)
@@ -312,7 +312,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <h5 style="background: #242424;color: #ffffff;padding: 5px;text-align: center;margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
+                                    <h5 class="qm-section-title" style="margin-bottom: 24px;"><i class="mdi mdi-alert-outline"></i> Special instructions</h5>
                                     <div class="col-sm-12" >
                                         <textarea class="form-control" name="special_instructions" rows="3" maxlength="1000">{{ old('special_instructions') }}</textarea>
                                     </div>
@@ -397,7 +397,6 @@
 <script src="{{ URL::asset('/js/select2.min.js')}}"></script>
 <script src="{{ URL::asset('/libs/rwd-table/rwd-table.min.js')}}"></script>
 <script src="{{ URL::asset('/js/ion.rangeSlider.min.js')}}"></script>
-<script src="{{ URL::asset('/js/form-advanced.init.js')}}"></script>
 
 <script type='text/javascript'>
     $("#range_10").ionRangeSlider({
