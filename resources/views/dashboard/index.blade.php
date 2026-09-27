@@ -354,7 +354,7 @@
                             </div>
                         </div>
                         <!-- end row -->
-                    @elseif((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))
+                    @elseif((Auth::user()->can('admin')))
                             <div class="row"> 
                                         <div class="col-xl-6 col-sm-6">
                                             <div class="card">

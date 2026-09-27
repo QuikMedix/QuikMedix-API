@@ -60,7 +60,7 @@
                                                             <td><button class="btn btn-success">Active</button></td>
                                                         @endif
                                                         <td class="action">
-                                                        @if($user->id != 1)
+                                                        @if(Auth::user()->can('manage-account', [$user->id, $pharmacy_id]))
                                                             <a href="/pharmacy/{{ $pharmacy_id }}/users/edit/{{$user->id}}"><button class="btn btn-warning">Edit</button></a>
                                                             <form method="post" style="display: inline-block;">
                                                                     @csrf

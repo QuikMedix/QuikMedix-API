@@ -29,7 +29,7 @@
                                 @endif
                                 <div class="row">
                                 <div class="col-md-6">
-                                <h5 style="background: var(--qm-charcoal);color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">Pharmacy information</h5>
+                                <h5 class="qm-section-title" style="margin: 20px 0;">Pharmacy information</h5>
                                     <div class="form-group">
                                         <label for="pharmacyName">Pharmacy Name *</label>
                                         <input type="text" class="form-control @error('pharmacyName') is-invalid @enderror" name="pharmacyName" value="{{ old('pharmacyName') }}" required maxlength="255" id="pharmacyName" data-label="Pharmacy name" autocomplete="organization">
@@ -67,7 +67,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <h5 style="background: var(--qm-charcoal);color: #ffffff; padding: 5px;text-align: center;margin: 20px 0;">User Information</h5>
+                                    <h5 class="qm-section-title" style="margin: 20px 0;">User Information</h5>
                                     <div class="form-group">
                                         <label for="name">First Name *</label>
                                         <input type="text" name="name" value="{{ old('name') }}" required maxlength="255" autocomplete="given-name" class="form-control @error('name') is-invalid @enderror" autofocus id="name" data-label="First name">

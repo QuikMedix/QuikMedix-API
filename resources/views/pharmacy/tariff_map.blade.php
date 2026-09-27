@@ -26,7 +26,7 @@
                                         <h4 class="mt-2"><i class="mdi mdi-medical-bag"></i> {{$pharmacy->name}} - <i class="mdi mdi-google-maps"></i> {{$pharmacy->address}}</h4> 
                                     </div> 
                                     <div class="col-4 text-right">
-                                    @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))
+                                    @if((Auth::user()->can('admin')))
                                         <a href="/billing/{{ $pharmacy->id }}"><button type="button" class="btn btn-outline-dark waves-effect waves-light">Billing</button></a>
                                         <a href="/pharmacys/edit/{{ $pharmacy->id }}"><button type="button" class="btn btn-outline-dark waves-effect waves-light">Edit</button></a>                    
                                     @endif   
@@ -46,10 +46,10 @@
                                     <form method="GET" class="mb-2">
                                         <label for="time_delivery">Time Delivery</label>
                                         <select name="time_delivery" id="time_delivery" class="form-control">
-                                            <option value="1" @if(isset($_GET["time_delivery"]) && $_GET["time_delivery"]=='1'){{"selected"}}@endif>Next day delivery</option>
-                                            <option value="2" @if(isset($_GET["time_delivery"]) && $_GET["time_delivery"]=='2'){{"selected"}}@endif>Same day delivery</option>
-                                            <option value="3" @if(isset($_GET["time_delivery"]) && $_GET["time_delivery"]=='3'){{"selected"}}@endif>ASAP Delivery</option>
-                                            <option value="4" @if(isset($_GET["time_delivery"]) && $_GET["time_delivery"]=='4'){{"selected"}}@endif>After Hours</option>
+                                            <option value="1" @if(request()->has('time_delivery') && request()->query('time_delivery')=='1'){{"selected"}}@endif>Next day delivery</option>
+                                            <option value="2" @if(request()->has('time_delivery') && request()->query('time_delivery')=='2'){{"selected"}}@endif>Same day delivery</option>
+                                            <option value="3" @if(request()->has('time_delivery') && request()->query('time_delivery')=='3'){{"selected"}}@endif>ASAP Delivery</option>
+                                            <option value="4" @if(request()->has('time_delivery') && request()->query('time_delivery')=='4'){{"selected"}}@endif>After Hours</option>
                                         </select>
                                     </form>
                                     <div id="map" style="height: 600px;width: 100%;"></div>
@@ -74,14 +74,15 @@
         "tariff_area3":@if(!empty($pharmacy->tariff_area3)){{number_format($pharmacy->tariff_area3 ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_area3 ?? 0,2)}}@endif,
         "tariff_area_more":@if(!empty($pharmacy->tariff_area_more)){{number_format($pharmacy->tariff_area_more ?? 0,2)}}@else{{number_format($pharmacy_plan->tariff_area_more ?? 0,2)}}@endif
     };
-    var time_delivery = @if(isset($_GET["time_delivery"])) '{{$_GET["time_delivery"]}}' @else '1' @endif;
+    var time_delivery = @if(request()->has('time_delivery')) '{{request()->query('time_delivery')}}' @else '1' @endif;
     var locationPharmasy = "{{ $pharmacy->location }}".split(',');
     var _myPolygon;
     var polygonsList=[];
     var labelsLoc=[];
     var kof = 0.05;
     @if(!empty($polygons))
-    var polygons=JSON.parse('[@foreach($polygons as $key=>$pol) {"name":"{{$pol->name}}","type":"{{$pol->type}}","coord":{!!$pol->polygon!!} }@if($key<count($polygons)-1){{","}}@endif @endforeach]');
+    {{-- Names go into marker HTML, so they stay HTML-escaped; areas without a polygon are skipped. --}}
+    var polygons = @json(collect($polygons)->filter(fn ($pol) => $pol->polygon !== '')->map(fn ($pol) => ['name' => e($pol->name), 'type' => e($pol->type), 'coord' => json_decode($pol->polygon)])->values());
     @endif
     const here = {
         apiKey:"{{config('app.hereApiKey')}}"

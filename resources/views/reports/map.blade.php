@@ -108,7 +108,8 @@
         map2 = L.map(document.getElementById("map")).setView([40.743798988555,-74.023925802166005], 10);
         L.tileLayer(hereTileUrl).addTo(map2);
         @if(!empty($polygons))
-        var polygons=JSON.parse('[@foreach($polygons as $key=>$pol) {"name":"{{$pol->count}}","coord":{!!$pol->polygon!!} }@if($key<count($polygons)-1){{","}}@endif @endforeach]');
+        {{-- Areas without a polygon are skipped. --}}
+        var polygons = @json(collect($polygons)->filter(fn ($pol) => $pol->polygon !== '')->map(fn ($pol) => ['name' => e($pol->count), 'coord' => json_decode($pol->polygon)])->values());
         for(let i = 0; i < polygons.length; i++) {
             drawPolygon2(polygons[i].coord,polygons[i].name);
         }

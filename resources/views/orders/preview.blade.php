@@ -2,7 +2,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-body">
-                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Details</h5>
+                <h5 class="qm-section-title">Order Details</h5>
                 <div class="row">							
                     <div class="col-6">							
                         <b>Order:</b> {{$order->id}} - <span style="font-size: 11px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span><br>
@@ -16,7 +16,7 @@
                                 <span style="font-size: 11px;" class="badge badge-pill badge-{{$order->statuse_copay_color}} mt-1">{{$order->statuse_copay_name}}</span>
                             @endif
                             
-                            @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist') && $order->copay>0 && !in_array($order->statuse_copay,[1,3,4,6]))
+                            @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'logist') && $order->copay>0 && !in_array($order->statuse_copay,[1,3,4,6]))
                             <a style="cursor:pointer;" onclick="var win=window.open('/pay/copay/{{$order->id}}','Pay order Co-Pay','width=800,height=700');var timer=setInterval(function(){if(win.closed){clearInterval(timer);document.location.reload();}},600);"><button class="btn btn-success btn-sm" type="button">Pay</button></a>
                             <form method="post" style="display: inline-block;">
                                 @csrf
@@ -38,7 +38,7 @@
                         <b>Options:</b> {{$order->delivery_method}}<br>
                         <b>Time:</b> {{$order->delivery_time}}<br>
                         <b>Fridge:</b> {{($order->fridge>0)?'yes':'no'}}<br>
-                        @if((Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')) && ($order->statuse_id==4))
+                        @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))
                         <b>Customer rating:</b> <div class="rating">
                         @if(empty($order->rating))
                         <i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i>
@@ -64,9 +64,6 @@
                             @if($order->statuse_id==4)                                         
                                 <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem2('#HIPAA')" style="margin-top: 8px;">HIPAA <i class="mdi mdi-printer-check"></i></button>
                                 <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem3('#AOB')" style="margin-top: 8px;">NYS FORM NF-AOB <i class="mdi mdi-printer-check"></i></button>
-                                @if($order->pharmacy_id==123) 
-                                <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem4('#PLA')" style="margin-top: 8px;">Provider’s Lien <i class="mdi mdi-printer-check"></i></button>                                        
-                                @endif
                                 
                                 <div class="row" style="margin: 10px 0;">
                                 <button id="show_live_tracker" type="button" class="btn btn-primary btn-lg waves-effect waves-light me-1 mt-2" data-bs-toggle="modal" data-bs-target=".bs-example-modal-lg">Live tracker at delivery time</i></button>
@@ -88,7 +85,7 @@
                         <i class="mdi mdi-medical-bag"></i> {{$order->pharmacyname}}<br>
                         @if(!empty($order->medic_id))<i class="mdi mdi-account-heart"></i> {{$order->medicname}} {{$order->mediclast_name}} (ID #{{$order->medic_id}})<br>@endif
                         <i class="mdi mdi-cellphone-android"></i> {{$order->pharmacyphone}}
-                        @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')                
+                        @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))                
                         <button class="btn btn-primary btn-sm waves-effect call_patient" data-phone="{{ $order->pharmacyphone }}">Call <i class="ti-headphone-alt" style="color:#fff;font-size: inherit;"></i></button>
                         @endif 
                         <br>
@@ -110,13 +107,13 @@
                         @endif
                         <br>
                         <i class="mdi mdi-cellphone-android"></i> {{$order->userphone}} 
-                        @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')
+                        @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))
                         <button class="btn btn-primary btn-sm waves-effect call_patient" data-phone="{{ $order->userphone }}">Call <i class="ti-headphone-alt" style="color:#fff;font-size: inherit;"></i></button>
                         @endif
                         @if(!empty($order->userhomephone))
                         <br>
                         <i class="mdi mdi-deskphone"></i> {{$order->userhomephone}} 
-                        @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')
+                        @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))
                         <button class="btn btn-primary btn-sm waves-effect call_patient" data-phone="{{ $order->userhomephone }}">Call <i class="ti-headphone-alt" style="color:#fff;font-size: inherit;"></i></button>
                         @endif
                         @endif 
@@ -131,7 +128,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-body">
-                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Items</h5>
+                <h5 class="qm-section-title">Order Items</h5>
                 <table class="table table-striped" style="table-layout: fixed;">
                     <thead>
                         <tr>
@@ -160,12 +157,12 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-body">
-                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Instructions</h5>
+                <h5 class="qm-section-title">Order Instructions</h5>
                 <div class="row">
                     <div class="col-4">
                         <div class="card">
                             <div class="card-body" style="min-height: 220px;">
-                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Special instructions</h5>
+                                <h5 class="qm-section-title">Special instructions</h5>
                                 <div style="margin: 10px">  {{$order->special_instructions}}</div>							
                             </div>
                         </div>
@@ -173,9 +170,9 @@
                     <div class="col-4">
                         <div class="card">
                             <div class="card-body" style="min-height: 220px;">
-                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Dispatcher Notes</h5>
+                                <h5 class="qm-section-title">Dispatcher Notes</h5>
                                 <div style="margin: 10px"> 
-                                    @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist'))
+                                    @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'logist'))
                                     <div style="min-height: 30px;"><a href="#" id="ajax-alert" class="btn btn-sm btn-primary float-right">Add Note</a></div>
                                     @endif
                                     <ol class="activity-feed mb-0">
@@ -195,7 +192,7 @@
                     <div class="col-4">
                         <div class="card">
                             <div class="card-body" style="min-height: 220px;">
-                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Customer Notes</h5>
+                                <h5 class="qm-section-title">Customer Notes</h5>
                                 <div style="margin: 10px">
                                     <ol class="activity-feed mb-0">
                                     @foreach($customer_notes as $customer_note)

@@ -34,6 +34,8 @@
                             @endif
                                 <div style="margin-top: 1.25rem;position: absolute;text-align: center;width: 100%;">Pages: 
                                     @foreach ($pages as $page)
+                                        <x-flash-messages />
+                                        <x-form-errors />
                                         <form class="filter-form" style="display: inline-block;">
                                             <input type="hidden" name="page" value="{{ $page['id'] }}">
                                             <input type="hidden" name="search" value="{{ $search }}">

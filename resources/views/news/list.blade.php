@@ -35,7 +35,7 @@
 							<div class="card-body">
                                 <div class="row">
 						                <div class="col-6">
-                                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Push Notification</h5>
+                                                <h5 class="qm-section-title">Push Notification</h5>
                                                 
                                                 
                                                 <form method="post" enctype="multipart/form-data">
@@ -165,7 +165,7 @@
                         <div class="col-12">
                             <div class="card">
 								<div class="card-body">
-                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Notice to pharmacies</h5>
+                                <h5 class="qm-section-title">Notice to pharmacies</h5>
                                     <div class="row">	                                                
                                         <div class="col-6">                                                             
                                             <div class="mb-3">
@@ -220,7 +220,7 @@
 								<div class="card-body">
                                 <div class="row">
 						                <div class="col-6">
-                                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">SMS Notification</h5>
+                                                <h5 class="qm-section-title">SMS Notification</h5>
                                                 
                                                 
                                                 <form method="post" enctype="multipart/form-data">
@@ -352,7 +352,7 @@
 								<div class="card-body">
                                 <div class="row">
 						                <div class="col-12">
-											<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;" class="mb-5">History</h5>
+											<h5 class="qm-section-title mb-5">History</h5>
 											
 											<div class="alert alert-success mt-2" role="alert">
                                              <i class="mdi mdi-cellphone-message"></i>   <strong>05.10.2020</strong> Push from pharmacy <strong>Sinai Rx Pharmacy Inc</strong> Status - Successful

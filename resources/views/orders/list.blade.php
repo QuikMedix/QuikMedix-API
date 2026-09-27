@@ -266,7 +266,7 @@
                                                         </td>
                                                         <td style="vertical-align: middle;text-align: center;">
                                                             <span style="font-size: 11px;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-{{$statuses[$order->statuse_id]->color}}">{{$statuses[$order->statuse_id]->name}}</span>
-                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')) && ($order->statuse_id==4))                                                            
+                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))                                                            
                                                             <div style="margin: 10px 0;font-size: 20px;line-height: 20px;color: #f5b225;"><span style="margin-top: 10px;font-size: 12px;color:#5b626b;">Customer rating</span><br>
                                                             @if(empty($order->rating))
                                                             <i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i>
@@ -311,7 +311,7 @@
                                                                 <a href="/orders/{{$order->pharmacy_id}}?search={{$patients[$order->user_id]->name}} {{$patients[$order->user_id]->last_name}}">
                                                                     <button type="button" class="btn btn-secondary btn-sm waves-effect">History <i class="mdi mdi-history"></i></button>
                                                                 </a>
-                                                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')
+                                                                @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))
                                                                 <button class="btn btn-primary btn-sm waves-effect call_patient" data-phone="{{$patients[$order->user_id]->phone}}">Call <i class="ti-headphone-alt"></i></button>
                                                                 @endif                                            
                                                             </div>
@@ -328,7 +328,7 @@
                                                             @if(isset($pharmacys[$order->pharmacy_id]))
                                                             <span style="max-width: 220px;width: auto;display: block;white-space: break-spaces;">{{$pharmacys[$order->pharmacy_id]->name}}</span>
                                                             <div class="button-items" style="margin-top: 10px;">
-                                                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')
+                                                                @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))
                                                                 <a href="/orders/{{$order->pharmacy_id}}">
                                                                     <button type="button" class="btn btn-secondary btn-sm waves-effect">History <i class="mdi mdi-history"></i></button>
                                                                 </a>
@@ -349,7 +349,7 @@
                                                             @endif
                                                             <br>
                                                             <span style="line-height: 22px;">{{$drivers[$order->driver_id]->name}} {{$drivers[$order->driver_id]->last_name}}<span> <br>
-                                                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')
+                                                            @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))
                                                             <a href="/routes-list/driver/{{$order->driver_id}}" target="_blank" style="border: solid 1px #000;color: black;padding: 1px 5px;font-size: 11px;">View route</a>
                                                             @endif
                                                             @else
@@ -375,14 +375,14 @@
                                                             </button>
                                                             <div class="dropdown-menu text-black">
                                                                 <a class="dropdown-item" href="/orders/{{ $order->pharmacy_id }}/show/{{ $order->id }}">View order</a>
-                                                                @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')) || (Auth::user()->role == 'logist'))
+                                                                @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->hasAnyRole('superadmin', 'admin'))) || (Auth::user()->role == 'logist'))
                                                                 @if($order->facility)
                                                                 <a href="/orders/{{ $order->pharmacy_id }}/facilitys_edit/{{ $order->id }}" class="dropdown-item">Edit</a>
                                                                 @else
                                                                 <a href="/orders/{{ $order->pharmacy_id }}/edit/{{ $order->id }}" class="dropdown-item">Edit</a>
                                                                 @endif
                                                                 @endif
-                                                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') && $order->statuse_id==5)
+                                                                @if((Auth::user()->hasAnyRole('superadmin', 'admin')) && $order->statuse_id==5)
                                                                 <div class="dropdown-divider"></div>
                                                                 <form method="post">
                                                                     @csrf
@@ -393,15 +393,15 @@
                                                                 @endif                                                              
                                                                 </div>
                                                             </div>
-                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')) && ($order->statuse_id==1 || $order->statuse_id==2))
+                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==1 || $order->statuse_id==2))
                                                             <a href="#" onclick="printTicket('{{$order->id}}')"><button class="btn btn-sm btn-secondary"><i class="ti-printer"></i></button></a>
                                                             @endif                                                             
 
                                                             <!-- <a href="/orders/{{ $order->pharmacy_id }}/show/{{ $order->id }}"><button class="btn btn-success">View order</button></a>
-                                                            @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')) || (Auth::user()->role == 'logist'))
+                                                            @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->hasAnyRole('superadmin', 'admin'))) || (Auth::user()->role == 'logist'))
                                                                 <a href="/orders/{{ $order->pharmacy_id }}/edit/{{ $order->id }}"><button class="btn btn-warning">Edit</button></a>
                                                             @endif
-                                                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') && $order->statuse_id==5)
+                                                            @if((Auth::user()->hasAnyRole('superadmin', 'admin')) && $order->statuse_id==5)
                                                                 <form method="post" style="display: inline-block;">
                                                                     @csrf
                                                                     <input type="hidden" name="order_id" value="{{$order->id}}">
@@ -409,7 +409,7 @@
                                                                     <button class="btn btn-danger" type="button" onclick="if(confirm('Are you sure?')){$(this).parent('form').submit();}">Remove</button>
                                                                 </form>
                                                             @endif
-                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')) && ($order->statuse_id==1 || $order->statuse_id==2))
+                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==1 || $order->statuse_id==2))
                                                             <a href="#" onclick="printTicket('{{$order->id}}')"><button class="btn btn-secondary"><i class="ti-printer"></i></button></a>
                                                             @endif -->
                                                         </td>
@@ -436,7 +436,7 @@
                         <!-- end col -->
                     </div>
                     <!-- end row -->
-                @if(((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'medic') && !empty($pharmacy_id))
+                @if(((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'medic') && !empty($pharmacy_id))
                 <div class="start-ph" id="sa-params" title="Start route automation" data-bs-original-title="Start route automation">              
                     <i class="ion ion-md-play mr-2" aria-hidden="true"></i>
                     @php
@@ -523,7 +523,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') && isset($filter['pharmacy']))
+                            @if((Auth::user()->can('admin')) && isset($filter['pharmacy']))
                             <div class="form-group mb-3" data-select2-id="78">
                                 <label class="form-label">Pharmacy</label>
                                 <select class="select2 form-control select2-multiple" name="pharmacy[]" multiple="" data-matcher="customMatcher" data-placeholder="Choose ...">
@@ -679,8 +679,8 @@
     var role = "{{ Auth::user()->role }}";
     var page = "{{ $page0 }}";
     $(document).ready(function(){
-        @if(!empty($_GET['added']))
-            printTicket('{{$_GET['added']}}');
+        @if(!empty(request()->query('added')))
+            printTicket('{{request()->query('added')}}');
         @endif
         if(role!='admin' && role!='medic') {
             $('.addorder').hide();

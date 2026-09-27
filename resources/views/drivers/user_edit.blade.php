@@ -79,10 +79,12 @@
                     @if($alert!='') 
                         <div class="alert alert-danger" role="alert">{{ $alert }}</div>
                     @endif
+                    <x-flash-messages />
+                    <x-form-errors />
 				    <div class="row">
                         <div class="col-3">
                             <div class="card">
-                                <div class="card-body" style="min-height: 200px;"><h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Photo </h5>
+                                <div class="card-body" style="min-height: 200px;"><h5 class="qm-section-title">Photo </h5>
                                     <div style="text-align: center;"  class="user-phnew">
                                         <img style="width: 60%;" class="user-phnew" id="user_img" src="{{ $user->image }}">
                                         <input type="file" class="filestyle form-control" data-input="false" data-buttonname="btn-secondary" name="image" onchange='encodeImageFileAsURL(this);' accept="image/x-png,image/jpeg,image/jpg">
@@ -106,7 +108,7 @@
 						<div class="col-6">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
+                                    <h5 class="qm-section-title">Profile</h5>
 
                                         <div class="form-group row">                                            
                                             <div class="col-sm-6">
@@ -186,7 +188,7 @@
                         </div>
                         <div class="col-3">
                             <div class="card">
-                                <div class="card-body" style="min-height: 200px;"><h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Additional info</h5>
+                                <div class="card-body" style="min-height: 200px;"><h5 class="qm-section-title">Additional info</h5>
                                         
                                 <div class="row user-phnew2">
                                         <div class="col-12">

@@ -66,13 +66,15 @@
                         <div class="col-6">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Profile</h5>
+                                    <h5 class="qm-section-title">Profile</h5>
                                     <form method="post" enctype="multipart/form-data">
                                         @csrf
                                         <input type="hidden" name="save" value="1">
                                         @if($alert!='') 
                                             <div class="alert alert-danger" role="alert">{{ $alert }}</div>
                                         @endif
+                                        <x-flash-messages />
+                                        <x-form-errors />
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Name</label>
                                             <div class="col-sm-10">
@@ -144,7 +146,7 @@
                         <div class="col-6">
                             <div class="card">
                                 <div class="card-body" style="min-height: 200px;">
-                                    <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Facility patients</h5>
+                                    <h5 class="qm-section-title">Facility patients</h5>
                                     <div style="padding: 10px;background: #efefef;border-radius: 5px;margin: 5px;">  
                                     <h5 class="my-3 text-black">Select from database</h5>
                                     <form method="post" enctype="multipart/form-data">
@@ -202,7 +204,7 @@
 @endsection
 @section('footerScript')
 <script src="{{ URL::asset('/js/select2.min.js')}}"></script>
-<script src="{{ URL::asset('/js/pages/form-advanced.init.js')}}"></script>
+<script>$('.select2').select2();</script>
 <script>
     $(document).ready(function() {
         $('body').on('click','.close',function() {

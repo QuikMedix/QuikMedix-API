@@ -17,7 +17,7 @@
                         <button type="button" class="btn btn-sm px-3 font-size-24 d-lg-none header-item waves-effect waves-light" data-toggle="collapse" data-target="#topnav-menu-content">
                             <i class="mdi mdi-menu"></i>
                         </button>
-                        @if(Auth::user()->role=='admin' || Auth::user()->role=='superadmin')
+                        @if(Auth::user()->hasAnyRole('admin', 'superadmin'))
                             <div class="total-inc d-inline-block" style="background: #d9ffe1;padding: 4px 8px 4px 8px;border-radius: 7px;">
                                 <a href="/reports/billing"><p style="font-size: 13px;color: black;margin-bottom: 0;"> <i class="mdi mdi-bank-transfer-in"></i> Income Today <span style="">${{Auth::user()->income_today()}}</span></p></a>
                             </div>  
@@ -92,7 +92,7 @@
                             </button>
                         </div>
                         
-                        @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist')
+                        @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist'))
                         <div class="dropdown d-none d-lg-inline-block">
                             <form action="/ready_call" method="POST">
                                 @csrf
@@ -281,7 +281,7 @@
                                         <i class="ti-dashboard"></i>Dashboard
                                     </a>
                                 </li>
-                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))
+                                @if((Auth::user()->can('admin')))
                                 <li class="nav-item">
                                     <a href="/orders" class="nav-link">
                                         <i class="ti-bag"></i>
@@ -309,7 +309,7 @@
                                     </li>
                                 @endif
 
-                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'sale')
+                                @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'sale'))
                                     <li class="nav-item dropdown">
                                         <a class="nav-link dropdown-toggle arrow-none" href="/pharmacys" id="topnav-email2" role="button" aria-haspopup="true" aria-expanded="false">
                                             <i class="ti-location-pin"></i>Pharmacies 
@@ -370,7 +370,7 @@
                                     </li>
                                 @endif
 
-                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role == 'logist' || Auth::user()->role == 'medic')
+                                @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'))
                                     <li class="nav-item dropdown">
                                         <a class="nav-link dropdown-toggle arrow-none" href="#" id="topnav-email" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                             @php
@@ -425,7 +425,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))
+                                @if((Auth::user()->can('admin')))
                                 <li class="nav-item @if(Request::is('reports/*')){{'active'}}@endif">
                                     <a href="/reports" class="nav-link @if(Request::is('reports/*')){{'active'}}@endif">
                                         <i class="ti-bar-chart"></i>
@@ -439,7 +439,7 @@
                                     </a>
                                 </li> 
                                 @endif
-                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))
+                                @if((Auth::user()->can('admin')))
                                 <li class="nav-item @if(Request::is('reports/*')){{'active'}}@endif">
                                     <a href="/payroll" class="nav-link">
                                         <i class="ti-wallet"></i>
@@ -469,7 +469,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin'))
+                                @if((Auth::user()->can('admin')))
                                 <li class="nav-item dropdown">
                                         <a class="nav-link dropdown-toggle arrow-none" href="#" id="topnav-email" role="button"
                                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

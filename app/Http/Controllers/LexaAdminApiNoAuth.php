@@ -125,7 +125,7 @@ class LexaAdminApiNoAuth extends Controller
             'driving_license_img' => 'mimes:jpeg,jpg,png|max:10048',
             'identification_cards' => 'required|max:155',
             'car_info' => 'required|max:255',
-            'pharmacy_id' => 'max:255',
+            'pharmacy_id' => 'nullable|integer|exists:pharmacys,id',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -145,15 +145,17 @@ class LexaAdminApiNoAuth extends Controller
                     'errors' => 'User already exists'
                 ], 409);
             } else {
+                $image = NULL;
                 if($request->hasFile('image')) {
                     $file = $request->file('image');
-                    $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
+                    $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                    $image = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                 }
                 $driving_license_img = NULL;
                 if($request->hasFile('driving_license_img')) {
                     $file = $request->file('driving_license_img');
-                    $file->move(public_path() . '/images/driving_license/',date('mdHis').$request->file('driving_license_img')->getClientOriginalName());
-                    $driving_license_img = '/images/driving_license/'.date('mdHis').$request->file('driving_license_img')->getClientOriginalName();
+                    $file->move(public_path() . '/images/driving_license/',\App\Support\PublicUpload::name($request->file('driving_license_img')));
+                    $driving_license_img = '/images/driving_license/'.\App\Support\PublicUpload::name($request->file('driving_license_img'));
                 }
                 if($request->input('password')!='') {
                     if($request->input('password')==$request->input('password2')) {
@@ -170,14 +172,25 @@ class LexaAdminApiNoAuth extends Controller
                         'errors' => 'Bad Request'
                     ], 400);
                 }
-                if($request->input('pharmacy_id')>0) {
-                    $pharmacy_id = $request->input('pharmacy_id');
-                    DB::table('users')->insert(['role' => 'driver','name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'password' => $password,'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'car_info' => $request->input('car_info'),'pharmacy_id' => $pharmacy_id]);
-                } else {
-                    DB::table('users')->insert(['role' => 'driver','name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'password' => $password,'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'car_info' => $request->input('car_info')]);
-                }
+                // Self-registered drivers stay inactive until QuikMedix staff, or the pharmacy they chose, approve them.
+                DB::table('users')->insert(array_filter([
+                    'role' => 'driver',
+                    'isactive' => 0,
+                    'name' => $request->input('name'),
+                    'last_name' => $request->input('last_name'),
+                    'email' => $request->input('email'),
+                    'phone' => $request->input('phone'),
+                    'password' => $password,
+                    'image' => $image,
+                    'driving_license' => $request->input('driving_license'),
+                    'driving_license_img' => $driving_license_img,
+                    'identification_cards' => $request->input('identification_cards'),
+                    'car_info' => $request->input('car_info'),
+                    'pharmacy_id' => $request->input('pharmacy_id') ?: NULL,
+                ], fn ($value) => $value !== NULL));
                 return response()->json([
-                    'message' => 'Driver successfully created'
+                    'message' => 'Driver successfully created',
+                    'status' => 'pending_approval'
                 ], 200);
             }
         }

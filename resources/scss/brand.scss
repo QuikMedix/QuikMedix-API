@@ -77,3 +77,11 @@ body[data-layout="horizontal"] #page-topbar,
 .swal2-styled.swal2-confirm:focus {
     box-shadow: 0 0 0 3px rgba($brand-primary, .25) !important;
 }
+
+// Dark section heading used across forms and order pages ("Details", "Order Items", ...).
+.qm-section-title {
+    background: var(--qm-charcoal);
+    color: #ffffff;
+    padding: 5px;
+    text-align: center;
+}

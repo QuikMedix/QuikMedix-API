@@ -109,7 +109,7 @@ audio {
 				 <div class="col-8">
 					 <div class="card">
                         <div class="card-body">
-							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Details</h5>
+							<h5 class="qm-section-title">Order Details</h5>
 							
 						<div class="row" style="min-height: 420px;">
 						<div class="col-6">							
@@ -129,7 +129,7 @@ audio {
                                             <span style="font-size: 11px;" class="badge badge-pill badge-{{$order->statuse_copay_color}} mt-1">{{$order->statuse_copay_name}}</span>
                                         @endif
                                         
-                                        @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist') && $order->copay>0 && !in_array($order->statuse_copay,[1,3,4,6]))
+                                        @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'logist') && $order->copay>0 && !in_array($order->statuse_copay,[1,3,4,6]))
                                         <a style="cursor:pointer;" onclick="var win=window.open('/pay/copay/{{$order->id}}','Pay order Co-Pay','width=800,height=700');var timer=setInterval(function(){if(win.closed){clearInterval(timer);document.location.reload();}},600);"><button class="btn btn-success btn-sm" type="button">Pay</button></a>
                                         <form method="post" style="display: inline-block;">
                                             @csrf
@@ -158,7 +158,7 @@ audio {
 									<b>Options:</b> {{$order->delivery_method}}<br>
 									<b>Time:</b> {{$order->delivery_time}}<br>
 									<b>Fridge:</b> {{($order->fridge>0)?'yes':'no'}}<br>
-                                    @if((Auth::user()->role == 'medic' || (Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin')) && ($order->statuse_id==4))
+                                    @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))
                                     <b>Customer rating:</b> <div class="rating">
                                     @if(empty($order->rating))
                                     <i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i>
@@ -182,15 +182,6 @@ audio {
                                     <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem2('#HIPAA')" style="margin-top: 8px;">HIPAA <i class="mdi mdi-printer-check"></i></button>
                                     <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem3('#AOB')" style="margin-top: 8px;">NYS FORM NF-AOB <i class="mdi mdi-printer-check"></i></button>
                                     <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem7('#all-print')" style="margin-top: 8px;">Print all <i class="mdi mdi-printer-check"></i></button>
-                                    @if($order->pharmacy_id==123) 
-                                    <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem4('#PLA')" style="margin-top: 8px;">Provider’s Lien <i class="mdi mdi-printer-check"></i></button>                                        
-                                    @endif
-                                    @if($order->pharmacy_id==35) 
-                                    <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem5('#ingr')" style="margin-top: 8px;">INTEGRA <i class="mdi mdi-printer-check"></i></button>                                        
-                                    @endif
-                                    @if($order->pharmacy_id==166 || $order->pharmacy_id==167) 
-                                    <button class="btn btn-dark waves-effect waves-light printbt" onclick="PrintElem6('#otc')" style="margin-top: 8px;">OTC COVID-19 <i class="mdi mdi-printer-check"></i></button>                                        
-                                    @endif
                                     @if($order->statuse_id==4)
                                     <div class="row" style="margin: 10px 0;">
                                         <button id="show_live_tracker" type="button" class="btn btn-primary btn-lg waves-effect waves-light me-1 mt-2" data-bs-toggle="modal" data-bs-target=".bs-example-modal-lg">Live tracker at delivery time</i></button>
@@ -205,7 +196,7 @@ audio {
 							<div class="zoom-gallery">
 							<a class="float-left" href="{{$order->drop_off_photo}}" title="Drop Off Photo" style="margin: 10px;"><img src="{{$order->drop_off_photo}}" alt="Drop Off Photo" height="120"></a></div>
 							@else
-                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role=='logist')
+                            @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist'))
 							<div class="form-group row" style="margin: 10px;">
                                 <div>
                                     <input class="form-control" type="file" name="drop_off_photo" onchange='encodeImageFileAsURL(this);' accept="image/x-png,image/jpeg,image/jpg">
@@ -219,7 +210,7 @@ audio {
 							    <a class="float-left" href="{{$order->signature_photo}}" title="Signature Photo" style="margin: 10px;"><img src="{{$order->signature_photo}}" alt="Signature Photo" height="120"></a>                            
                             </div> 
 							@else
-                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin' || Auth::user()->role == 'dispadmin') || Auth::user()->role=='logist') 
+                            @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) 
                            	<div class="form-group row" style="margin: 10px;">
                                 <div>
                                     <input class="form-control" type="file" name="signature_photo" onchange='encodeImageFileAsURL(this);' accept="image/x-png,image/jpeg,image/jpg">
@@ -229,7 +220,7 @@ audio {
 							@endif
                             @endif										
 							@if(empty($order->drop_off_photo) || empty($order->signature_photo))
-                                @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin'))  
+                                @if((Auth::user()->hasAnyRole('superadmin', 'admin')))  
                                     <div align="center"><button class="btn btn-primary" type="submit">Save</button></div>
                                 @endif
                             @endif                            
@@ -248,7 +239,7 @@ audio {
 							<i class="mdi mdi-medical-bag"></i> {{$order->pharmacyname}}<br>
 							@if(!empty($order->medic_id))<i class="mdi mdi-account-heart"></i> {{$order->medicname}} {{$order->mediclast_name}} (ID #{{$order->medic_id}})<br>@endif
 							<i class="mdi mdi-cellphone-android"></i> {{$order->pharmacyphone}}
-                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')                
+                            @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))                
                             <button class="btn btn-primary btn-sm waves-effect call_patient" data-phone="{{ $order->pharmacyphone }}">Call <i class="ti-headphone-alt" style="color:#fff;font-size: inherit;"></i></button>
                             @endif 
                             <br>
@@ -270,13 +261,13 @@ audio {
                             @endif
                             <br>
 							<i class="mdi mdi-cellphone-android"></i> {{$order->userphone}} 
-                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')
+                            @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))
                             <button class="btn btn-primary btn-sm waves-effect call_patient" data-phone="{{ $order->userphone }}">Call <i class="ti-headphone-alt" style="color:#fff;font-size: inherit;"></i></button>
                             @endif
                             @if(!empty($order->userhomephone))
                             <br>
 							<i class="mdi mdi-deskphone"></i> {{$order->userhomephone}} 
-                            @if((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist')
+                            @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'logist'))
                             <button class="btn btn-primary btn-sm waves-effect call_patient" data-phone="{{ $order->userhomephone }}">Call <i class="ti-headphone-alt" style="color:#fff;font-size: inherit;"></i></button>
                             @endif
                             @endif 
@@ -585,12 +576,6 @@ audio {
                                                 <td><p align="center" style="color: #000000;line-height: 13px;font-size: 16px; font-weight: 700; font-family: Arial;"></p>
                                                 </td>	
                                             <td style="text-align: center">
-                                                @if($order->pharmacy_id==46)
-
-                                                @endif
-                                                @if($order->pharmacy_id==185 || $order->pharmacy_id==197)
-
-                                                @endif
                                                 <p align="center" style="color: #000000;line-height: 14px;font-size: 14px; font-weight: 700; font-family: Arial;">&nbsp;<br>
                                                 <hr style="padding: 0 20px;margin: 0px 0 2px 0;"> 
                                                 <span style="font-size: 11px;">(Signature of Provider)</span></p>
@@ -1028,12 +1013,6 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 							<td><p align="center" style="color: #000000;line-height: 13px;font-size: 16px; font-weight: 700; font-family: Arial;"></p>
 							</td>	
 						 <td style="text-align: center">
-                            @if($order->pharmacy_id==46)
-
-                            @endif
-                            @if($order->pharmacy_id==185 || $order->pharmacy_id==197)
-
-                            @endif
 							 <p align="center" style="color: #000000;line-height: 14px;font-size: 14px; font-weight: 700; font-family: Arial;">&nbsp;<br>
 							 <hr style="padding: 0 20px;margin: -13px 0 2px 0;"> 
 							<span style="font-size: 11px;">(Signature of Provider)</span></p>
@@ -1075,914 +1054,12 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     
     </div>
 
-<div style="display:none;" id="otc" style="padding: 0 40px;">
-    <div class="row" style="margin-top: 0px">
-		<div class="col-12" style="color: #000000;padding: 0px 0 0 15px;">
-			<p
-				style="padding: 5px 0;font-weight: 200;margin: 15px 0px; font-family: Arial Black; line-height: 35px;font-size: 25px;">
-				Insured Patient Request and<br>
-                Attestation for OTC COVID-19 Test Billing<br>
-				
-            </p>
-			<h1
-				style="padding: 5px 0;font-weight: 600;margin: 15px 0px; font-family: Arial Black; line-height: 45px;font-size: 40px;">
-				Documentation of Request<br>
-
-			</h1>
-
-		</div>
-	</div>
-    <br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 20%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Date Requested: </p>
-				</td>
-                <td style="width:30%; border-bottom: solid 1px #000;"></td>
-                <td style="width: 50%;white-space: nowrap;">
-				<p
-					style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;">
-				</p>
-				</td>
-			</tr>
-		</tbody>
-	</table><br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 25%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Method of Request: </p>
-				</td>
-                <td style="width: 22%;white-space: nowrap;text-align: center;">
-                <input type="checkbox" id="chk" name="chk">  
-				<span
-					style="color: #000000;line-height: 18px;font-size: 20px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">In person
-                </span>
-				</td>
-                <td style="width: 22%;white-space: nowrap;text-align: center;">
-                <input type="checkbox" id="chk" name="chk" checked>  
-				<span
-					style="color: #000000;line-height: 18px;font-size: 20px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">Telephone
-                </span>
-				</td>
-                <td style="width: 16%;white-space: nowrap;text-align: center;">
-                <input type="checkbox" id="chk" name="chk">  
-				<span
-					style="color: #000000;line-height: 18px;font-size: 20px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">Other:
-                </span>
-				</td>
-                <td style="width:15%; border-bottom: solid 1px #000;"></td>
-			</tr>
-		</tbody>
-	</table><br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 25%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Person Requesting:  </p>
-				</td>
-                <td style="width:75%; border-bottom: solid 1px #000;ine-height: 22px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;"> {{$order->username}} </td>
-			</tr>
-		</tbody>
-	</table><br><br>
-    <table width="100%" border="1">
-		<tbody>
-			<tr style="height: 107px;text-align: center;">
-				<td style="width: 13%;white-space: nowrap;text-align: center;">
-					<p
-						style="color: #000000;line-height: 22px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Request # </p>
-				</td>
-                <td style="width: 27%;white-space: nowrap;text-align: center;">
-					<p
-						style="color: #000000;line-height: 22px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Patient Name </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;text-align: center;">
-					<p
-						style="color: #000000;line-height: 22px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Beneficiary <br>DOB </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;text-align: center;">
-					<p
-						style="color: #000000;line-height: 22px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Quantity <br>Requested </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;text-align: center;">
-					<p
-						style="color: #000000;line-height: 22px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Relationship <br>to patient </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;text-align: center;">
-					<p
-						style="color: #000000;line-height: 22px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Quantity <br>of On-Hand <br>Supply <br> Remaining</p>
-				</td>
-			</tr>
-            <tr style="height: 38px;">
-				<td style="width: 13%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						Sample </p>
-				</td>
-                <td style="width: 27%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						John Doe </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-                        1/1/1950 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						8 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						Self </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						0 </p>
-				</td>
-			</tr>
-            <tr style="height: 38px;">
-				<td style="width: 13%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						1 </p>
-				</td>
-                <td style="width: 27%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						{{$order->username}} {{$order->last_name}} </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-                         </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-					2	 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-                    @if(!empty($family))
-                    <p style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">{{$family->family_type}}</p>
-                    @else
-                    <p style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">self</p>
-                    @endif
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-					0	 </p>
-				</td>
-			</tr>
-            <tr style="height: 38px;">
-				<td style="width: 13%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						2 </p>
-				</td>
-                <td style="width: 27%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-                         </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-			</tr>
-            <tr style="height: 38px;">
-				<td style="width: 13%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						3 </p>
-				</td>
-                <td style="width: 27%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-                         </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-			</tr>
-            <tr style="height: 38px;">
-				<td style="width: 13%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						4 </p>
-				</td>
-                <td style="width: 27%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-                         </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-			</tr>
-            <tr style="height: 38px;">
-				<td style="width: 13%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						5 </p>
-				</td>
-                <td style="width: 27%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: left;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-                         </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-                <td style="width: 15%;white-space: nowrap;padding: 5px;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 300; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-			</tr>
-		</tbody>
-	</table><br>
-    <div class="row" style="margin-top: 5px">
-		<div class="col-12" style="color: #000000;padding: 5px 0 0 15px;">
-			<p
-				style="color: #000000;line-height: 24px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-				Attestation
-				
-            </p><br>
-            <p
-				style="color: #000000;line-height: 28px;font-size: 20px; font-weight: 400; font-family: Arial;margin: 0 0 0;">
-				I have requested the pharmacy to provide the above listed OTC COVID-19 tests and attest to the following:
-            </p><br>
-            <p
-				style="color: #000000;line-height: 18px;font-size: 20px; font-weight: 400; font-family: Arial;margin: 0 0 0 30px;">
-				&#x2022; The tests requested above are for personal use for the indicated patient(s)
-            </p><br>
-            <p
-				style="color: #000000;line-height: 18px;font-size: 20px; font-weight: 400; font-family: Arial;margin: 0 0 0 30px;">
-				&#x2022; These tests are not for employer or travel purposes
-            </p><br>
-            <p
-				style="color: #000000;line-height: 18px;font-size: 20px; font-weight: 400; font-family: Arial;margin: 0 0 0 30px;">
-				&#x2022; I agree not to resale the tests provided under this covered benefit
-            </p><br>
-            <p
-				style="color: #000000;line-height: 18px;font-size: 20px; font-weight: 400; font-family: Arial;margin: 0 0 0 30px;">
-				&#x2022; The cost of these tests is not being covered by any other source
-            </p><br>
-
-		</div>
-	</div>
-    <br><br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 50%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Signature of patient (or legal representative):  </p>
-				</td>
-                <td style="width:50%; border-bottom: solid 1px #000;"><img src="{{$order->signature_photo}}" alt="Signature Photo" style="max-height: 120px;width: auto;height: auto;max-width: 200px;right: 228px;bottom: 480px;position: absolute;z-index: -1;"></td>
-			</tr>
-		</tbody>
-	</table><br><br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 10%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						Name:  </p>
-				</td>
-                <td style="width:65%; border-bottom: solid 1px #000;color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;">{{$order->username}} {{$order->last_name}}</td>
-                <td style="width: 10%;white-space: nowrap;text-align: center;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;text-align: center;">
-						Date:  </p>
-				</td>
-                <td style="width:15%; border-bottom: solid 1px #000;text-align: center;color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;">{{date('m.d.Y', strtotime($order->finish.' -2 day'))}}</td>
-			</tr>
-		</tbody>
-	</table><br><br>
-
-    <p
-		style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;text-align: center;"> ----------------------------------------------Pharmacy Only Claim Information----------------------------------------------- </p>
-
-        <br><br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 45%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 400; font-family: Arial;margin: 0;">
-						Name of OTC COVID-19 Test being supplied:  </p>
-				</td>
-                <td style="width:55%;  border-bottom: solid 1px #000;color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;"> IHEALTH COVID HOME TEST 2PK ndc 56362000589</td>
-			</tr>
-		</tbody>
-	</table><br><br>
-    
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 100%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 400; font-family: Arial;margin: 0;">
-						Sig: Test as directed per manufacturer and CDC guidance:  </p>
-				</td>
-			</tr>
-		</tbody>
-	</table><br><br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 100%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 400; font-family: Arial;margin: 0;">
-						No Refills </p>
-				</td>
-			</tr>
-		</tbody>
-	</table><br><br>
-    <table width="100%" border="0">
-		<tbody>
-			<tr>
-				<td style="width: 22%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 400; font-family: Arial;margin: 0;">
-						Pharmacist on Duty::  </p>
-				</td>
-                <td style="width:25%; border-bottom: solid 1px #000;"></td>
-                <td style="width: 53%;white-space: nowrap;">
-					<p
-						style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0;">
-						 </p>
-				</td>
-			</tr>
-		</tbody>
-	</table><br><br>
-    <div class="row" style="margin-top: 5px">
-		<div class="col-10" style="color: #000000;padding: 0px 0 0 15px;">
-			<p
-				style="color: #000000;line-height: 18px;font-size: 16px; font-weight: 400; font-family: Arial;margin: 0;">
-				<b>Disclaimer:</b> PAAS National® does not assume any legal liability or responsibility for the completeness, or usefulness, of this documentation. The information contained herein was developed based on PBM requirements at the time of its creation and may not meet all PBM/payor requirements. If pharmacies are initiating a prescription, confirm that all required elements of a prescription are present for your state.
-				
-            </p><br>
-            <p
-				style="color: #000000;line-height: 18px;font-size: 22px; font-weight: 700; font-family: Arial;margin: 0 0 0;">
-				Documentation of Request <span
-				style="color: #e30404;line-height: 18px;font-size: 22px; font-weight: 400; font-family: Arial;margin: 0 0 0 30px;float:right;">
-				Last Revised: 2/2/2022
-</span>
-            </p>
-		</div>
-        <div class="col-2" style="color: #000000;padding: 5px 0 0 15px;text-align: center;">
-        <span>PAAS</span>
-
-		</div>
-	</div>
 
 
 
-
-</div>
-
-
-
-<div style="display:none;" id="ingr">
-    <div class="row" style="margin-top: 70px">
-		<div class="col-2"></div>
-		<div class="col-8" style="color: #000000;padding: 5px 0;text-align: center;">
-            @include('layouts.partials.document-image', ['document' => 'partner_header', 'description' => 'Partner form header', 'imageStyle' => 'width: 100%; height: auto;'])
-			<p
-				style="padding: 5px 0;font-weight: 200;text-align: center; margin: 15px 0px; font-family: Arial; line-height: 30px;font-size: 20px;">
-				100 Wall Street, Suite 2502, New York, NY, 10005<br>
-				Tel: 718.369.0012   &nbsp;&nbsp;Fax: 718.287.1229</span>
-            </p>
-			<h1
-				style="padding: 5px 0;font-weight: 600;text-align: center; margin: 15px 0px; font-family: Cambria; line-height: 30px;">
-				DELIVERY TICKET/SLIP<br>
-
-			</h1>
-
-		</div>
-		<div class="col-2">
-		</div>
-	</div>
-	<div class="row" style="margin-top: 20px; padding: 0 80px;">
-		<div class="col-12">
-			<table width="100%" border="0">
-				<tbody>
-					<tr>
-						<td style="width: 30%;white-space: nowrap;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;">
-								PATIENT (first/last name): </p>
-						</td>
-						<td style="width:40%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{$order->username}} {{$order->last_name}} </td>
-                        <td style="width: 10%;white-space: nowrap;text-align: center;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">
-								DATE </p>
-						</td>
-						<td style="width:20%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{date('m.d.Y', strtotime($order->finish ?? ''))}} </td>
-					</tr>
-				</tbody>
-			</table>
-            </br></br>
-            <p
-				style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 600; font-family: Arial;margin: 0;">
-				SHIP TO</p>
-            </br></br>
-
-            <table width="100%" border="0">
-				<tbody>
-					<tr>
-						<td style="white-space: nowrap;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;">
-								NAME (first/last): </p>
-						</td>
-						<td style="width:77%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{$order->username}} {{$order->last_name}} </td>
-					</tr>
-				</tbody>
-			</table>
-            <table width="100%" border="0">
-				<tbody>
-					<tr>
-						<td style="white-space: nowrap;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;">
-								ADDRESS: </p>
-						</td>
-						<td style="width:77%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{$order->useraddress}} {{$order->userapartment}} </td>
-					</tr>
-				</tbody>
-			</table>
-            <table width="100%" border="0">
-				<tbody>
-					<tr>
-						<td style="width: 10%;white-space: nowrap;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;">
-								CITY: </p>
-						</td>
-                        <td style="width:30%; border-bottom: solid 1px #000;"></td>
-                        <td style="width: 13%;white-space: nowrap;text-align: center;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">
-								STATE: </p>
-						</td>
-                        <td style="width:15%; border-bottom: solid 1px #000;"></td>
-                        <td style="width: 12%;white-space: nowrap;text-align: center;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">
-								ZIP </p>
-						</td>
-                        <td style="width:20%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{$order->userzip}} </td>
-					</tr>
-				</tbody>
-			</table>
-            <table width="100%" border="0">
-				<tbody>
-					<tr>
-						<td style="width: 10%;white-space: nowrap;">
-							<p
-								style="color: #000000;line-height: 18px;font-size: 18px; font-weight: 200; font-family: Arial;margin: 0;">
-								PHONE</p>
-						</td>
-                        <td style="width:70%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">{{$order->userphone}}  </td>
-					</tr>
-				</tbody>
-			</table>
-            </br>
-
- <div class="row" style="margin-top: 10px;">
-		<div class="col-12" style="padding: 0 11px;text-align: center;">
-            @include('layouts.partials.document-image', ['document' => 'partner_footer', 'description' => 'Partner form footer', 'imageStyle' => 'width: 100%; height: auto;'])
-		</div>
-</div>
-
-			<table width="100%" border="1" style="margin-top: 0px;">
-				<tbody>
-					<tr style="height: 30px;">
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-                        <p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">
-								DESCRIPTION</p>
-						</td>
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-							<p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;background: #697e90;text-align: center;">
-								HCPCS CODE</p>
-						</td>
-						<td style="width: 20%;white-space: nowrap;text-align: center;"><p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: center;">
-								QUANTITY</p>
-						</td>
-					</tr>
-
-                    @php
-                                            $rx_recipient_count=0;
-                                            @endphp
-                                            @foreach($rxs as $key=>$rx)
-                                            
-                                            @php
-                                            $rx_recipient_count++;
-                                            @endphp
-                                            <tr>
-                                                <td align="center">{{explode('-',$rx->rx_id)[0]}}</td>
-                                                <td align="center">@if(count(explode('-',$rx->rx_id))>1){{explode('-',$rx->rx_id)[1]}}@endif</td>
-                                                <td align="center">{{ $rx->rx_count }}</td>    
-                                            </tr>
-                                           
-                                            @endforeach 
-                                         
-                    <tr style="height: 30px;">
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-                        &nbsp;
-						</td>
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-						<td style="width: 20%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-					</tr>
-                    <tr style="height: 30px;">
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-                        &nbsp;
-						</td>
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-						<td style="width: 20%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-					</tr>
-                    <tr style="height: 30px;">
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-                        &nbsp;
-						</td>
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-						<td style="width: 20%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-					</tr>
-                    <tr style="height: 30px;">
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-                        &nbsp;
-						</td>
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-						<td style="width: 20%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-					</tr>
-                    <tr style="height: 30px;">
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-                        &nbsp;
-						</td>
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-						<td style="width: 20%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-					</tr>
-                    <tr style="height: 30px;">
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-                        &nbsp;
-						</td>
-						<td style="width: 40%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-						<td style="width: 20%;white-space: nowrap;text-align: center;">
-						&nbsp;
-						</td>
-					</tr>
-				</tbody>
-			</table>
-            </br>
-            <table width="100%" border="1" style="margin-top: 0px;">
-				<tbody>
-                <tr style="height: 50px;">
-						<td style="width: 40%;white-space: nowrap;text-align: left;">
-                        <p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: left;">
-								&nbsp;&nbsp;<b>OTHER</b> HEALTHFIRST MIDICAID - NAR</p>
-						</td>
-						
-					</tr>
-				</tbody>
-			</table>
-            </br>
-            <table width="100%" border="0">
-				<tbody>
-                    <tr>
-						<td style="width:45%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">&nbsp;</td>
-                        <td style="width:15%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 16px;">/ &nbsp;&nbsp; {{date('m.d.Y', strtotime($order->finish ?? ''))}}</td>
-                        <td style="width:2%; border: none;text-transform: uppercase;font-size: 22px;"> </td>
-                        <td style="width:38%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">&nbsp;</td>
-					</tr>
-                    <tr style="height: 45px;">
-						<td style="width:33%; text-transform: uppercase;font-size: 22px;"><p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: left;">
-								&nbsp;&nbsp;PATIENT`S SIGNATURE</p></td>
-                        <td style="width:15%;text-transform: uppercase;font-size: 22px;"><p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: left;">
-								&nbsp;&nbsp;DATE </p> </td>
-                        <td style="width:2%; border: none;text-transform: uppercase;font-size: 22px;"> </td>
-                        <td style="width:38%;font-size: 22px;"><p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: left;">
-								&nbsp;&nbsp;NAME (if other than patient)</p></td>
-					</tr>
-					
-				</tbody>
-			</table>
-
-			@if(!empty($order->signature_photo)) <img src="{{$order->signature_photo}}" alt="Signature Photo"
-				style="max-height: 120px;width: auto;height: auto;max-width: 200px;left: 80px;top: 630px;position: absolute;z-index: -1;">
-			@endif
-            </br>
-            <table width="100%" border="0">
-				<tbody>
-                    <tr>
-						<td style="width:45%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">&nbsp;</td>
-                        <td style="width:15%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">/ </td>
-                        <td style="width:2%; border: none;text-transform: uppercase;font-size: 22px;"> </td>
-                        <td style="width:38%; border-bottom: solid 1px #000;text-transform: uppercase;font-size: 22px;">&nbsp;</td>
-					</tr>
-                    <tr style="height: 45px;">
-						<td style="width:33%; text-transform: uppercase;font-size: 22px;"><p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: left;">
-								&nbsp;&nbsp;COMPANY REPRESENTATIVE`S SIGNATURE</p></td>
-                        <td style="width:15%;text-transform: uppercase;font-size: 22px;"><p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: left;">
-								&nbsp;&nbsp;DATE </p> </td>
-                        <td style="width:2%; border: none;text-transform: uppercase;font-size: 22px;"> </td>
-                        <td style="width:38%; text-transform: uppercase;font-size: 22px;"><p
-								style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Arial;margin: 0;text-align: left;">
-								&nbsp;&nbsp;COMPANY REPRESENTATIVE`S NAME </p></td>
-					</tr>
-					
-				</tbody>
-			</table>
-            <table width="100%" border="0">
-				<tbody>
-                    <tr>
-						<td style="width:40%;font-size: 22px;">&nbsp;</td>
-                        <td style="text-transform: uppercase;font-size: 22px;"><br>
-                        <p
-								style="color: #000000;line-height: 17px;font-size: 17px; font-weight: 600; font-family: Arial;margin: 0;text-align: left;">
-						TERESA PHARMA LLC <br>
-                        582 ROCKAWAY AVE<br>
-                        BROOKLYN, NY 11212<br>
-                        (718)324-3446
-                        </p>
-                    
-                    </td>
-                        
-					</tr>
-                </tbody>
-			</table>
-		</div>
-	</div>
-
-    </div>
 
     
 
-                                    <div style="display:none;" id="PLA">
-                                    <div class="row" style="margin-top: 70px">
-                                    <div class="col-2">
-		  	</div>
-			<div class="col-8" style="color: #000000;padding: 5px 0;text-align: center;">
-				<h1 style="padding: 5px 0;font-weight: 200;text-align: center; margin: 0px 0px; font-family: Cambria; line-height: 30px;">Athenas Pharmacy<br>
-					<span style="font-size: 70%">32-84 Steinway Street</span><br>
-					<span style="font-size: 70%">Astoria,  NY  11103</span><br>
-					<span style="font-size: 40%">Tel: 718-204-7867 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Fax: 718-204-5936</span>
-				</h1>
-				<h1 style="padding: 5px 0;font-weight: 200;text-align: center; margin: 15px 0px; font-family: Cambria; line-height: 30px;">Provider’s Lien<br>
-					
-				</h1>
-		
-			</div>
-			<div class="col-2">
-			</div>
-	 </div>
-  <div class="row" style="margin-top: 20px; padding: 0 80px;">
-		  <div class="col-12">
-					<table width="100%" border="0">
-					  <tbody>
-						<tr>
-						  <td style="width: 9%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">(Attorney): </p>
-						  </td>	
-						  <td style="width:50%; border-bottom: solid 1px #000;"></td>
-						  <td>&nbsp;</td>	
-						</tr>	
-						<tr>
-						  <td style="width: 9%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;margin: 12px 0 0 0;">Address: </p>
-						  </td>	
-						  <td style="width:50%; border-bottom: solid 1px #000;"></td>
-						  <td>&nbsp;</td>	
-						</tr>
-					  </tbody>
-					</table>
-			  
-			  
-			 		<table width="100%" border="0"  style="margin-top: 25px;">
-					  <tbody>
-						<tr style="height: 30px;">    
-						  <td  style="width: 5%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">Re:</p>
-						  </td>	
-						  <td  style="width: 17%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">Provider’s Lien for:</p>
-						  </td>	
-						  <td>&nbsp;</td>
-						  <td>&nbsp;</td>
-						  <td>&nbsp;</td>
-							<td>&nbsp;</td>
-						</tr>
-						<tr style="height: 30px;">
-						  <td  style="width: 5%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">&nbsp;</p>
-						  </td>	
-						  <td  style="width: 17%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">Patient’s Name: </p>
-						  </td>	
-						  <td style="width:40%; border-bottom: solid 1px #000;">{{$order->last_name}} {{$order->username}}</td>
-						  <td  style="width: 5%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">File No: </p>
-						  </td>	
-						  <td style="width:15%; border-bottom: solid 1px #000;"></td>
-						  <td>&nbsp;</td>	
-						</tr>
-						  <tr style="height: 30px;">
-						  <td  style="width: 5%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">&nbsp;</p>
-						  </td>	
-						  <td  style="width: 17%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 700; font-family: Cambria;margin: 0;">Date of Injury: </p>
-						  </td>	
-						  <td style="width:35%; border-bottom: solid 1px #000;"></td>
-						  <td>&nbsp;</td>
-						  <td>&nbsp;</td>
-						  <td>&nbsp;</td>	
-						</tr>
-						
-					  </tbody>
-					</table>		 		
-			  
-			  
-
-		    	<p  style="color: #000000;font-size: 16px;font-weight: 200; font-family: Cambria;margin-top: 40px;">
-		     I do hereby authorize and direct you, my attorney, to pay directly to said provide such sums as may be due and owing them for medical services rendered me both by reason of this accident and by reason of any other bills that are due there office and to withhold such sums from any settlement, judgement or verdict as may be necessary to adequately protect said provider.  And I hereby further give a lien on my case to said provider against any and all proceeds of any settlement, judgment or verdict which may be paid to you , my attorney, or myself as the result of the injuries for which I have been treated or injuries in connection therewith.</p>
-			  <p  style="color: #000000;font-size: 16px;font-weight: 200; font-family: Cambria;">
-		     I fully understand that I am directly and fully responsible to said provider for all medical bills submitted by them for services rendered me and that this agreement is made solely for said Provider’s additional protection and in consideration of his awaiting payment. And I further understand that such payment is not contingent on any settlement, judgment or verdict by which I may eventually recover said fee.</p>
-			  
-			  @if(!empty($order->signature_photo)) <img src="{{$order->signature_photo}}" alt="Signature Photo" style="max-height: 120px;width: auto;height: auto;max-width: 200px;left: 178px;top: 480px;position: absolute;z-index: -1;"> @endif
-			  
-			  
-			   <table width="100%" border="0"  style="margin-top: 65px;">
-					  <tbody>					
-						<tr style="height: 30px;">						
-						  <td  style="width: 17%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Cambria;margin: 0;">Patient’s Signature: </p>
-						  </td>	
-						  <td style="width:34%; border-bottom: solid 1px #000;"></td>
-						  <td style="width:8%;">&nbsp;</td>						  
-						  <td  style="width: 5%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Cambria;margin: 0;">Date:  </p></td>						
-						  <td style="width:15%; border-bottom: solid 1px #000;"></td>
-						  <td >&nbsp;</td>	
-						</tr>
-						<tr style="height: 18px;">						
-						  <td colspan="6" ></td>
-						</tr>
-						<tr style="height: 30px;">						
-						  <td  style="width: 17%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Cambria;margin: 0;">Patient’s Name: </p>
-						  </td>	
-						  <td style="width:34%; border-bottom: solid 1px #000;">{{$order->last_name}} {{$order->username}}</td>
-						  <td style="width:8%;">&nbsp;</td>						  
-						  <td >&nbsp;</td>						
-						  <td >&nbsp;</td>
-						  <td >&nbsp;</td>	
-						</tr>
-						  <tr style="height: 18px;">						
-						  <td colspan="6" ></td>
-						</tr>
-						<tr style="height: 30px;">						
-						  <td  style="width: 17%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Cambria;margin: 0;">Witnessed by: </p>
-						  </td>	
-						  <td style="width:34%; border-bottom: solid 1px #000;"></td>
-						  <td style="width:8%;">&nbsp;</td>						  
-						  <td >&nbsp;</td>						
-						  <td >&nbsp;</td>
-						  <td >&nbsp;</td>	
-						</tr>
-					  </tbody>
-					</table>
-			  
-			  
-			  
-			  <p  style="color: #000000;font-size: 16px;font-weight: 700; font-family: Cambria;margin-top: 65px;">
-		     The undersigned being attorney of record for the above patient does herby agree to observe all the terms of above and agrees to withhold such sums form any settlement, judgment, or verdict as may be necessary to adequately protect said Provider above named.</p>
-			  
-			  <table width="100%" border="0"  style="margin-top: 65px;">
-					  <tbody>					
-						<tr style="height: 30px;">						
-						  <td  style="width: 17%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Cambria;margin: 0;">Attorney’s Signature: </p>
-						  </td>	
-						  <td style="width:34%; border-bottom: solid 1px #000;"></td>
-						  <td style="width:8%;">&nbsp;</td>						  
-						  <td  style="width: 5%;white-space: nowrap;"><p style="color: #000000;line-height: 16px;font-size: 16px; font-weight: 200; font-family: Cambria;margin: 0;">Date:  </p></td>						
-						  <td style="width:15%; border-bottom: solid 1px #000;"></td>
-						  <td >&nbsp;</td>	
-						</tr>										
-					  </tbody>
-					</table>
-			  
-			  <p  style="color: #000000;font-size: 16px;font-weight: 200; font-family: Cambria;margin-top: 10px;">
-		     Dear Attorney:	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Please date, sign and return to the provider’s office as soon as possible</p>	
-			  
-	  	</div>	  
-	  </div>
-    </div>
 
             </div>			 
                 </div> 
@@ -1990,7 +1067,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Map</h5>
+                        <h5 class="qm-section-title">Map</h5>
                         <div id="map" style="min-height: 420px;;width: 100%;"></div>
                         <div id="pano" style="min-height: 420px;;width: 100%;display:none;"></div>
                         <button id="toggle_map" class="btn btn-primary mt-2">Street View</button>
@@ -2055,7 +1132,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 				<div class="col-4">
 					 <div class="card">
                         <div class="card-body" style="min-height: 220px;">
-							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Special instructions</h5>
+							<h5 class="qm-section-title">Special instructions</h5>
 							<div style="margin: 10px">  {{$order->special_instructions}}</div>							
 						</div>
 					</div>
@@ -2063,9 +1140,9 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 				<div class="col-4">
 					 <div class="card">
                         <div class="card-body" style="min-height: 220px;">
-							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Dispatcher Notes</h5>
+							<h5 class="qm-section-title">Dispatcher Notes</h5>
 							<div style="margin: 10px"> 
-                                @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->role == 'superadmin' || Auth::user()->role == 'admin') || Auth::user()->role == 'logist'))
+                                @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'logist'))
 								<div style="min-height: 30px;"><a href="#" id="ajax-alert" class="btn btn-sm btn-primary float-right">Add Note</a></div>
                                 @endif
 								<ol class="activity-feed mb-0">
@@ -2085,7 +1162,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                 <div class="col-4">
 					 <div class="card">
                         <div class="card-body" style="min-height: 220px;">
-							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Customer Notes</h5>
+							<h5 class="qm-section-title">Customer Notes</h5>
 							<div style="margin: 10px">
 								<ol class="activity-feed mb-0">
                                 @foreach($customer_notes as $customer_note)
@@ -2108,7 +1185,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
 				 <div class="col-12">
 					 <div class="card">
                         <div class="card-body">
-							<h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Order Items</h5>
+							<h5 class="qm-section-title">Order Items</h5>
 							<table class="table table-striped" style="table-layout: fixed;">
                                 <thead>
                                     <tr>
@@ -2144,7 +1221,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body">
-                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Call recording</h5>
+                                <h5 class="qm-section-title">Call recording</h5>
                                 <img src="https://www.schoolwearinc.co.uk/wp-content/uploads/2018/04/preloader.gif" alt="loader" class="loader">
                                 <ol class="activity-feed mb-0">
                                 </ol>							
@@ -2158,7 +1235,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body" style="text-align: center;">
-                                <h5 style="background: var(--qm-charcoal);color: #ffffff;padding: 5px;text-align: center;">Video</h5>
+                                <h5 class="qm-section-title">Video</h5>
                                 <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix — Your Health - Our Priority" width="400" style="max-width: 100%; height: auto;">
                             </div>
                         </div>
@@ -2209,7 +1286,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     var locationUser = "{{ $order->userlocation }}".split(',');
     var locationPharmasy = "{{ $order->pharmacylocation }}".split(',');
     @if($driver!='')
-    var locationDriver = "{{ $locations->location }}".split(',');
+    var locationDriver = "{{ $locations?->location }}".split(',');
     var locationDrivers = [@foreach($locationDrivers as $locationDriver)
     "{{ $locationDriver->location }}",
     @endforeach];
@@ -2217,7 +1294,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     "{{ date('g:i A', strtotime($locationDriver->created ?? '')) }}",
     @endforeach];
     var deliverTime = "{{date('gi', strtotime($order->finish ?? ''))}}";
-    var Driver = "{{ $locations->user_id }}";
+    var Driver = "{{ $locations?->user_id }}";
     @endif
     function addMarker(latlng, text, map) {
         if(parseInt(text.replace(/\D+/g,""))==parseInt(deliverTime) || parseInt(text.replace(/\D+/g,""))+1==parseInt(deliverTime)  || parseInt(text.replace(/\D+/g,""))+2==parseInt(deliverTime) || parseInt(text.replace(/\D+/g,""))-1==parseInt(deliverTime) || parseInt(text.replace(/\D+/g,""))-2==parseInt(deliverTime)) {
@@ -2262,7 +1339,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         marker = L.marker(PharmasyLatlng,{
             icon: customPharmasyIcon(),
         }).addTo(map);
-        @if($driver!='')
+        @if($driver!='' && $locations)
         marker = L.marker(DriverLatlng,{
             icon: customIconDriver(),
         }).addTo(map);
@@ -2343,15 +1420,6 @@ of coverage and/or violation of a policy condition due to the actions or conduct
     function PrintElem3(elem){
         Popup3($(elem).html());
     }  
-    function PrintElem4(elem){
-        Popup4($(elem).html());
-    }    
-    function PrintElem5(elem){
-        Popup5($(elem).html());
-    }  
-    function PrintElem6(elem){
-        Popup6($(elem).html());
-    }       
     function PrintElem7(elem){
         Popup7($(elem).html());
     }  
@@ -2407,57 +1475,6 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         mywindow.onafterprint = function(){ mywindow.close();}
         return true;
     }   
-    function Popup4(data){
-        if (data && data.indexOf('data-document-unavailable') !== -1) {
-            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
-            return false;
-        }
-        var mywindow = window.open('', 'my div', 'height=400,width=600');
-        mywindow.document.write('<html><head><title>Provider_Lien_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
-        mywindow.document.write('</head><body >');
-        mywindow.document.write(data);
-        mywindow.document.write('</body></html>');
-        mywindow.document.close(); // necessary for IE >= 10
-        mywindow.focus(); // necessary for IE >= 10
-        setTimeout(() => {mywindow.print(); }, 1500);
-        mywindow.onafterprint = function(){ mywindow.close();}
-        return true;
-    }
-    function Popup5(data){
-        if (data && data.indexOf('data-document-unavailable') !== -1) {
-            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
-            return false;
-        }
-        var mywindow = window.open('', 'my div', 'height=400,width=600');
-        mywindow.document.write('<html><head><title>integrapartners_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
-        mywindow.document.write('</head><body >');
-        mywindow.document.write(data);
-        mywindow.document.write('</body></html>');
-        mywindow.document.close(); // necessary for IE >= 10
-        mywindow.focus(); // necessary for IE >= 10
-        setTimeout(() => {mywindow.print(); }, 1500);
-        mywindow.onafterprint = function(){ mywindow.close();}
-        return true;
-    }
-    function Popup6(data){
-        if (data && data.indexOf('data-document-unavailable') !== -1) {
-            Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
-            return false;
-        }
-        var mywindow = window.open('', 'my div', 'height=400,width=600');
-        mywindow.document.write('<html><head><title>COVID-19_{{$order->last_name}}_{{$order->username}}</title>');
-        mywindow.document.write('<link href="{{ asset('css') }}/bootstrap.min.css?v=quikmedix-1" id="bootstrap-style" rel="stylesheet" type="text/css">');
-        mywindow.document.write('</head><body >');
-        mywindow.document.write(data);
-        mywindow.document.write('</body></html>');
-        mywindow.document.close(); // necessary for IE >= 10
-        mywindow.focus(); // necessary for IE >= 10
-        setTimeout(() => {mywindow.print(); }, 1500);
-        mywindow.onafterprint = function(){ mywindow.close();}
-        return true;
-    }
     function Popup7(data){
         if (data && data.indexOf('data-document-unavailable') !== -1) {
             Swal.fire('Document unavailable', 'Please contact QuikMedix support for this form.', 'info');
@@ -2475,9 +1492,6 @@ of coverage and/or violation of a policy condition due to the actions or conduct
         mywindow.onafterprint = function(){ mywindow.close();}
         return true;
     }
-    @if($order->pharmacy_id==123 && $order->statuse_id=1)
-    $('#toggle_map').click();
-    @endif
 </script>
 <script src="{{ URL::asset('/js/bootstrap.bundle.min.js')}}"></script>
 <script src="{{ URL::asset('/js/sweetalert2.min.js')}}"></script>

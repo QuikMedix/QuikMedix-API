@@ -46,6 +46,7 @@
                                         @if($alert!='') 
                                             <div class="alert alert-danger" role="alert">{{ $alert }}</div>
                                         @endif
+                                        <x-form-errors />
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Image</label>
                                             <div class="col-sm-10" style="margin-bottom: 5px;">
@@ -83,7 +84,7 @@
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Password</label>
                                             <div class="col-sm-10">
-                                                <input class="form-control" required type="text" minlength="8" onfocus="this.removeAttribute('readonly');" readonly autocomplete="off" name="password" value="{{ $input['password'] }}">
+                                                <input class="form-control" required type="password" minlength="8" autocomplete="new-password" name="password" value="{{ $input['password'] }}">
                                             </div>
                                         </div>
                                         <div class="form-group row">

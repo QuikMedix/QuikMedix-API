@@ -268,15 +268,11 @@ class MessagesController extends Controller
     public function getFavorites(Request $request)
     {
         User::where('id', Auth::user()->id)->update(['active_status' => DB::raw('now()')]);
-        $favorites = Favorite::where('user_id', Auth::user()->id)->whereNotIn('favorite_id',[12322,1])->get();
+        $supportIds = User::supportContactIds();
+        $favorites = Favorite::where('user_id', Auth::user()->id)->whereNotIn('favorite_id', $supportIds)->get();
         $favoritesList = [];
-        $user=User::where('users.id', 12322)->leftJoin('pharmacys','pharmacys.id','=','users.pharmacy_id')->select('users.id','users.name','users.last_name','users.phone','users.image','users.role','pharmacys.name as pharmacy_name', 'users.pharmacy_id',DB::raw('case when active_status is null or active_status < now() - interval 10 minute then 0 else 1 end as active_status'))->first();
-        if(!empty($user)){
-            $favoritesList[] = $user;
-        }
-        $user=User::where('users.id', 1)->leftJoin('pharmacys','pharmacys.id','=','users.pharmacy_id')->select('users.id','users.name','users.last_name','users.phone','users.image','users.role','pharmacys.name as pharmacy_name', 'users.pharmacy_id',DB::raw('case when active_status is null or active_status < now() - interval 10 minute then 0 else 1 end as active_status'))->first();
-        if(!empty($user)){
-            $favoritesList[] = $user;
+        foreach ($supportIds as $supportId) {
+            $favoritesList[] = User::where('users.id', $supportId)->leftJoin('pharmacys','pharmacys.id','=','users.pharmacy_id')->select('users.id','users.name','users.last_name','users.phone','users.image','users.role','pharmacys.name as pharmacy_name', 'users.pharmacy_id',DB::raw('case when active_status is null or active_status < now() - interval 10 minute then 0 else 1 end as active_status'))->first();
         }
         foreach ($favorites as $key=>$favorite) {
             $favoritesList[] = User::where('users.id', $favorite->favorite_id)->leftJoin('pharmacys','pharmacys.id','=','users.pharmacy_id')->select('users.id','users.name','users.last_name','users.phone','users.image','users.role','pharmacys.name as pharmacy_name', 'users.pharmacy_id',DB::raw('case when active_status is null or active_status < now() - interval 10 minute then 0 else 1 end as active_status'))->first();
@@ -303,11 +299,9 @@ class MessagesController extends Controller
                     ->orWhere('users.email','LIKE','%'.$input.'%')
                     ->orWhere('users.phone','LIKE','%'.$input.'%');
                 });
-        if(!empty(Auth::user()->pharmacy_id)){
-            $records=$records->whereIn('users.id',[Auth::user()->pharmacy_id,1,12322]);
-        } else {
-            $records=$records->whereIn('users.id',[1,12322]);
-        }
+        // Support staff, plus the staff of the user's own pharmacy.
+        $records=$records->where(fn ($query) => $query->whereIn('users.id', User::supportContactIds())
+            ->when(Auth::user()->pharmacy_id, fn ($query, $pharmacyId) => $query->orWhere(fn ($staff) => $staff->where('users.role', 'medic')->where('users.pharmacy_id', $pharmacyId))));
         $records=$records->paginate($request->per_page ?? $this->perPage);
 
         foreach ($records->items() as $index => $record) {

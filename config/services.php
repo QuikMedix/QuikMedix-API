@@ -12,6 +12,14 @@ return [
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
     ],
+    'zadarma' => [
+        'key' => env('ZADARMA_KEY'),
+        'secret' => env('ZADARMA_SECRET'),
+        'sip' => env('ZADARMA_SIP'),
+    ],
+    'bestrx' => [
+        'basic_auth' => env('BESTRX_BASIC_AUTH'),
+    ],
     'tidio' => [
         'widget_key' => env('TIDIO_WIDGET_KEY'),
     ],

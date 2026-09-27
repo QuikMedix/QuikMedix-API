@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Notifications;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -99,14 +100,14 @@ class LexaAdminApi extends Controller
             $address="";
             if($request->hasFile('image')) {
                 $file = $request->file('image');
-                $file->move(public_path() . '/images/users/',date('mdHis').$request->file('image')->getClientOriginalName());
-                $src = '/images/users/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                $file->move(public_path() . '/images/users/',\App\Support\PublicUpload::name($request->file('image')));
+                $src = '/images/users/'.\App\Support\PublicUpload::name($request->file('image'));
                 $user->image = $src;
             }
             if($request->hasFile('driving_license_img')) {
                 $file = $request->file('driving_license_img');
-                $file->move(public_path() . '/images/driving_license/',date('mdHis').$request->file('driving_license_img')->getClientOriginalName());
-                $driving_license_img = '/images/driving_license/'.date('mdHis').$request->file('driving_license_img')->getClientOriginalName();
+                $file->move(public_path() . '/images/driving_license/',\App\Support\PublicUpload::name($request->file('driving_license_img')));
+                $driving_license_img = '/images/driving_license/'.\App\Support\PublicUpload::name($request->file('driving_license_img'));
                 $user->driving_license_img = $driving_license_img;
             }
             if($request->input('password')!='') {
@@ -292,17 +293,17 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'driver' || Auth::user()->role == 'user') {
+        if(Auth::user()->hasAnyRole('driver', 'user')) {
             if(Auth::user()->role == 'user') {
                 $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.statuse_id', 'orders.copay', 'orders.actual', 'orders.pharmacy_id', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'),'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.location as pharmacylocation','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.user_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.driver_id', 'orders.created', 'orders.signature_photo', 'orders.actual', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name','users.last_name')->orderBy('orders.id','desc');
             } else { // driver
                 $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.statuse_id', 'orders.copay', 'orders.actual', 'orders.pharmacy_id', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'),'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.location as pharmacylocation','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.driver_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.driver_id', 'orders.created', 'orders.signature_photo', 'orders.actual', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name','users.last_name')->orderBy('orders.id','desc');
             }
-            if(!empty($_GET['statuse'])) {
-                $orders = $orders->whereIn('orders.statuse_id',$_GET['statuse']);
+            if(!empty(request()->query('statuse'))) {
+                $orders = $orders->whereIn('orders.statuse_id',request()->query('statuse'));
             }
-            if(!empty($_GET['pharmacy'])) {
-                $orders = $orders->where('orders.pharmacy_id',$_GET['pharmacy']);
+            if(!empty(request()->query('pharmacy'))) {
+                $orders = $orders->where('orders.pharmacy_id',request()->query('pharmacy'));
             }
             $orders = $orders->get();
             foreach($orders as $key=>$order) {
@@ -445,7 +446,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $routes_priority1 = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
             $routes_priority0 = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', Auth::user()->id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
             $routes = array();
@@ -475,7 +476,7 @@ class LexaAdminApi extends Controller
                     $routes[$key]->phone_point=$pharmacy->phone;
                     $routes[$key]->address_point=$pharmacy->address;
                     $routes[$key]->google_maps_point="https://www.google.com/maps/dir/".str_replace(' ','',$driver->location)."/".str_replace(' ','',$pharmacy->location)."/";
-                    $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    $order=DB::table('orders')->whereIn('id', explode(',', (string) $value->order_id))->first();
                     if(empty($order)) {
                         continue;
                     }
@@ -513,7 +514,7 @@ class LexaAdminApi extends Controller
                         $routes[$key]->zip_point=$patient0->zip;
                     }
                     $routes[$key]->google_maps_point="https://www.google.com/maps/dir/".str_replace(' ','',$driver->location)."/".str_replace(' ','',$routes[$key]->location_point)."/";
-                    $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    $order=DB::table('orders')->whereIn('id', explode(',', (string) $value->order_id))->first();
                     if(empty($order)) {
                         continue;
                     }
@@ -560,7 +561,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'user' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
             $route = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id")->havingRaw('min(id) = ?', [$route_id])->orderBy("priority","asc")->first();
             if(empty($route) || empty($route->id)) {
                 return response()->json([
@@ -634,7 +635,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'user' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
             $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
             if(!empty($payment_account)) {
                 return response()->json([
@@ -662,7 +663,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'user' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
             if(!empty($request->input('name')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
                 $card_token = $request->input('card');
                 $type = 'card';
@@ -721,7 +722,7 @@ class LexaAdminApi extends Controller
                 }
                 if($type=="card") {
                     $amount_money = new \Square\Models\Money();
-                    $amount_money->setAmount(($amount*100));
+                    $amount_money->setAmount(\App\Support\Money::cents($amount));
                     $amount_money->setCurrency('USD');
                     $unid = uniqid("",true).rand(0,100);
                     $body = new \Square\Models\CreatePaymentRequest(
@@ -815,7 +816,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $code = explode("_",$request->input('order_id'));
             $order_id = $code[0];
             if(empty($order_id)) {
@@ -856,7 +857,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $validator = Validator::make($request->all(), [
                 'image' => 'mimes:jpeg,jpg,png|max:10048',       
                 'order_id' => 'max:255',    
@@ -884,8 +885,8 @@ class LexaAdminApi extends Controller
                     ], 400);
                 }
                 $file = $request->file('image');
-                $file->move(public_path() . '/images/drop_off/',date('mdHis').$request->file('image')->getClientOriginalName());
-                $src = '/images/drop_off/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                $file->move(public_path() . '/images/drop_off/',\App\Support\PublicUpload::name($request->file('image')));
+                $src = '/images/drop_off/'.\App\Support\PublicUpload::name($request->file('image'));
                 if(empty($order->signature_photo)) {
                     DB::table('orders')->where('id',$order_id)->update(['drop_off_photo'=>$src]);
                 } else {
@@ -895,9 +896,9 @@ class LexaAdminApi extends Controller
                     $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
                     $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
                     $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
+                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
                     if(!empty($zip_tariff)){
                         if(is_numeric($pharmacy->tariff)) {
                             $tariff = $pharmacy->tariff;
@@ -1031,7 +1032,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $validator = Validator::make($request->all(), [
                 'image' => 'mimes:jpeg,jpg,png|max:2048',  
                 'signature_type' => 'max:255',         
@@ -1060,8 +1061,8 @@ class LexaAdminApi extends Controller
                     ], 400);
                 }
                 $file = $request->file('image');
-                $file->move(public_path() . '/images/signature/',date('mdHis').$request->file('image')->getClientOriginalName());
-                $src = '/images/signature/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                $file->move(public_path() . '/images/signature/',\App\Support\PublicUpload::name($request->file('image')));
+                $src = '/images/signature/'.\App\Support\PublicUpload::name($request->file('image'));
                 if($order->signature>0) {
                     if(empty($order->drop_off_photo)) {
                         DB::table('orders')->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>$request->input('signature_type')]);
@@ -1072,9 +1073,9 @@ class LexaAdminApi extends Controller
                         $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
                         $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
                         $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                        $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                        $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                        $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
+                        $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                        $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                        $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
                         if(!empty($zip_tariff)){
                             if(is_numeric($pharmacy->tariff)) {
                                 $tariff = $pharmacy->tariff;
@@ -1215,8 +1216,8 @@ class LexaAdminApi extends Controller
                     ], 400);
                 }
                 $file = $request->file('image');
-                $file->move(public_path() . '/images/signature/',date('mdHis').$request->file('image')->getClientOriginalName());
-                $src = '/images/signature/'.date('mdHis').$request->file('image')->getClientOriginalName();
+                $file->move(public_path() . '/images/signature/',\App\Support\PublicUpload::name($request->file('image')));
+                $src = '/images/signature/'.\App\Support\PublicUpload::name($request->file('image'));
                 DB::table('orders')->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>'Patient']);
                 return response()->json([
                     'message' => 'Signature was saved'
@@ -1244,7 +1245,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $location = $request->input('location');
             if(empty($location)) {
                 return response()->json([
@@ -1546,13 +1547,13 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(empty($request->input('from')) && empty($request->input('to'))) {
                 $routes = DB::table('routes_priority_logs')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id")->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id")->orderBy("created","desc")->limit(10)->get();
             } else {
                 $from = date("Y-m-d H:i:s",strtotime($request->input('from')));
                 $to = date("Y-m-d H:i:s",strtotime($request->input('to')));
-                $routes = DB::table('routes_priority_logs')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id")->where('driver_id', Auth::user()->id)->whereRaw("created between '$from' and '$to'")->groupBy("type","type_id","driver_id")->orderBy("created","desc")->get();
+                $routes = DB::table('routes_priority_logs')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id")->where('driver_id', Auth::user()->id)->whereBetween('created', [$from, $to])->groupBy("type","type_id","driver_id")->orderBy("created","desc")->get();
             }
             foreach ($routes as $key => $value) {
                 if($value->type=='pharmacy') {
@@ -1563,7 +1564,7 @@ class LexaAdminApi extends Controller
                     $routes[$key]->name_point=$pharmacy->name;
                     $routes[$key]->phone_point=$pharmacy->phone;
                     $routes[$key]->address_point=$pharmacy->address;
-                    $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    $order=DB::table('orders')->whereIn('id', explode(',', (string) $value->order_id))->first();
                     if(empty($order)) {
                         continue;
                     }
@@ -1585,7 +1586,7 @@ class LexaAdminApi extends Controller
                     } else {
                         $routes[$key]->address_point=$patient0->address;
                     }
-                    $order=DB::table('orders')->whereRaw('id in ('.$value->order_id.')')->first();
+                    $order=DB::table('orders')->whereIn('id', explode(',', (string) $value->order_id))->first();
                     if(empty($order)) {
                         continue;
                     }
@@ -1623,7 +1624,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             DB::table('users')->where('id', Auth::user()->id)->update(['route_status'=>'started']);
             $routes = DB::table('routes_priority')->where('driver_id', Auth::user()->id)->orderBy("priority","asc")->get();
             foreach($routes as $value) {
@@ -1646,7 +1647,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id')) && !empty($request->input('status_id'))) {
                 $order_id = explode("_",$request->input('order_id'))[0];
                 $order = DB::table('orders')->where('id', $order_id)->first();
@@ -1658,9 +1659,9 @@ class LexaAdminApi extends Controller
                     $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
                     $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
                     $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
-                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT('.$patient->location.'))')->select("area.id")->first();
+                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
+                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
                     if(!empty($zip_tariff)){
                         if(is_numeric($pharmacy->tariff)) {
                             $tariff = $pharmacy->tariff;
@@ -1805,7 +1806,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id'))) {
                 $code = explode("_",$request->input('order_id'));
                 $order_id = $code[0];
@@ -1872,7 +1873,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id')) && !empty($request->input('code'))) {
                 $code = explode("_",$request->input('code'));
                 $order_id_code = $code[0];
@@ -1955,7 +1956,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'driver') {
+        if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $amount = round(DB::table('payouts_driver')->where('driver_id', Auth::user()->id)->where('withdraw',0)->sum('amount'),1);
             return response()->json([
                 'amount' => $amount
@@ -1980,70 +1981,78 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        $order = DB::table('orders')->where('id',$order_id)->first();
-        if(!empty($order)) {
-            if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'user') && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
-                $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
-                if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
-                    $client = new \Square\SquareClient([
-                        'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                        'environment' => config('app.SQUARE_ENVIRONMENT'),
-                    ]);
-                    $amount = floatval($order->copay);
-                    $amount_money = new \Square\Models\Money();
-                    $amount_money->setAmount(($amount*100));
-                    $amount_money->setCurrency('USD');
-                    $unid = uniqid("",true).rand(0,100);
-                    $body = new \Square\Models\CreatePaymentRequest(
-                        $payment_account->payment_profile_id,
-                        $unid
-                    );
-                    $body->setAmountMoney($amount_money);
-                    $body->setAutocomplete(true);
-                    $body->setCustomerId($payment_account->profile_id);
-                    $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
-                    $body->setNote('Pay Copay #'.$order->id);
-                    $api_response = $client->getPaymentsApi()->createPayment($body);
-                    if ($api_response->isSuccess()) {
-                        $result = $api_response->getResult();
-                        $payment_status = $result->getPayment()->getStatus();
-                        if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
-                            DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>3]);
-                            DB::table('payments')->insert(['order_id'=>$order_id,'transaction_id'=>$result->getPayment()->getId(),'type'=>'copay']);
-                            return response()->json([
-                                'message' => 'OK'
-                            ], 200);
+        // One attempt per order at a time, so a double tap cannot charge the card twice.
+        $response = Cache::lock('pay-copay:'.$order_id, 120)->get(function () use ($order_id) {
+            $order = DB::table('orders')->where('id',$order_id)->first();
+            if(!empty($order)) {
+                if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'user') && $order->user_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
+                    $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
+                    if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
+                        $client = new \Square\SquareClient([
+                            'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
+                            'environment' => config('app.SQUARE_ENVIRONMENT'),
+                        ]);
+                        $amount = floatval($order->copay);
+                        $amount_money = new \Square\Models\Money();
+                        $amount_money->setAmount(\App\Support\Money::cents($amount));
+                        $amount_money->setCurrency('USD');
+                        $unid = uniqid("",true).rand(0,100);
+                        $body = new \Square\Models\CreatePaymentRequest(
+                            $payment_account->payment_profile_id,
+                            $unid
+                        );
+                        $body->setAmountMoney($amount_money);
+                        $body->setAutocomplete(true);
+                        $body->setCustomerId($payment_account->profile_id);
+                        $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
+                        $body->setNote('Pay Copay #'.$order->id);
+                        $api_response = $client->getPaymentsApi()->createPayment($body);
+                        if ($api_response->isSuccess()) {
+                            $result = $api_response->getResult();
+                            $payment_status = $result->getPayment()->getStatus();
+                            if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
+                                DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>3]);
+                                DB::table('payments')->insert(['order_id'=>$order_id,'transaction_id'=>$result->getPayment()->getId(),'type'=>'copay']);
+                                return response()->json([
+                                    'message' => 'OK'
+                                ], 200);
+                            } else {
+                                return response()->json([
+                                    'message' => 'Payment not completed!',
+                                    'errors' => 'Error'
+                                ], 400);
+                            }
                         } else {
+                            $error = json_encode($api_response->getErrors());
                             return response()->json([
-                                'message' => 'Payment not completed!',
+                                'message' => 'Transaction Failed: '.$error,
                                 'errors' => 'Error'
                             ], 400);
                         }
                     } else {
-                        $error = json_encode($api_response->getErrors());
                         return response()->json([
-                            'message' => 'Transaction Failed: '.$error,
-                            'errors' => 'Error'
-                        ], 400);
+                            'message' => 'Card not added',
+                            'errors' => 'Forbidden'
+                        ], 403);
                     }
                 } else {
                     return response()->json([
-                        'message' => 'Card not added',
+                        'message' => 'You cannot open this page',
                         'errors' => 'Forbidden'
                     ], 403);
                 }
             } else {
                 return response()->json([
-                    'message' => 'You cannot open this page',
-                    'errors' => 'Forbidden'
-                ], 403);
+                    'message' => 'Order not found',
+                    'errors' => 'Not Found'
+                ], 404);
             }
-        } else {
-            return response()->json([
-                'message' => 'Order not found',
-                'errors' => 'Not Found'
-            ], 404);
-        }
+        });
+
+        return $response === false ? response()->json([
+            'message' => 'This copay is already being paid.',
+            'errors' => 'Conflict'
+        ], 409) : $response;
     }
 
     /**
@@ -2322,7 +2331,7 @@ class LexaAdminApi extends Controller
         } else {
             Auth::user()->extendTokenExpiry();
         }
-        if(Auth::user()->role == 'admin' || Auth::user()->role == 'user') {
+        if(Auth::user()->hasAnyRole('admin', 'user')) {
             if(!empty($request->input('order_id')) && !empty($request->input('time_id'))) {
                 $order = DB::table('orders')->where('id',$request->input('order_id'))->first();
                 if(!empty($order) && ($order->user_id==Auth::user()->id)) {
@@ -2468,7 +2477,7 @@ class LexaAdminApi extends Controller
             Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
             return $response->access_token;
         } else {
-            dd('Error when update access token HERE!');
+            throw new \RuntimeException('Could not refresh the HERE Maps access token.');
         }
     } 
 }

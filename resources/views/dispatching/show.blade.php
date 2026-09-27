@@ -343,16 +343,7 @@ label {
 @endsection
 @section('content')
  <!-- start page title -->
-                    @if(\Session::has('success'))
-                        <div class="alert alert-success">
-                            {!! \Session::get('success') !!}
-                        </div>
-                    @endif
-                    @if(\Session::has('error'))
-                        <div class="alert alert-danger">
-                            {!! \Session::get('error') !!}
-                        </div>
-                    @endif
+                    <x-flash-messages />
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card">
