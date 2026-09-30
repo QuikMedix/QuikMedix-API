@@ -117,6 +117,17 @@ class OrderCreationTest extends TestCase
         $this->assertDatabaseCount('rxs', 0);
     }
 
+    public function test_order_without_a_bag_count_defaults_to_one_printable_label(): void
+    {
+        $payload = $this->order();
+        unset($payload['count_bags']);
+
+        $this->actingAs($this->pharmacyAdmin)->post('/orders/2/add', $payload)
+            ->assertRedirect('/orders/2?added=1')->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', ['id' => 1, 'count_bags' => 1]);
+    }
+
     public function test_rejects_a_customer_from_another_pharmacy_and_an_rx_that_would_be_truncated(): void
     {
         $this->actingAs($this->pharmacyAdmin)

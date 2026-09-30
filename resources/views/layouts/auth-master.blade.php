@@ -33,6 +33,7 @@
     <script src="{{ URL::asset('/libs/jquery-sparkline/jquery-sparkline.min.js')}}"></script>
     <!-- App js -->
     <script src="{{ URL::asset('/js/app.min.js?v=quikmedix-1')}}"></script>
+    <script src="{{ asset('js/password-visibility.js') }}"></script>
 </body>
 
 </html>

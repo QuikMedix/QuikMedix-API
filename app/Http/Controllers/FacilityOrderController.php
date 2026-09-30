@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ChangeOrderStatus;
 use App\Notifications;
 use App\User;
 use Illuminate\Http\Request;
@@ -116,7 +117,7 @@ class FacilityOrderController extends Controller
                 } else {
                     $driver_id = NULL;
                 }
-                DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
+                DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
                 if(!empty($request->input('facility'))){
                     $us = DB::table('users')->where('id',$request->input('facility'))->first();
                 } else {
@@ -248,7 +249,7 @@ class FacilityOrderController extends Controller
      * @param int|string $pharmacy_id
      * @param int|string $order_id
      */
-    public function update(Request $request,$pharmacy_id,$order_id) {
+    public function update(Request $request,$pharmacy_id,$order_id, ChangeOrderStatus $changeOrderStatus) {
         Gate::authorize('access-order', $order_id);
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id) || Auth::user()->hasAnyRole('logist')) {
             if(request()->request->has('user_id')) {
@@ -322,6 +323,17 @@ class FacilityOrderController extends Controller
                 return redirect("orders/$pharmacy_id/facilitys_edit/$order_id");
             }
             if($request->input('save')>0) {
+                $order = DB::table('orders')->where('id', $order_id)->first();
+                abort_if($order === null, 404, 'Order not found');
+                $validated = $request->validate([
+                    'statuse' => ['sometimes', 'required', 'integer', 'exists:statuses,id'],
+                    'count_bags' => ['sometimes', 'required', 'integer', 'min:1', 'max:10'],
+                ]);
+                $statusId = (int) ($validated['statuse'] ?? $order->statuse_id);
+                if ($statusId !== (int) $order->statuse_id && ! Auth::user()->can('change-order-status')) {
+                    abort_unless((int) $order->statuse_id === 1 && $statusId === 5, 403);
+                }
+
                 $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
                 $statuse_copay = (empty($request->input('copay')))?'1':'2';
                 if(!empty($request->input('copay_paid_pharm'))) {
@@ -369,7 +381,7 @@ class FacilityOrderController extends Controller
                 } else {
                     $delivery_time_range = $request->input('delivery_time_range');
                 }
-                DB::table('orders')->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'statuse_id' => $request->input('statuse'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $request->input('count_bags'), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge]);
+                DB::table('orders')->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $validated['count_bags'] ?? max(1, (int) $order->count_bags), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge]);
                 if($request->input('statuse')==1 && ($request->input('delivery_time')==3 || $request->input('delivery_time')==4)) {
                     $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                     Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
@@ -379,101 +391,7 @@ class FacilityOrderController extends Controller
                         "rush_order"
                     );
                 }
-                if($order->statuse_id!=$request->input('statuse') && ($request->input('statuse')==4 || $request->input('statuse')==8 || $request->input('statuse')==9 || $request->input('statuse')==10)) {
-                    $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
-                    $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
-                    $patient=DB::table('users')->where('users.id',$order->user_id)->first();
-                    $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
-                    $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
-                    $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
-                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
-                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
-                    if(!empty($zip_tariff)){
-                        if(is_numeric($pharmacy->tariff)) {
-                            $tariff = $pharmacy->tariff;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff;
-                        }
-                    } else if(!empty($zip_tariff2)){
-                        if(is_numeric($pharmacy->tariff_area2)) {
-                            $tariff = $pharmacy->tariff_area2;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area2;
-                        }
-                    } else if(!empty($zip_tariff3)){
-                        if(is_numeric($pharmacy->tariff_area3)) {
-                            $tariff = $pharmacy->tariff_area3;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area3;
-                        }
-                    } else {
-                        if(is_numeric($pharmacy->tariff_area_more)) {
-                            $tariff = $pharmacy->tariff_area_more;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area_more;
-                        }
-                    }
-                    if(is_numeric($pharmacy->tariff_next_day)) {
-                        $tariff_next_day = $pharmacy->tariff_next_day;
-                    } else {
-                        $tariff_next_day = $pharmacy_plan->tariff_next_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_same_day)) {
-                        $tariff_same_day = $pharmacy->tariff_same_day;
-                    } else {
-                        $tariff_same_day = $pharmacy_plan->tariff_same_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_asap)) {
-                        $tariff_asap = $pharmacy->tariff_asap;
-                    } else {
-                        $tariff_asap = $pharmacy_plan->tariff_asap;
-                    }
-                    if(is_numeric($pharmacy->tariff_after_hours)) {
-                        $tariff_after_hours = $pharmacy->tariff_after_hours;
-                    } else {
-                        $tariff_after_hours = $pharmacy_plan->tariff_after_hours;
-                    }
-                    if(is_numeric($pharmacy->tariff_fridge)) {
-                        $tariff_fridge = $pharmacy->tariff_fridge;
-                    } else {
-                        $tariff_fridge = $pharmacy_plan->tariff_fridge;
-                    }
-                    if($order->type_driver==1) {
-                        if($order->delivery_time_id==1) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==2) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==3) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==4) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
-                        } else {
-                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
-                        }
-                        if($order->fridge==1) {
-                            $tariff_res+= floatval($tariff_fridge);
-                        }
-                    } else {
-                        $tariff_res = floatval($tariff);
-                    }
-                    $route = DB::table('routes_priority')->where('order_id',$order_id);
-                    $route->delete();
-                    if($patient->primary_address==3){
-                        $user_address = $patient->address3.', '.$patient->zip3.', Apt '.$patient->apartment3;
-                        $user_location = $patient->location3;
-                    } elseif($patient->primary_address==2){
-                        $user_address = $patient->address2.', '.$patient->zip2.', Apt '.$patient->apartment2;
-                        $user_location = $patient->location2;
-                    } else {
-                        $user_address = $patient->address.', '.$patient->zip.', Apt '.$patient->apartment;
-                        $user_location = $patient->location;
-                    }
-                    $driver_location=$user_location;
-                    DB::table('orders')->where('orders.id',$order_id)->update(['statuse_id'=>$request->input('statuse'),'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'tariff'=>$tariff_res]);
-                } else if($order->statuse_id!=$request->input('statuse') && $request->input('statuse')==3) {
-                    Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
-                }
+                $changeOrderStatus->handle((int) $order_id, $statusId);
                 DB::table('medicine')->where('order_id', $order_id)->delete();
             }
             return redirect("orders/$pharmacy_id");

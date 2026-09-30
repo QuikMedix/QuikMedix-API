@@ -65,6 +65,32 @@ body[data-layout="horizontal"] #page-topbar,
     box-shadow: 0 0 0 3px rgba($brand-charcoal, .2);
 }
 
+.qm-order-status {
+    display: inline-block;
+    max-width: 100%;
+    padding: .35rem .55rem;
+    border: 1px solid currentColor;
+    border-radius: .35rem;
+    color: #334155;
+    background-color: #e2e8f0;
+    font-size: .8125rem;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+
+    &[data-tone="primary"] { color: #9f1239; background-color: #ffe4e6; }
+    &[data-tone="success"] { color: #166534; background-color: #dcfce7; }
+    &[data-tone="info"] { color: #075985; background-color: #e0f2fe; }
+    &[data-tone="warning"] { color: #854d0e; background-color: #fef3c7; }
+    &[data-tone="danger"] { color: #991b1b; background-color: #fee2e2; }
+    &[data-tone="light"] { color: #334155; background-color: #f8fafc; }
+    &[data-tone="dark"] { color: #ffffff; background-color: #334155; }
+    &[data-tone="orange"] { color: #9a3412; background-color: #ffedd5; }
+    &[data-tone="pink"] { color: #9d174d; background-color: #fce7f3; }
+    &[data-tone="purple"] { color: #6b21a8; background-color: #f3e8ff; }
+}
+
 // SweetAlert ships its own default purple button independently of Bootstrap.
 .swal2-styled.swal2-confirm {
     background-color: var(--qm-primary) !important;

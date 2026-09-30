@@ -195,6 +195,13 @@
 @endsection
 
 @section('content')
+    @if(request()->integer('added') > 0)
+        <div class="alert alert-success" role="status">
+            Order created.
+            <a class="btn btn-primary btn-sm" href="{{ route('orders.ticket', ['order_id' => request()->integer('added'), 'print' => 1]) }}" target="_blank" rel="noopener">Print QR labels</a>
+        </div>
+    @endif
+
  <!-- start page title -->
                     <div class="row">     
                     
@@ -265,7 +272,7 @@
                                                             @endif
                                                         </td>
                                                         <td style="vertical-align: middle;text-align: center;">
-                                                            <span style="font-size: 11px;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-{{$statuses[$order->statuse_id]->color}}">{{$statuses[$order->statuse_id]->name}}</span>
+                                                            <x-order-status :name="$statuses[$order->statuse_id]->name ?? null" :color="$statuses[$order->statuse_id]->color ?? null" />
                                                             @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))                                                            
                                                             <div style="margin: 10px 0;font-size: 20px;line-height: 20px;color: #f5b225;"><span style="margin-top: 10px;font-size: 12px;color:#5b626b;">Customer rating</span><br>
                                                             @if(empty($order->rating))
@@ -393,8 +400,8 @@
                                                                 @endif                                                              
                                                                 </div>
                                                             </div>
-                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==1 || $order->statuse_id==2))
-                                                            <a href="#" onclick="printTicket('{{$order->id}}')"><button class="btn btn-sm btn-secondary"><i class="ti-printer"></i></button></a>
+                                                            @if(Auth::user()->hasAnyRole('medic', 'superadmin', 'admin', 'dispadmin', 'logist'))
+                                                            <a href="{{ route('orders.ticket', ['order_id' => $order->id, 'print' => 1]) }}" target="_blank" rel="noopener" title="Print QR labels"><button class="btn btn-sm btn-secondary"><i class="ti-printer"></i></button></a>
                                                             @endif                                                             
 
                                                             <!-- <a href="/orders/{{ $order->pharmacy_id }}/show/{{ $order->id }}"><button class="btn btn-success">View order</button></a>
@@ -679,9 +686,6 @@
     var role = "{{ Auth::user()->role }}";
     var page = "{{ $page0 }}";
     $(document).ready(function(){
-        @if(!empty(request()->query('added')))
-            printTicket('{{request()->query('added')}}');
-        @endif
         if(role!='admin' && role!='medic') {
             $('.addorder').hide();
         }
@@ -696,12 +700,6 @@
         } else {
             alert("Date has not be empty!");
         }
-    }
-
-    function printTicket(order_id) {
-        $.get('/orders/ticket/print',{order_id:order_id}).done(function(response) {
-            Popup(response);
-        });
     }
 
     function PrintElem(elem){

@@ -41,6 +41,7 @@ class AuthServiceProvider extends ServiceProvider
         Passport::authorizationView('auth.oauth.authorize');
 
         Gate::define('admin', fn (User $user): bool => $user->isAdmin());
+        Gate::define('change-order-status', fn (User $user): bool => $user->isAdmin() || $user->role === 'logist');
         Gate::define('manage-pharmacy', fn (User $user, int|string|null $pharmacyId = null): bool => $user->canManagePharmacy($pharmacyId));
         // Admin staff manage any driver or patient; a pharmacy user only those of their own pharmacy.
         $managesMember = fn (User $user, int|string|null $pharmacyId, int|string|null $memberId, string $role): bool => $user->canManagePharmacy($pharmacyId)

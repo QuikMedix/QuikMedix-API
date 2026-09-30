@@ -1,11 +1,12 @@
 @foreach($orders as $key=>$order)
 @if(isset($pharmacys[$order->pharmacy_id]) && isset($patients[$order->user_id]))
 <div id="ticket_{{$order->id}}">
-    @for ($i = 1; ($i-1) < $order->count_bags; $i++)
+    @php($bagCount = max(1, (int) $order->count_bags))
+    @for ($i = 1; $i <= $bagCount; $i++)
         <div class="row" style="background: white;">
             <div class="text-center" style="width:306px;height: 406px;background: #ffffff;">
                 <p><img src="{{ asset('images/branding/quikmedix-wordmark.png?v=transparent-1') }}" alt="QuikMedix" width="260" height="63" style="margin-top: 17px;"></p>
-                <span style="font-size:13px;line-height: 12px;padding: 5px;color: #000000;border: solid 1px #000;">Bags: {{$order->count_bags}} -- RX qty: {{$order->rxs_count}} </span>
+                <span style="font-size:13px;line-height: 12px;padding: 5px;color: #000000;border: solid 1px #000;">Bags: {{$bagCount}} -- RX qty: {{$order->rxs_count}} </span>
                 <p class="mb-0" style="font-size:14px;color:#000;margin-left:0px;margin-top: 0px; height: 130px">
                 <img src="data:image/png;base64,{{DNS2D::getBarcodePNG($order->id.'_'.$i, 'QRCODE',5,5)}}" alt="qrcode" style="margin-left: 20px;margin-top: 20px; float: left;"/>
                 <br><span style="margin-top: 10px;">Order # {{$order->id}}</span><br>
