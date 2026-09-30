@@ -29,13 +29,16 @@
 
                                     </div>
                                     <div class="form-group">
-                                        <label for="userpassword">Password</label>
-                                        <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="current-password" placeholder="Password">
-                                        @error('password')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                        @enderror
+                                        <label for="password">Password</label>
+                                        <div class="input-group">
+                                            <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="current-password" placeholder="Password">
+                                            <x-password-toggle target="password" label="password" />
+                                            @error('password')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                            @enderror
+                                        </div>
                                     </div>
                                     <div class="form-group row mt-4">
                                         <div class="col-6">

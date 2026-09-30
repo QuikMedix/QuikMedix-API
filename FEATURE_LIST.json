@@ -1,0 +1,70 @@
+{
+  "last_updated": "2026-09-29",
+  "features": [
+    {
+      "id": "orders-qr-status",
+      "priority": 1,
+      "area": "orders",
+      "title": "Restore QR labels and manual delivery status controls",
+      "user_visible_behavior": "Orders show their current status and QR labels; authorized operations staff can select warehouse, on the way, delivered, or another configured status. Unrelated order edits preserve the current status.",
+      "status": "in_progress",
+      "verification_steps": [
+        "Verify status badge contrast with missing, blank, supported, and unsupported color values; display Unknown status for blank labels without changing stored status data.",
+        "Verify scanner dialog has a visible input, manual submit, error feedback, and Close/Escape support without animation or repeated focus capture; confirm an existing order code opens its preview and dismisses the scanner.",
+        "Verify rendered QR labels for multiple bags and missing legacy bag counts.",
+        "Verify manual status changes, invalid inputs, role and pharmacy restrictions, delivery completion and reopening.",
+        "Verify omitted status and bag fields do not erase existing values.",
+        "Run installed tests and smoke checks, asset build, and available PHP formatter."
+      ],
+      "evidence": [
+        "2026-09-29 badge contrast: 17 synthetic Blade cases and static Chrome fixture using actual built CSS passed; blank-label fallback and escaping checked. All 11 color pairs measure at least 6.15:1. Vite build, 159 tests / 517 assertions, and 114 smoke checks passed with explicit in-memory SQLite settings. No requests to the production-connected application for this verification.",
+        "2026-09-29 manual navigation: Chrome pharmacy session opened Orders → Action → View order and expanded the QR panel; QR image, current status, and Print QR labels link visibly present. The page displayed the stored label Status 1 (dev); the user later confirmed this application connects to a production database; pharmacy role has no manual status selector. Baseline rerun passed (Vite build, 159 tests / 517 assertions, 114 smoke checks).",
+        "2026-09-29 restoration onto main at 66c219c: stash applied without conflicts; SKIP_INSTALL=1 ./init.sh passed (Vite build, 159 tests / 517 assertions, 114 smoke checks). Changes remain uncommitted; stash retained.",
+        "2026-09-29: SKIP_INSTALL=1 ./init.sh passed: Vite build, 159 PHPUnit tests / 517 assertions, 45 routing smoke checks, 69 tariff smoke checks.",
+        "2026-09-29: focused OrderStatusTest.php and OrderLabelsTest.php passed after final cleanup: 35 tests / 127 assertions.",
+        "2026-09-29: OrderCreationTest.php passed: 4 tests / 24 assertions, including omitted bag count.",
+        "2026-09-29: route:list confirms named QR-label, order-details, and status-update routes. PHP syntax checks, bash -n init.sh, and git diff --check passed.",
+        "2026-09-29 source-only placeholder-label investigation: explicit isolated baseline passed (Vite build, 159 tests / 517 assertions, 114 smoke checks). No production application requests or database queries/updates."
+      ],
+      "notes": [
+        "Uses installed PHPUnit and Bootstrap without adding dependencies. Pint invocation failed because vendor/bin/pint is absent; new code was reviewed and syntax checked.",
+        "Status changes are restricted to superadmin, admin, dispadmin, and logist. Existing pharmacy cancellation permissions remain; patient and driver roles cannot use the manual status endpoint.",
+        "Warehouse uses existing status ID 7 (Office), labeled Warehouse (Office) in the selector. No statuses or order rows were altered in the live database.",
+        "Missing historical statuses display Unknown status and can be corrected by authorized staff; they are not guessed or backfilled.",
+        "Live MySQL spatial-query execution, browser status submission as operations staff, physical QR scanning/printing, and actual BestRx/push delivery remain unverified. HTTP/view tests use isolated SQLite and fake external boundaries. Signed-in pharmacy browser navigation, current-status display, and QR image display have been verified.",
+        "Restored init.sh using existing composer test and npm build scripts. SKIP_INSTALL=1 used installed dependencies. Fresh installation and dev startup were not exercised; a missing .env produces an explicit setup error because this checkout has no .env.example.",
+        "User confirms browser app uses a production database. Agent stopped its development server and browser checks; no production migrations, seeds, status submissions, or direct database writes were performed. Scanner dialog changes are uncommitted and await verification in an explicitly isolated environment. Earlier automated checks used isolated in-memory SQLite.",
+        "Shared order-status badge handles missing/unsupported colors and blank labels in list, details, preview, and tracking; preserves stored status names and IDs. Quick filters remain a proposal. Scanner interaction verification still outstanding, so feature remains in_progress.",
+        "Status editing clarification pending: order-number badge is display-only; operations selector is above Order Details and absent from preview. Asked whether to permit pharmacy users to update their own orders; no permission expansion made without that decision.",
+        "2026-09-29 placeholder-label diagnosis: edit/show read statuses.name directly, while shared list lookups cache reference records for one hour. No current source/setup generator for (dev) names was found; origin is unestablished without a database audit. Production label repair remains outstanding; retain IDs/order history and verify intended labels before updates. Pharmacy ID 1/5 restriction is a separate permission issue awaiting user scope confirmation.",
+        "2026-09-29 availability follow-up: the source maps 3/4/7 to On the way/Delivered/Office; pharmacy edit excludes them. Git HEAD confirms that restriction existed before the new gate. Own-pharmacy delivery-status permissions were explicitly requested for clarification again and remain unanswered; labels and pharmacy access are not yet repaired."
+      ]
+    },
+    {
+      "id": "auth-password-visibility",
+      "priority": 2,
+      "area": "authentication",
+      "title": "Show or hide passwords on login and registration",
+      "user_visible_behavior": "Login, registration password, and registration confirmation fields start masked and provide independent keyboard-accessible eye buttons to reveal or hide the entered text without submitting or changing it.",
+      "status": "passing",
+      "verification_steps": [
+        "Run the existing baseline and authentication tests.",
+        "Check show/hide behavior, independent fields, retained values, keyboard access, and registration validation in a browser.",
+        "Review the final diff and update session evidence."
+      ],
+      "evidence": [
+        "2026-09-29 restoration onto main at 66c219c: stash applied without conflicts; SKIP_INSTALL=1 ./init.sh passed (Vite build, 159 tests / 517 assertions, 114 smoke checks). Changes remain uncommitted; stash retained.",
+        "2026-09-29 baseline: SKIP_INSTALL=1 ./init.sh passed (159 tests / 517 assertions, 114 smoke checks, Vite build) using existing dependencies.",
+        "2026-09-29 after changes: vendor/bin/phpunit tests/Feature/ApplicationUpgradeTest.php tests/Feature/Http/Controllers/Auth/RegisterControllerTest.php passed (13 tests / 43 assertions).",
+        "2026-09-29 Chrome browser verification: login starts masked, eye reveals the unchanged sample value, Space re-masks without submission. Both registration fields start masked, reveal independently, and re-mask; mismatch feedback appears and clears after correction. Eye/eye-off icons and error layout visually inspected.",
+        "2026-09-29: node --check public/js/password-visibility.js and git diff --check passed."
+      ],
+      "notes": [
+        "Uses existing Bootstrap styling and Material Design icons, a shared Blade button, and a small script loaded on authentication pages. No backend behavior or dependencies changed.",
+        "Browser checks used sample text only; no login or registration was submitted. Other browsers/mobile devices were not checked.",
+        "Pint remains unavailable (vendor/bin/pint does not exist). Blade rendering is covered by the existing authentication tests.",
+        "All changes remain uncommitted and undeployed; earlier order work preserved."
+      ]
+    }
+  ]
+}

@@ -94,14 +94,20 @@
 
                                     <div class="form-group">
                                         <label for="userpassword">{{ __('Password') }} * <small class="text-muted">(at least 6 characters)</small></label>
-                                        <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" required minlength="6" autocomplete="new-password" id="userpassword" data-label="Password">
-                                        <div class="invalid-feedback" role="alert">@error('password'){{ $message }}@enderror</div>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" required minlength="6" autocomplete="new-password" id="userpassword" data-label="Password">
+                                            <x-password-toggle target="userpassword" label="password" />
+                                            <div class="invalid-feedback" role="alert">@error('password'){{ $message }}@enderror</div>
+                                        </div>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="userconfirmpassword">{{ __('Confirm Password') }} *</label>
-                                        <input type="password" required name="password_confirmation" class="form-control" id="userconfirmpassword" data-label="Password confirmation" autocomplete="new-password">
-                                        <div class="invalid-feedback" role="alert"></div>
+                                        <div class="input-group">
+                                            <input type="password" required name="password_confirmation" class="form-control" id="userconfirmpassword" data-label="Password confirmation" autocomplete="new-password">
+                                            <x-password-toggle target="userconfirmpassword" label="password confirmation" />
+                                            <div class="invalid-feedback" role="alert"></div>
+                                        </div>
                                     </div>
                                 </div>
 

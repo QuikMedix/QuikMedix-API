@@ -82,6 +82,8 @@ audio {
 }
 </style>
 @section('content')
+    <x-flash-messages />
+    @include('orders.tracking', ['order' => $order, 'statuses' => $statuses])
  <!-- start page title -->
 	<ul class="nav nav-tabs">
                 <li class="nav-item">
@@ -113,7 +115,7 @@ audio {
 							
 						<div class="row" style="min-height: 420px;">
 						<div class="col-6">							
-									<b>Order:</b> {{$order->id}} - <span style="font-size: 11px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span><br>
+									<b>Order:</b> {{$order->id}} - <x-order-status :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /><br>
 								    @if($driver!='')
                                     <b>Time away:</b> {{floor($order->eta / 60)}} hr {{$order->eta % 60}} min
                                     <form method="POST" id="eta_calculate" class="d-none">

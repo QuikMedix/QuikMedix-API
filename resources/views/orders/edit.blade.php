@@ -293,15 +293,15 @@
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Select Status</label>
                                             <div class="col-sm-10">
-                                                <select class="form-control" @if(!(Auth::user()->hasAnyRole('admin', 'superadmin')) && $order->statuse_id!=1){{"disabled"}}@endif placeholder="Select Status..." name="statuse">
+                                                <select class="form-control" @if(!(Auth::user()->can('change-order-status')) && $order->statuse_id!=1){{"disabled"}}@endif placeholder="Select Status..." name="statuse">
                                                     <option value="">Status...</option>
                                                     @foreach($statuses as $statuse)
                                                         @if($order->statuse_id==$statuse->id)
                                                             <option value="{{ $statuse->id }}" selected>{{ $statuse->name }}</option>
                                                         @else
-                                                            @if(!(Auth::user()->hasAnyRole('admin', 'superadmin')) && in_array($statuse->id,[1,5]))
+                                                            @if(!(Auth::user()->can('change-order-status')) && in_array($statuse->id,[1,5]))
                                                             <option value="{{ $statuse->id }}">{{ $statuse->name }}</option>
-                                                            @elseif(Auth::user()->hasAnyRole('admin', 'superadmin'))
+                                                            @elseif(Auth::user()->can('change-order-status'))
                                                             <option value="{{ $statuse->id }}">{{ $statuse->name }}</option>
                                                             @endif
                                                         @endif

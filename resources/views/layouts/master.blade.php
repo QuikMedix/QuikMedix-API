@@ -141,16 +141,7 @@
 
     </div>
     @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'medic'))
-    <div class="scan-qr">
-        <img src="{{ URL::asset('/images/qr_new.svg') }}" alt="qr scan">
-    </div>    
-
-    <div class="scan-preload">
-        <i class="fas fa-times close-proload"></i>
-        @csrf
-        <input type="text" id="qr-code">
-        <img src="https://cdn.dribbble.com/users/1187836/screenshots/6012802/13-qrcode.gif" alt="qr scan anim">
-    </div>
+    @include('layouts.partials.qr-scanner')
     <div class="modal fade bs-example-modal-xl" tabindex="-1" aria-labelledby="myExtraLargeModalLabel" id="order_preview_popup" aria-modal="true" role="dialog">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
@@ -229,6 +220,7 @@
     @endif
     <!-- App js -->
     <script src="{{ URL::asset('/js/app.min.js?v=quikmedix-1')}}"></script>
+    <script src="{{ asset('js/qr-scanner.js') }}"></script>
     <script src="{{ URL::asset('/js/jquery.maskedinput.min.js')}}" type="text/javascript"></script>
     <script>
         const synth = window.speechSynthesis;
@@ -268,49 +260,6 @@
             });
             @endif
             @endif
-            $(document).on('click','.scan-qr',function() {
-                $('.scan-preload').fadeIn(400);
-                setInterval(() => {
-                    if($('.scan-preload').css('display')=='block'){
-                        $('#qr-code').focus();
-                    }
-                }, 100);
-                toastr["info"]("Please scan the QR code!");
-                speak("Please scan the QR code!");
-            });
-            $(document).on('click','.close-proload',function() {
-                $('.scan-preload').fadeOut(400);
-            });
-            $(document).on('keyup','#qr-code',function(event) {
-                if(event.code=='Enter' && $('#qr-code').val()!='') {
-                    var qr = $('#qr-code').val();
-                    if(isNumeric(qr.split('_')[0])){
-                        $.get('/orders/preview/'+qr.split('_')[0])
-                        .done(function(response) {
-                            $('#qr-code').val("");
-                            toastr.clear();
-                            $('#order_preview_popup .modal-body').html(response);
-                            $('#order_preview_popup').modal('show');
-                        });
-                    } else {
-                        $.post('/drivers/qr', {code: qr, _token: $("input[name='_token']").val()}, null, 'json')
-                        .done(function(response) {
-                            $('#qr-code').val("");
-                            if(response.user_id>0) {
-                                window.open('/drivers/'+response.user_id+'/packages');
-                                $('.scan-preload').fadeOut(400);
-                                toastr.clear();
-                            } else {
-                                toastr["error"](response.message);
-                                speak(response.message);
-                            }
-                        });
-                    }
-                }
-            });
-            function isNumeric(value) {
-                return /^-?\d+$/.test(value);
-            }
             $.fn.setCursorPosition = function(pos) {
                 if($(this).val()=="") {
                     if ($(this).get(0).setSelectionRange) {

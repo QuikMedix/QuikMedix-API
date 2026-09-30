@@ -4,6 +4,7 @@ use App\Http\Controllers\LexaAdmin;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FacilityOrderController;
 use App\Http\Controllers\OrderPrintController;
+use App\Http\Controllers\OrderStatusController;
 use App\Http\Controllers\AllOrdersController;
 use App\Http\Controllers\LexaAdminApiNoAuth;
 use App\Http\Controllers\FacilityController;
@@ -167,7 +168,7 @@ Route::get('/orders', [AllOrdersController::class, 'index']);
 Route::post('/orders', [AllOrdersController::class, 'updateStatus']);
 
 Route::get('/orders/day/print', [OrderPrintController::class, 'day']);
-Route::get('/orders/ticket/print', [OrderPrintController::class, 'ticket']);
+Route::get('/orders/ticket/print', [OrderPrintController::class, 'ticket'])->name('orders.ticket');
 Route::get('/orders/tickets/print', [OrderPrintController::class, 'tickets']);
 
 Route::get('/orders/{pharmacy_id}/edit/{order_id}', [OrderController::class, 'edit']);
@@ -178,7 +179,8 @@ Route::get('/orders/preview/{order_id}', [OrderController::class, 'preview']);
 Route::get('/orders/{pharmacy_id}/facilitys_edit/{order_id}', [FacilityOrderController::class, 'edit']);
 Route::post('/orders/{pharmacy_id}/facilitys_edit/{order_id}', [FacilityOrderController::class, 'update']);
 
-Route::get('/orders/{pharmacy_id}/show/{order_id}', [OrderController::class, 'show']);
+Route::get('/orders/{pharmacy_id}/show/{order_id}', [OrderController::class, 'show'])->name('orders.show');
+Route::post('/orders/{pharmacy_id}/status/{order_id}', [OrderStatusController::class, 'update'])->whereNumber(['pharmacy_id', 'order_id'])->name('orders.status.update');
 Route::post('/orders/{pharmacy_id}/show/{order_id}', [OrderController::class, 'handleShowAction']);
 
 Route::get('/orders/{pharmacy_id}/add', [OrderController::class, 'create'])->whereNumber('pharmacy_id')->name('orders.pharmacy.create');

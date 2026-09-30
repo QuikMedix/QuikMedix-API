@@ -77,7 +77,7 @@ class OrderPrintController extends Controller
             $patients = self::get_patients([$order->user_id]);
             $wishs = self::get_wishs();
             $res_arr = ['order'=>$order,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
-            return view('orders.ticket',$res_arr);
+            return view(request()->boolean('print') ? 'orders.label-page' : 'orders.ticket', $res_arr);
         } else {
             return abort(403, LexaAdmin::$err_perm);
         }
