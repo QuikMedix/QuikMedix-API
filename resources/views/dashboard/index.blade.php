@@ -181,7 +181,7 @@
                             <div class="col-xl-6 col-sm-6">
                                 <div class="card">
                                     <div class="card-body">
-                                        <h4 class="card-title mb-4">Current Statistics <i class="mdi mdi-chart-bar"></i></h4>  
+                                        <h4 class="card-title mb-4">Order Statuses <i class="mdi mdi-chart-bar"></i></h4>
                                         <div class="row my-3"> 
                                             <div class="col-6 col-sm-6 status-home-box"> 
                                             <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=4" class="status-home-new hover status-delivered">
@@ -205,9 +205,9 @@
                                             <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pick up </a>
                                             <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=7"  class="status-home-new hover status-office">
                                             <i class="mdi mdi-office-building"></i>
-                                            <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Office </a>
+                                            <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Hub </a>
                                             <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=8" class="status-home-new hover status-unavailable">
-                                            <i class="mdi mdi-alien-outline"></i>
+                                            <i class="mdi mdi-account-off-outline"></i>
                                             <span class="font-size-16">{{(isset($count_orders_today[8]))?$count_orders_today[8]:0}}</span> Unavailable </a>
                                             <a href="/orders/{{ Auth::user()->pharmacy_id }}?asap=1" class="status-home-new hover status-scheduled">
                                             <i class="mdi mdi-truck-fast"></i>
@@ -359,7 +359,7 @@
                                         <div class="col-xl-6 col-sm-6">
                                             <div class="card">
                                                 <div class="card-body">
-                                                    <h4 class="card-title mb-4">Current Statistics <i class="mdi mdi-chart-bar"></i></h4>  
+                                                    <h4 class="card-title mb-4">Order Statuses <i class="mdi mdi-chart-bar"></i></h4>
                                                     <div class="row my-3"> 
                                                         <div class="col-6 col-sm-6 status-home-box"> 
                                                         <a href="/orders?filter=1&status%5B%5D=4" class="status-home-new hover status-delivered">
@@ -383,9 +383,9 @@
                                                         <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pick up </a>
                                                         <a href="/orders?filter=1&status%5B%5D=7"  class="status-home-new hover status-office">
                                                         <i class="mdi mdi-office-building"></i>
-                                                        <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Office </a>
+                                                        <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Hub </a>
                                                         <a href="/orders?filter=1&status%5B%5D=8" class="status-home-new hover status-unavailable">
-                                                        <i class="mdi mdi-alien-outline"></i>
+                                                        <i class="mdi mdi-account-off-outline"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_today[8]))?$count_orders_today[8]:0}}</span> Unavailable </a>
                                                         <a href="/orders?asap=1" class="status-home-new hover status-scheduled">
                                                         <i class="mdi mdi-truck-fast"></i>

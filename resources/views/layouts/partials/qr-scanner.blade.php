@@ -39,7 +39,7 @@
     <form id="qr-scanner-form">
         @csrf
         <label for="scan-code">Order number or QR code</label>
-        <input id="scan-code" name="code" class="form-control mb-2" type="text" placeholder="For example: 123 or 123_1" autocomplete="off" spellcheck="false" required autofocus>
+        <input id="scan-code" name="code" class="form-control mb-2" type="text" placeholder="For example: QM-000123 or 123_1" autocomplete="off" spellcheck="false" required autofocus>
         <p id="qr-scanner-error" class="text-danger" role="alert" hidden></p>
         <button type="submit" class="btn btn-primary mt-2">Find order or driver</button>
     </form>

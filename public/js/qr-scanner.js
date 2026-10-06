@@ -60,7 +60,7 @@
 
         error.hidden = true;
         setBusy(true);
-        const orderCode = /^([1-9]\d*)(?:_[1-9]\d*)?$/.exec(code);
+        const orderCode = /^(?:QM-)?0*([1-9]\d*)(?:_[1-9]\d*)?$/i.exec(code);
         pendingRequest = orderCode
             ? $.get('/orders/preview/' + orderCode[1])
             : $.post('/drivers/qr', {code: code, _token: form.elements._token.value}, null, 'json');
