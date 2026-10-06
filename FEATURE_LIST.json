@@ -1,14 +1,16 @@
 {
-  "last_updated": "2026-09-29",
+  "last_updated": "2026-10-05",
   "features": [
     {
       "id": "orders-qr-status",
       "priority": 1,
       "area": "orders",
       "title": "Restore QR labels and manual delivery status controls",
-      "user_visible_behavior": "Orders show their current status and QR labels; authorized operations staff can select warehouse, on the way, delivered, or another configured status. Unrelated order edits preserve the current status.",
+      "user_visible_behavior": "Orders show their current status and QR labels; authorized operations staff can select warehouse, on the way, delivered, or another configured status. Unrelated order edits preserve the current status. Dashboard summaries use the heading Order Statuses, call the existing status 7 tile Hub, and show a suitable Unavailable icon. Compact delivery labels show recipient details, QM order number, per-package QR, and PACKAGE n OF total without driver/pharmacy details. Connected scanners and manual entry accept the QR payload or displayed order number.",
       "status": "in_progress",
       "verification_steps": [
+        "Verify shared individual/batch/PDF compact labels show recipient details, QM order number, package numbering, and first-bag refrigerator/signature warnings; omit driver/pharmacy details and preserve legacy one-bag fallback. Decode distinct generated QR codes and verify scanner handling of raw, bag-specific, and QM-prefixed order numbers, success, failure recovery, and abort. Inspect isolated browser/PDF output.",
+        "Render the pharmacy and admin dashboard summaries with synthetic data; verify Order Statuses, Hub, the Unavailable icon, and preserved counts/filter destinations with the installed styles and icon font.",
         "Verify status badge contrast with missing, blank, supported, and unsupported color values; display Unknown status for blank labels without changing stored status data.",
         "Verify scanner dialog has a visible input, manual submit, error feedback, and Close/Escape support without animation or repeated focus capture; confirm an existing order code opens its preview and dismisses the scanner.",
         "Verify rendered QR labels for multiple bags and missing legacy bag counts.",
@@ -17,6 +19,8 @@
         "Run installed tests and smoke checks, asset build, and available PHP formatter."
       ],
       "evidence": [
+        "2026-10-05 compact label/scanner redesign: shared label layout retains 306 × 406 px paper, recipient details, QM number, per-package QR, and package numbering while omitting driver/pharmacy details. Focused label/status checks passed 44 tests / 187 assertions; node tests/smoke/qr-scanner.js passed 68 isolated checks. PDF normal/refrigerated/long-detail pages were rendered with pdftoppm and visually inspected at /tmp/quikmedix-label-review; independent temporary jsQR 1.4.0 decoding returned 123_1, 123_2, and 123456789_1. Final isolated SKIP_INSTALL=1 ./init.sh passed Vite build, 168 tests / 577 assertions, 45 routing checks, and 69 tariff checks. JS/PHP syntax and git diff --check passed. Native browser checks could not complete due unavailable/unstable controls; physical printing/scanning and authenticated live preview remain unverified. Pint is absent. No production requests/writes, application dependency changes, commit, or push.",
+        "2026-10-05 dashboard feedback: isolated baseline SKIP_INSTALL=1 ./init.sh passed the Vite build, 159 tests / 517 assertions, and 114 smoke checks. Both active pharmacy/admin summary panels now show Order Statuses, Hub, and mdi-account-off-outline. Twenty synthetic Blade rendering checks and native Chrome visual inspection passed using /tmp/quikmedix-dashboard-review/pharmacy.html and admin.html with installed styles/icon font. Final isolated composer test passed 159 tests / 517 assertions plus 45 routing and 69 tariff checks; git diff --check passed. Pint invocation failed because vendor/bin/pint is absent. No production-connected application navigation, lookup edits, or order writes; changes uncommitted.",
         "2026-09-29 badge contrast: 17 synthetic Blade cases and static Chrome fixture using actual built CSS passed; blank-label fallback and escaping checked. All 11 color pairs measure at least 6.15:1. Vite build, 159 tests / 517 assertions, and 114 smoke checks passed with explicit in-memory SQLite settings. No requests to the production-connected application for this verification.",
         "2026-09-29 manual navigation: Chrome pharmacy session opened Orders → Action → View order and expanded the QR panel; QR image, current status, and Print QR labels link visibly present. The page displayed the stored label Status 1 (dev); the user later confirmed this application connects to a production database; pharmacy role has no manual status selector. Baseline rerun passed (Vite build, 159 tests / 517 assertions, 114 smoke checks).",
         "2026-09-29 restoration onto main at 66c219c: stash applied without conflicts; SKIP_INSTALL=1 ./init.sh passed (Vite build, 159 tests / 517 assertions, 114 smoke checks). Changes remain uncommitted; stash retained.",
@@ -27,6 +31,8 @@
         "2026-09-29 source-only placeholder-label investigation: explicit isolated baseline passed (Vite build, 159 tests / 517 assertions, 114 smoke checks). No production application requests or database queries/updates."
       ],
       "notes": [
+        "2026-10-05 user selected existing compact labels. QR contents remain orderId_bagNumber; displayed QM-prefixed/padded numbers are now accepted by manual scanner input. Refrigeration and signature warnings retain the existing first-bag rule. Individual, batch, and PDF templates share the layout. Scanner remains USB/Bluetooth keyboard-style input or manual entry, without a camera capture implementation; configure hardware to send Enter. Prior scanner browser-verification requirement remains outstanding.",
+        "2026-10-05 dashboard feedback is presentation work within this active feature. It does not rename production lookup rows, broaden status permissions, or resolve the prior scanner browser-verification requirement. Earlier QR/status work is now merged on main at c68d338; this session started from a clean worktree.",
         "Uses installed PHPUnit and Bootstrap without adding dependencies. Pint invocation failed because vendor/bin/pint is absent; new code was reviewed and syntax checked.",
         "Status changes are restricted to superadmin, admin, dispadmin, and logist. Existing pharmacy cancellation permissions remain; patient and driver roles cannot use the manual status endpoint.",
         "Warehouse uses existing status ID 7 (Office), labeled Warehouse (Office) in the selector. No statuses or order rows were altered in the live database.",
