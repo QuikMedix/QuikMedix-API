@@ -276,8 +276,8 @@ class OrderStatusTest extends TestCase
         $this->view('orders.tracking', [
             'errors' => new \Illuminate\Support\ViewErrorBag,
             'order' => (object) ['id' => 20, 'pharmacy_id' => 2, 'statuse_id' => 3, 'statusename' => 'On the way', 'count_bags' => 2],
-            'statuses' => [(object) ['id' => 7, 'name' => 'Office'], (object) ['id' => 3, 'name' => 'On the way'], (object) ['id' => 4, 'name' => 'Delivered']],
-        ])->assertSee('Current status:')->assertSee('On the way')->assertSee('Warehouse (Office)')->assertSee('Delivered')
+            'statuses' => [(object) ['id' => 1, 'name' => 'New'], (object) ['id' => 7, 'name' => 'Office'], (object) ['id' => 3, 'name' => 'On the way'], (object) ['id' => 4, 'name' => 'Delivered']],
+        ])->assertSee('Current status:')->assertSee('Ready for pickup')->assertSee('On the way')->assertSee('Hub')->assertDontSee('Warehouse')->assertDontSee('Office')->assertSee('Delivered')
             ->assertSee('Update status')->assertSee('QR code for order 20, bag 2')->assertSee('Print QR labels');
     }
 
@@ -289,5 +289,28 @@ class OrderStatusTest extends TestCase
             'order' => (object) ['id' => 20, 'pharmacy_id' => 2, 'statuse_id' => null, 'statusename' => null, 'count_bags' => null],
             'statuses' => [],
         ])->assertSee('Unknown status')->assertSee('QR code for order 20, bag 1')->assertDontSee('Update status');
+    }
+
+    public static function displayedStatuses(): array
+    {
+        return [
+            'new pharmacy order' => [1, 'New', 'Ready for pickup'],
+            'legacy ready placeholder' => ['1', 'Status 1 (dev)', 'Ready for pickup'],
+            'hub check-in' => [7, 'Office', 'Hub'],
+            'hub placeholder' => ['7', 'Status 7 (dev)', 'Hub'],
+            'hub check-out' => [3, 'Status 3 (dev)', 'On the way'],
+            'configured status' => [4, 'Delivered', 'Delivered'],
+            'custom status' => [11, 'Awaiting review', 'Awaiting review'],
+            'missing status' => [null, null, 'Unknown status'],
+            'blank unknown status' => [99, ' ', 'Unknown status'],
+            'escaped configured status' => [11, '<script>alert(1)</script>', '<script>alert(1)</script>'],
+        ];
+    }
+
+    #[DataProvider('displayedStatuses')]
+    public function test_order_badges_use_confirmed_labels_and_preserve_other_configured_statuses(int|string|null $id, ?string $name, string $expected): void
+    {
+        $this->blade('<x-order-status :status-id="$id" :name="$name" color="warning" />', compact('id', 'name'))
+            ->assertSee($expected)->assertSee('data-tone="warning"', false);
     }
 }

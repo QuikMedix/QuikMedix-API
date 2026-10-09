@@ -1,7 +1,7 @@
 <div class="card">
     <div class="card-body">
         <h5 class="qm-section-title">Order status</h5>
-        <p>Current status: <x-order-status :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /></p>
+        <p>Current status: <x-order-status :status-id="$order->statuse_id ?? null" :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /></p>
         @can('change-order-status')
             <form method="POST" action="{{ route('orders.status.update', [$order->pharmacy_id, $order->id]) }}" class="form-inline mb-3">
                 @csrf
@@ -9,7 +9,7 @@
                 <select id="order-status" name="statuse" class="form-control mr-2" required>
                     <option value="">Choose status…</option>
                     @foreach($statuses as $status)
-                        <option value="{{ $status->id }}" @selected((string) old('statuse', $order->statuse_id) === (string) $status->id)>{{ (int) $status->id === 7 ? 'Warehouse ('.$status->name.')' : $status->name }}</option>
+                        <option value="{{ $status->id }}" @selected((string) old('statuse', $order->statuse_id) === (string) $status->id)>{{ \App\Support\OrderStatus::label($status->id, $status->name) }}</option>
                     @endforeach
                 </select>
                 <button type="submit" class="btn btn-primary">Update status</button>

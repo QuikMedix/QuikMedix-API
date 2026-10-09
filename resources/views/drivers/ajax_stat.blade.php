@@ -23,7 +23,7 @@
                 <td class="text-left p-0">
                     <div class="p-2" style="height: auto;max-height: 80px;overflow: auto;display: flex;flex-direction: row;flex-wrap: wrap;gap: 5px;">
                         @foreach($routes_logs_group->orders as $order)
-                        <a target="_blank" href="/orders/{{$order->pharmacy_id}}/show/{{$order->id}}"><button class="btn btn-outline-dark waves-effect p-1">#{{$order->id}} <span title="Status" style="font-size: 11px;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span>
+                        <a target="_blank" href="/orders/{{$order->pharmacy_id}}/show/{{$order->id}}"><button class="btn btn-outline-dark waves-effect p-1">#{{$order->id}} <span title="Status" style="font-size: 11px;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span>
                             @if($order->copay==0)
                             <span title="Co-pay" style="font-size: 11px;color: black;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-success mt-1">$0 Not required</span>
                             @else

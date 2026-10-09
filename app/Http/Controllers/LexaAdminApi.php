@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Notifications;
+use App\Support\OrderStatus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -252,7 +253,7 @@ class LexaAdminApi extends Controller
                     'pharmacy_name' => $pharmacy->name,
                     'last_order' => [
                         'id'=>$last_order->id,
-                        'status'=>$last_order->statusename,
+                        'status'=>OrderStatus::label($last_order->statuse_id, $last_order->statusename),
                         'eta'=>(!empty($last_order->eta))?$last_order->eta:"Processing",
                         'pharmacyaddress'=>$last_order->pharmacyaddress,
                         'pharmacylocation'=>$last_order->pharmacylocation,
@@ -321,6 +322,7 @@ class LexaAdminApi extends Controller
                 } else {
                     $location=NULL;
                 }
+                $order->statusename = OrderStatus::label($order->statuse_id, $order->statusename);
                 $order->order_location = $location;
                 if($order->statuse_copay==6) {
                     $order->statuse_copay=4;
@@ -329,6 +331,9 @@ class LexaAdminApi extends Controller
                 $orders[$key]=$order;
             }
             $statuses = DB::table('statuses')->get();
+            foreach ($statuses as $status) {
+                $status->name = OrderStatus::label($status->id, $status->name);
+            }
             $pharmacys = DB::table('pharmacys')->get();
             return response()->json([
                 'orders' => $orders,
@@ -384,6 +389,7 @@ class LexaAdminApi extends Controller
                     $order->statuse_copay=4;
                     $order->statuse_copay_name='Paid by cash';
                 }
+                $order->statusename = OrderStatus::label($order->statuse_id, $order->statusename);
                 $order->order_location = $location;
                 $rxs = DB::table('rxs')->where('order_id',$order_id)->get();
                 return response()->json([
@@ -827,8 +833,8 @@ class LexaAdminApi extends Controller
             }
             $order=DB::table('orders')->where('id',$order_id)->where('driver_id',Auth::user()->id)->first();
             if(!empty($order)) {
-                if($order->statuse_id==1 || $order->statuse_id==2 || $order->statuse_id==6) {
-                    DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>3]);
+                if (in_array((int) $order->statuse_id, [OrderStatus::READY_FOR_PICKUP, 2, 6, OrderStatus::HUB], true)) {
+                    DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>OrderStatus::ON_THE_WAY]);
                     Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
                 }
                 return response()->json([
