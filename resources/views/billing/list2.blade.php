@@ -45,7 +45,7 @@
                                                             @else
                                                                 <span style="font-size:10px;width:110px;white-space:normal;padding: 5px;color: white;" class="badge bg-primary badge-pill badge-info">{{$order->delivery_time}}</span>
                                                             @endif</td>
-                                                        <td><span style="font-size: 13px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                        <td><span style="font-size: 13px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                         <td>{{ $order->username }} {{ $order->last_name }}</td>
                                                         <td>${{$order->copay}}</td>
                                                         <td>${{$order->tariff}}</td>

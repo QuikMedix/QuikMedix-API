@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesAuthenticationSchema;
 use Tests\TestCase;
 
@@ -46,6 +47,7 @@ class OrderCreationTest extends TestCase
         }
         Schema::create('orders', function (Blueprint $table): void {
             $table->increments('id');
+            $table->integer('statuse_id')->nullable();
             foreach (['pharmacy_id', 'medic_id', 'driver_id', 'user_id', 'delivery_method_id', 'delivery_time_id', 'count_bags', 'type_driver', 'family_id'] as $column) {
                 $table->integer($column)->nullable();
             }
@@ -65,6 +67,7 @@ class OrderCreationTest extends TestCase
             $table->date('rx_date')->nullable();
             $table->integer('rx_count')->nullable();
             $table->integer('rx_recipient')->nullable();
+            $table->decimal('rx_copay')->nullable();
         });
 
         DB::table('pharmacys')->insert([['id' => 2, 'name' => 'Second Pharmacy'], ['id' => 3, 'name' => 'Other Pharmacy']]);
@@ -96,6 +99,7 @@ class OrderCreationTest extends TestCase
 
         $order = DB::table('orders')->first();
         $this->assertSame(40, (int) $order->user_id);
+        $this->assertSame(1, (int) $order->statuse_id);
         $this->assertSame('2026-09-22', $order->delivery_date);
         $this->assertSame(['RX100001-0'], DB::table('rxs')->where('order_id', $order->id)->pluck('rx_id')->all());
     }
@@ -126,6 +130,24 @@ class OrderCreationTest extends TestCase
             ->assertRedirect('/orders/2?added=1')->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('orders', ['id' => 1, 'count_bags' => 1]);
+    }
+
+    public static function facilityCreationPaths(): array
+    {
+        return [['/orders/2/add', '/orders/2?added=1'], ['/orders/2/facilitys_add', '/orders/2/facilitys_edit/1']];
+    }
+
+    #[DataProvider('facilityCreationPaths')]
+    public function test_facility_orders_also_start_ready_for_pickup(string $path, string $redirect): void
+    {
+        DB::table('users')->where('id', 40)->update(['role' => 'facility']);
+        DB::connection()->getPdo()->sqliteCreateFunction('CURDATE', fn (): string => '2026-10-09');
+        config(['services.fcm.server_key' => null, 'app.twilio_sid' => null]);
+
+        $this->actingAs($this->pharmacyAdmin)->post($path, $this->order(['facility' => 40]))
+            ->assertRedirect($redirect)->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', ['id' => 1, 'user_id' => 40, 'facility' => true, 'statuse_id' => 1]);
     }
 
     public function test_rejects_a_customer_from_another_pharmacy_and_an_rx_that_would_be_truncated(): void

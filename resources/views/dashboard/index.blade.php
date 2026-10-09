@@ -202,7 +202,7 @@
                                             <div class="col-6 col-sm-6"> 
                                             <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=1"class="status-home-new hover status-pending">
                                             <i class="mdi mdi-truck-check"></i>
-                                            <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pick up </a>
+                                            <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pickup </a>
                                             <a href="/orders/{{ Auth::user()->pharmacy_id }}?filter=1&status%5B%5D=7"  class="status-home-new hover status-office">
                                             <i class="mdi mdi-office-building"></i>
                                             <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Hub </a>
@@ -311,7 +311,7 @@
                                                     <h5 class="font-size-14 mt-3">Order: #{{$order->id}}</h5>
                                                     <p class="mb-1" style="min-height: 42px;">{{$order->name}} {{$order->last_name}}  </p>
 
-                                                    <span class="badge badge-pill badge-{{$order->statusecolor}} small mb-2">{{$order->statusename}}</span><br>
+                                                    <span class="badge badge-pill badge-{{$order->statusecolor}} small mb-2">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span><br>
                                                     <a href="/orders/{{ Auth::user()->pharmacy_id }}?search={{$order->id}}" class="mt-1"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View order</button></a>
                                                     <hr class="mb-2">
                                                     <span class="small"> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}   </span>
@@ -380,7 +380,7 @@
                                                         <div class="col-6 col-sm-6"> 
                                                         <a href="/orders?filter=1&status%5B%5D=1"class="status-home-new hover status-pending">
                                                         <i class="mdi mdi-truck-check"></i>
-                                                        <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pick up </a>
+                                                        <span class="font-size-16">{{Auth::user()->ready_pickup_count()}}</span> Ready for pickup </a>
                                                         <a href="/orders?filter=1&status%5B%5D=7"  class="status-home-new hover status-office">
                                                         <i class="mdi mdi-office-building"></i>
                                                         <span class="font-size-16">{{(isset($count_orders_all[7]))?$count_orders_all[7]:0}}</span> Hub </a>
@@ -527,7 +527,7 @@
                                                     <div class="row text-center mt-2">
                                                         <div class="col-6">
                                                             <h5 class="font-size-24 mb-3">{{Auth::user()->ready_pickup_count()}}</h5>
-                                                            <a href="/orders?filter=1&status%5B%5D=1" class="stat-1-4"><i class="mdi mdi-truck-fast"></i> Ready for pick up</a>                                                           
+                                                            <a href="/orders?filter=1&status%5B%5D=1" class="stat-1-4"><i class="mdi mdi-truck-fast"></i> Ready for pickup</a>
                                                         </div>
                                                         <div class="col-6">
                                                             <h5 class="font-size-24 mb-3">{{(isset($count_orders_today[10]))?$count_orders_today[10]:0}}</h5>
@@ -584,7 +584,7 @@
                                         </div>
                                         <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
                                             <i class="mdi mdi-office-building float-right" style="color: #ffa500;font-size: 30px;position: absolute;right: 10px;top: 0px;"></i>                                            
-                                            <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Office</span> {{(isset($count_orders_all[7]))?$count_orders_all[7]:0}} </h4>
+                                            <h4 class="mb-4 mt-4"><span style="font-size: 14px;">Hub</span> {{(isset($count_orders_all[7]))?$count_orders_all[7]:0}} </h4>
                                             <a href="/orders?filter=1&status%5B%5D=7" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                         </div>
                                         <div class="col-xl-2 col-sm-12" style="border-right: solid 1px #c90016;text-align: center;">
@@ -647,7 +647,7 @@
                                             </div>
                                             <div class="">
                                                 <h6 class="text-uppercase mb-3 font-size-12">Today</h6>
-                                                <h2 class="mb-4"><span>Office</span> {{(isset($count_orders_today[7]))?$count_orders_today[7]:0}} </h2>
+                                                <h2 class="mb-4"><span>Hub</span> {{(isset($count_orders_today[7]))?$count_orders_today[7]:0}} </h2>
                                                 <a href="/orders?filter=1&status%5B%5D=7" class="" style="margin-top: -30px;"><button type="button" class="btn btn-sm btn-outline-dark waves-effect waves-light">View orders </button></a>
                                             </div>
                                         </div>
@@ -916,7 +916,7 @@
                           <!-- <div class="col-xl-6">
                                 <div class="card">
                                     <div class="card-body">
-                                        <h4 class="card-title-3 mb-4">Latest Ready for pick up Orders</h4>
+                                        <h4 class="card-title-3 mb-4">Latest Ready for pickup Orders</h4>
                                         <div class="row mt-2">
                                             @foreach($orders0 as $order)                                            
                                             <div class="col-6 p-3">
@@ -927,7 +927,7 @@
                                                     
                                                     <br>                                                
                                                     <hr>
-                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}</span> <span class="float-right"><i class="far fa-grin-alt"></i> {{$order->statusename}}</span></p> 
+                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}</span> <span class="float-right"><i class="far fa-grin-alt"></i> {{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></p>
                                                 </div>                                                                                         
                                             </div>
                                             @endforeach
@@ -950,7 +950,7 @@
                                                     
                                                     <br>                                                
                                                     <hr>
-                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}</span> <span class="float-right"><i class="far fa-grin-stars"></i> {{$order->statusename}}</span></p> 
+                                                    <span> <i class="far fa-calendar-alt"></i> {{date('m.d.Y g:i A', strtotime($order->created ?? ''))}}</span> <span class="float-right"><i class="far fa-grin-stars"></i> {{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></p>
                                                 </div>                                                                                         
                                             </div>
                                             @endforeach
@@ -964,7 +964,7 @@
                             <div class="col-xl-6">
                                 <div class="card">
                                     <div class="card-body">
-                                        <h4 class="card-title mb-4">Latest Ready for pick up Orders</h4>
+                                        <h4 class="card-title mb-4">Latest Ready for pickup Orders</h4>
                                         <div class="table-responsive">
                                             <table class="table table-centered table-vertical table-nowrap">
                                                 <tbody>
@@ -974,7 +974,7 @@
                                                         <td>
                                                             <img src="{{ URL::asset(($order->image=='')?'/images/users/default-user-image.png':$order->image)}}" alt="user-image" class="avatar-xs mr-2 rounded-circle" /> {{$order->name}} {{$order->last_name}}
                                                         </td>
-                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                         <td>
                                                             {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
@@ -1000,7 +1000,7 @@
                                                         <td>
                                                             <img src="{{ URL::asset(($order->image=='')?'/images/users/default-user-image.png':$order->image)}}" alt="user-image" class="avatar-xs mr-2 rounded-circle" /> {{$order->name}} {{$order->last_name}}
                                                         </td>
-                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                         <td>
                                                             {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
@@ -1040,7 +1040,7 @@
                             <div class="col-xl-6">
                                 <div class="card">
                                     <div class="card-body">
-                                        <h4 class="card-title mb-4">Latest Ready for pick up Orders</h4>
+                                        <h4 class="card-title mb-4">Latest Ready for pickup Orders</h4>
                                         <div class="table-responsive">
                                             <table class="table table-centered table-vertical table-nowrap">
                                                 <tbody>
@@ -1050,7 +1050,7 @@
                                                         <td>
                                                             <img src="{{ URL::asset(($order->image=='')?'/images/users/default-user-image.png':$order->image)}}" alt="user-image" class="avatar-xs mr-2 rounded-circle" /> {{$order->name}} {{$order->last_name}}
                                                         </td>
-                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                         <td>
                                                             {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
@@ -1076,7 +1076,7 @@
                                                         <td>
                                                             <img src="{{ URL::asset(($order->image=='')?'/images/users/default-user-image.png':$order->image)}}" alt="user-image" class="avatar-xs mr-2 rounded-circle" /> {{$order->name}} {{$order->last_name}}
                                                         </td>
-                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                        <td><span class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                         <td>
                                                             {{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}
                                                         </td>
