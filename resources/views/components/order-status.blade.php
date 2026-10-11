@@ -1,3 +1,3 @@
-@props(['name' => null, 'color' => null])
+@props(['statusId' => null, 'name' => null, 'color' => null])
 
-<span {{ $attributes->merge(['class' => 'qm-order-status']) }} data-tone="{{ $color }}">{{ trim((string) $name) !== '' ? $name : 'Unknown status' }}</span>
+<span {{ $attributes->merge(['class' => 'qm-order-status']) }} data-tone="{{ $color }}">{{ \App\Support\OrderStatus::label($statusId, $name) }}</span>

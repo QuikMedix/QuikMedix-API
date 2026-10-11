@@ -5,7 +5,7 @@
                 <h5 class="qm-section-title">Order Details</h5>
                 <div class="row">							
                     <div class="col-6">							
-                        <b>Order:</b> {{$order->id}} - <x-order-status :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /><br>
+                        <b>Order:</b> {{$order->id}} - <x-order-status :status-id="$order->statuse_id ?? null" :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /><br>
                         @if(!empty($driver))
                         <b>Time away:</b> {{floor($order->eta / 60)}} hr {{$order->eta % 60}} min
                         <br>

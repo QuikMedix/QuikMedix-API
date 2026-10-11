@@ -43,7 +43,7 @@
                                                 <select class="form-control" name="statuse_id" id="statuse_id">
                                                     <option value="">All statuses</option>
                                                     @foreach($statuses as $status)
-                                                    <option value="{{$status->id}}" @if($statuse_id==$status->id){{'selected'}}@endif>{{$status->name}}</option>
+                                                    <option value="{{$status->id}}" @if($statuse_id==$status->id){{'selected'}}@endif>{{ \App\Support\OrderStatus::label($status->id, $status->name) }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>

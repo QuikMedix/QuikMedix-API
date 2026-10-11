@@ -316,7 +316,7 @@
                                                                 <tr>
                                                                     <th scope="row">{{$order->id}}</th>
                                                                     <td>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}</td>
-                                                                    <td><span style="font-size: 11px;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                                    <td><span style="font-size: 11px;padding: 4px 5px;border-radius: 3px;box-shadow: 0 -3px 31px 0 rgb(64 59 59 / 5%), 0 6px 20px 0 rgb(58 57 57 / 20%);" class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                                     <td>{{$order->drivername}} {{$order->driverlast_name}}</td>
                                                                     <td><a href="/orders/{{$order->pharmacy_id}}/show/{{$order->id}}"><button type="button" class="btn btn-outline-secondary waves-effect">View order</button></a></td>                                                    
                                                                 </tr>

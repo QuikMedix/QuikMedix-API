@@ -140,7 +140,7 @@
                                                                         <td class="fc-event-container">
                                                                             @if(isset($stats[$week[$day]]))
                                                                             @foreach($stats[$week[$day]] as $status)
-                                                                            <a href="/orders/{{$pharmacy_id}}?filter=1&status%5B%5D={{$status->id}}&need_delivery_start={{date('m/d/Y',strtotime($week[$day]))}}&need_delivery_end={{date('m/d/Y',strtotime($week[$day]))}}" class="">{{$status->name}}: {{$status->count}}</a><br>
+                                                                            <a href="/orders/{{$pharmacy_id}}?filter=1&status%5B%5D={{$status->id}}&need_delivery_start={{date('m/d/Y',strtotime($week[$day]))}}&need_delivery_end={{date('m/d/Y',strtotime($week[$day]))}}" class="">{{ \App\Support\OrderStatus::label($status->id, $status->name) }}: {{$status->count}}</a><br>
                                                                             @endforeach
                                                                             @endif
                                                                         </td>

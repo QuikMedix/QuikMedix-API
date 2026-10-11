@@ -272,7 +272,7 @@
                                                             @endif
                                                         </td>
                                                         <td style="vertical-align: middle;text-align: center;">
-                                                            <x-order-status :name="$statuses[$order->statuse_id]->name ?? null" :color="$statuses[$order->statuse_id]->color ?? null" />
+                                                            <x-order-status :status-id="$order->statuse_id ?? null" :name="$statuses[$order->statuse_id]->name ?? null" :color="$statuses[$order->statuse_id]->color ?? null" />
                                                             @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))                                                            
                                                             <div style="margin: 10px 0;font-size: 20px;line-height: 20px;color: #f5b225;"><span style="margin-top: 10px;font-size: 12px;color:#5b626b;">Customer rating</span><br>
                                                             @if(empty($order->rating))
@@ -554,12 +554,12 @@
                                     @foreach($statuses as $order_statuse)
                                         @if(!empty($filter))
                                             @if(in_array($order_statuse->id,$filter['status']))
-                                                <option value="{{$order_statuse->id}}" selected>{{$order_statuse->name}}</option>
+                                                <option value="{{$order_statuse->id}}" selected>{{ \App\Support\OrderStatus::label($order_statuse->id, $order_statuse->name) }}</option>
                                             @else
-                                                <option value="{{$order_statuse->id}}">{{$order_statuse->name}}</option>
+                                                <option value="{{$order_statuse->id}}">{{ \App\Support\OrderStatus::label($order_statuse->id, $order_statuse->name) }}</option>
                                             @endif
                                         @else
-                                            <option value="{{$order_statuse->id}}">{{$order_statuse->name}}</option>
+                                            <option value="{{$order_statuse->id}}">{{ \App\Support\OrderStatus::label($order_statuse->id, $order_statuse->name) }}</option>
                                         @endif
                                     @endforeach
                                 </select>

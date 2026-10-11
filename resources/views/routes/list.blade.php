@@ -73,18 +73,18 @@
                                                                     @if(in_array($statuse->id,request()->query('statuse')))
                                                                         <div style="margin-bottom:5px;">
                                                                             <input type="checkbox" checked class="col-form-label status" id="exampleinput{{$n}}">
-                                                                            <label for="exampleinput{{$n}}" class="col-form-label">{{ $statuse->name }}</label>
+                                                                            <label for="exampleinput{{$n}}" class="col-form-label">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</label>
                                                                         </div>
                                                                     @else
                                                                         <div style="margin-bottom:5px;">
                                                                             <input type="checkbox" class="col-form-label status" id="exampleinput{{$n}}">
-                                                                            <label for="exampleinput{{$n}}" class="col-form-label">{{ $statuse->name }}</label>
+                                                                            <label for="exampleinput{{$n}}" class="col-form-label">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</label>
                                                                         </div>
                                                                     @endif
                                                                 @else
                                                                     <div style="margin-bottom:5px;">
                                                                         <input type="checkbox" class="col-form-label status" id="exampleinput{{$n}}">
-                                                                        <label for="exampleinput{{$n}}" class="col-form-label">{{ $statuse->name }}</label>
+                                                                        <label for="exampleinput{{$n}}" class="col-form-label">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</label>
                                                                     </div>
                                                                 @endif
                                                             @endforeach
@@ -118,7 +118,7 @@
                                                     <tr>
                                                         <td>{{$order->id}}</td>
                                                         <td>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}</td>
-                                                        <td><span style="font-size: 13px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                        <td><span style="font-size: 13px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                         <td>{{$order->username}} {{$order->last_name}}</td>
                                                         <td>{{$order->pharmacyname}}</td>
                                                         @if($order->driver_id>0)

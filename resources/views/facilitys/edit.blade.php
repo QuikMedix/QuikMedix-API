@@ -197,12 +197,12 @@
                                                                 <option value="">Status...</option>
                                                                 @foreach($statuses as $statuse)
                                                                     @if($order->statuse_id==$statuse->id)
-                                                                        <option value="{{ $statuse->id }}" selected>{{ $statuse->name }}</option>
+                                                                        <option value="{{ $statuse->id }}" selected>{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
                                                                     @else
                                                                         @if(!(Auth::user()->role=="superadmin" || Auth::user()->role=="admin") && in_array($statuse->id,[1,5]))
-                                                                        <option value="{{ $statuse->id }}">{{ $statuse->name }}</option>
+                                                                        <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
                                                                         @elseif((Auth::user()->role=="superadmin" || Auth::user()->role=="admin"))
-                                                                        <option value="{{ $statuse->id }}">{{ $statuse->name }}</option>
+                                                                        <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
                                                                         @endif
                                                                     @endif
                                                                 @endforeach

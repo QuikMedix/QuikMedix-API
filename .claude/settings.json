@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -vE \"\\\\.php$\")",
+      "Bash(grep -rnI -A12 \"CREATE TABLE \\\\`delivery_methods\\\\`\" --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=.git .)",
+      "Bash(grep -rnoI \"INSERT INTO \\\\`delivery_methods\\\\`.\\\\{0,600\\\\}\" --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=.git .)",
+      "Bash(grep -rnoE \".{0,80}delivery_method.{0,120}\" resources/views)",
+      "Bash(php artisan *)",
+      "Bash(php /private/tmp/claude-501/-Users-insidious-Documents-Developer-Insight-playground-MavlonProject-MyFork-QuikMedix-API/45232cf7-a9b6-441c-8f13-b84adc0f67f9/scratchpad/q.php)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(grep -rnoE 'statuses\\(_copay\\)?\\\\.name[^,;]{0,60}|\\\\$status\\(e\\)?->name|statuse_copay_name|copay_status[a-z_]*' app resources)",
+      "Bash(grep -rnoE \".{0,90}statuse_id['\\\\\"]?\\\\]?\\\\s*\\(=>|==|===|!=|,|=\\)\\\\s*['\\\\\"]?[0-9]+.{0,60}\" app resources routes)",
+      "Bash(/usr/bin/grep -rnE \"statuse_id['\\\\\"]?\\\\]?[[:space:]]*\\(=>|==|===|!=|,|=\\)[[:space:]]*['\\\\\"]?[0-9]+|statuse_id.{0,20}\\(\\\\[|in ?\\\\\\(\\)[0-9, ]+\" app resources routes)",
+      "Bash(/usr/bin/grep -oE \"^[^:]+:[0-9]+:|statuse_id.{0,70}\")",
+      "Bash(/usr/bin/grep -rnE \"statuse_id['\\\\\"]?[[:space:]]*=>[[:space:]]*['\\\\\"]?\\(2|6|8|9|10\\)\\\\b\" app)",
+      "Bash(/usr/bin/grep -rnE \"==[[:space:]]*['\\\\\"]?\\(6|9\\)['\\\\\"]?\\\\\\)\" app/Http/Controllers/LexaAdminApi.php app/Http/Controllers/OrderController.php)",
+      "Bash(/usr/bin/grep -i statu)",
+      "Bash(/usr/bin/grep -rnE \"case \\(2|6|9\\):|\\\\[\\(2|6|9\\)\\\\][[:space:]]*=>|'\\(2|6|9\\)'[[:space:]]*=>\" app/Http/Controllers)",
+      "Bash(/usr/bin/grep -rnoE \".{0,120}statuse_copay['\\\\\"]?[[:space:]]*\\(=>|==|=|,\\)[[:space:]]*['\\\\\"]?[0-9].{0,80}\" app resources)",
+      "Bash(/usr/bin/grep -rn \"ChangeOrderStatus\" app)",
+      "Bash(/usr/bin/grep -nE \"statuse_id|=>|case|match\" app/Actions/SendOrderStatusToBestRx.php)",
+      "Bash(/usr/bin/grep -rnE \"\\\\b6\\\\b\" app/Http/Controllers/BestRxApi.php)",
+      "Bash(/usr/bin/grep -noE 'name=\"[a-z_]+\"' resources/views/orders/add.blade.php)",
+      "Bash(sort -t'\"' -k2 -u)",
+      "Bash(/usr/bin/grep -rn \"delivery_method\\\\|deliveryMethod\" tests)",
+      "Bash(/usr/bin/grep -rnoE \"['\\\\\"]signature['\\\\\"][[:space:]]*=>[^,\\\\]]{0,60}\" app)",
+      "Bash(/usr/bin/grep -rln \"RefreshDatabase\\\\|DatabaseMigrations\\\\|LazilyRefreshDatabase\" tests)",
+      "Bash(composer show *)",
+      "Bash(/usr/bin/grep -iE \"pint|pest\")",
+      "Bash(/usr/bin/grep -nE \"phpunit|pint|php -l\" PROGRESS.md)",
+      "Bash(php -l database/migrations/2026_10_09_153930_rename_placeholder_lookup_names.php)",
+      "Bash(composer test *)",
+      "Bash(/usr/bin/grep -rnE \"Cache::\\(remember|rememberForever|forget\\)\" app)",
+      "Bash(/usr/bin/grep -rnE \"cache\\\\\\(|->remember\\\\\\(|Cache::\" app)"
+    ]
+  }
+}

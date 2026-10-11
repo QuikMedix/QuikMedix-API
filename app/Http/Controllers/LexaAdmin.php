@@ -104,9 +104,9 @@ class LexaAdmin extends Controller
             }
             $new_patients_app = DB::table('users')->select(DB::raw('count(users.id) as count'))->where('pharmacy_id', Auth::user()->pharmacy_id)->where('isactive', '1')->where('role', 'user')->whereNotNull("os")->first()->count;
             $patients = DB::table('users')->where('pharmacy_id', Auth::user()->pharmacy_id)->where('isactive', '1')->orderBy('id','desc')->limit(6)->get();
-            $orders = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 4)->orderBy('orders.id','desc')->limit(6)->get();
+            $orders = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 4)->orderBy('orders.id','desc')->limit(6)->get();
             $chartDelivered = DB::table('orders')->where('statuse_id',4)->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->select(DB::raw("count(id) as count"), DB::raw("DATE_FORMAT(created, '%m-%Y') date"))->groupby(DB::raw("DATE_FORMAT(created, '%m-%Y')"))->orderBy('id','desc')->limit(12)->get()->reverse();       
-            $orders0 = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 1)->orderBy('orders.id','desc')->limit(6)->get();
+            $orders0 = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 1)->orderBy('orders.id','desc')->limit(6)->get();
             $app_android_users = DB::table("users")->where("role","user")->where("os","1")->count();
             $app_android_drivers = DB::table("users")->where("role","driver")->where("os","1")->count();
             $app_ios_users = DB::table("users")->where("role","user")->where("os","2")->count();
@@ -314,12 +314,12 @@ class LexaAdmin extends Controller
                 $chartDelivered=$chartDelivered->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
             }
             $chartDelivered=$chartDelivered->get()->reverse();
-            $orders = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id', 4)->orderBy('orders.id','desc')->limit(6);
+            $orders = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id', 4)->orderBy('orders.id','desc')->limit(6);
             if(!empty(Auth::user()->zone_id)){
                 $orders=$orders->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
             }
             $orders=$orders->get();
-            $orders0 = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id', 1)->orderBy('orders.id','desc')->limit(6);
+            $orders0 = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.statuse_id', 1)->orderBy('orders.id','desc')->limit(6);
             if(!empty(Auth::user()->zone_id)){
                 $orders0=$orders0->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
             }

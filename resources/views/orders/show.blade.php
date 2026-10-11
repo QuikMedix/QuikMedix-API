@@ -115,7 +115,7 @@ audio {
 							
 						<div class="row" style="min-height: 420px;">
 						<div class="col-6">							
-									<b>Order:</b> {{$order->id}} - <x-order-status :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /><br>
+									<b>Order:</b> {{$order->id}} - <x-order-status :status-id="$order->statuse_id ?? null" :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /><br>
 								    @if($driver!='')
                                     <b>Time away:</b> {{floor($order->eta / 60)}} hr {{$order->eta % 60}} min
                                     <form method="POST" id="eta_calculate" class="d-none">
@@ -1112,9 +1112,9 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                                                     @endif
                                                     @if(!empty($orders_transition->office_id))
                                                         @if($orders_transition->target=="out")
-                                                        <td>The package was taken to the office  (Bag {{$orders_transition->bag}})</td>
+                                                        <td>The package was taken from the hub  (Bag {{$orders_transition->bag}})</td>
                                                         @else
-                                                        <td>The package was given to the office (Bag {{$orders_transition->bag}})</td>
+                                                        <td>The package was given to the hub (Bag {{$orders_transition->bag}})</td>
                                                         @endif
                                                     @endif
                                                     <td>{{$orders_transition->driver_id}}</td>

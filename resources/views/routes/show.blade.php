@@ -33,7 +33,7 @@
                                                     </tr>
                                                     <tr>
                                                         <td>Order Status</td>
-                                                        <td><span style="font-size: 13px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{$order->statusename}}</span></td>
+                                                        <td><span style="font-size: 13px;" class="badge badge-pill badge-{{$order->statusecolor}}">{{ \App\Support\OrderStatus::label($order->statuse_id ?? null, $order->statusename ?? null) }}</span></td>
                                                     </tr>
                                                     <tr>
                                                         <td>Delivery options</td>

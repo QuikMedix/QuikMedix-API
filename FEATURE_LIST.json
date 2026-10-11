@@ -1,14 +1,15 @@
 {
-  "last_updated": "2026-10-05",
+  "last_updated": "2026-10-09",
   "features": [
     {
       "id": "orders-qr-status",
       "priority": 1,
       "area": "orders",
       "title": "Restore QR labels and manual delivery status controls",
-      "user_visible_behavior": "Orders show their current status and QR labels; authorized operations staff can select warehouse, on the way, delivered, or another configured status. Unrelated order edits preserve the current status. Dashboard summaries use the heading Order Statuses, call the existing status 7 tile Hub, and show a suitable Unavailable icon. Compact delivery labels show recipient details, QM order number, per-package QR, and PACKAGE n OF total without driver/pharmacy details. Connected scanners and manual entry accept the QR payload or displayed order number.",
+      "user_visible_behavior": "Orders show their current status and QR labels; authorized operations staff can select hub, on the way, delivered, or another configured status. Unrelated order edits preserve the current status. Dashboard summaries use the heading Order Statuses, call the existing status 7 tile Hub, and show a suitable Unavailable icon. Compact delivery labels show recipient details, QM order number, per-package QR, and PACKAGE n OF total without driver/pharmacy details. Connected scanners and manual entry accept the QR payload or displayed order number. Pharmacy-created orders start at Ready for pickup; status 7 displays Hub consistently and completed outbound hub scans change to On the way.",
       "status": "in_progress",
       "verification_steps": [
+        "Verify Ready for pickup / Hub / On the way labels in badges, tracking controls, status filters, and human-readable API responses; preserve configured labels for other statuses. Verify normal/facility pharmacy creation explicitly sets status 1; completed staff hub handoffs set 7 inbound and 3 outbound after all bags; assigned-driver API pickup scans change Hub to On the way, reject another driver, and preserve Delivered. Keep production records and role permissions unchanged.",
         "Verify shared individual/batch/PDF compact labels show recipient details, QM order number, package numbering, and first-bag refrigerator/signature warnings; omit driver/pharmacy details and preserve legacy one-bag fallback. Decode distinct generated QR codes and verify scanner handling of raw, bag-specific, and QM-prefixed order numbers, success, failure recovery, and abort. Inspect isolated browser/PDF output.",
         "Render the pharmacy and admin dashboard summaries with synthetic data; verify Order Statuses, Hub, the Unavailable icon, and preserved counts/filter destinations with the installed styles and icon font.",
         "Verify status badge contrast with missing, blank, supported, and unsupported color values; display Unknown status for blank labels without changing stored status data.",
@@ -19,6 +20,8 @@
         "Run installed tests and smoke checks, asset build, and available PHP formatter."
       ],
       "evidence": [
+        "2026-10-09 confirmed hub implementation: shared OrderStatus labels use existing IDs 1/3/7 for Ready for pickup/On the way/Hub across badges, selectors, filters, summaries, and readable app API fields. Normal/facility creation explicitly starts at 1. Driver API pickup now accepts assigned Hub orders; staff per-bag handoffs retain existing behavior. Final isolated composer test passed 187 tests / 642 assertions, 45 routing checks, and 69 tariff checks. Isolated SKIP_INSTALL=1 ./init.sh passed the Vite build and then-current 184 tests / 635 assertions before the final driver API regression tests. Final API/hub focused run passed 7 tests / 33 assertions; creation tests reran after notification isolation changes and passed 6 tests / 33 assertions. node tests/smoke/qr-scanner.js passed 68 checks. Modified PHP syntax and git diff --check passed. Required Pint command failed because vendor/bin/pint is absent. Production records, migrations, dependencies, and role permissions were untouched; no commit, push, or deployment.",
+        "2026-10-09 hub feedback review: clean checkout at af3a93d (merged PR #18). SKIP_INSTALL=1 ./init.sh with explicit testing/in-memory SQLite, array session/cache, and temporary config/route/event cache paths passed: Vite build, 168 tests / 577 assertions, 45 routing checks, and 69 tariff checks. Source inspection confirms completed hub inbound handoff sets status 7 and clears the driver, while completed outbound handoff sets status 3. Dashboard says Hub, tracking selector still says Warehouse (Office), and general QR scanning opens the order preview. No product code or production records changed.",
         "2026-10-05 compact label/scanner redesign: shared label layout retains 306 × 406 px paper, recipient details, QM number, per-package QR, and package numbering while omitting driver/pharmacy details. Focused label/status checks passed 44 tests / 187 assertions; node tests/smoke/qr-scanner.js passed 68 isolated checks. PDF normal/refrigerated/long-detail pages were rendered with pdftoppm and visually inspected at /tmp/quikmedix-label-review; independent temporary jsQR 1.4.0 decoding returned 123_1, 123_2, and 123456789_1. Final isolated SKIP_INSTALL=1 ./init.sh passed Vite build, 168 tests / 577 assertions, 45 routing checks, and 69 tariff checks. JS/PHP syntax and git diff --check passed. Native browser checks could not complete due unavailable/unstable controls; physical printing/scanning and authenticated live preview remain unverified. Pint is absent. No production requests/writes, application dependency changes, commit, or push.",
         "2026-10-05 dashboard feedback: isolated baseline SKIP_INSTALL=1 ./init.sh passed the Vite build, 159 tests / 517 assertions, and 114 smoke checks. Both active pharmacy/admin summary panels now show Order Statuses, Hub, and mdi-account-off-outline. Twenty synthetic Blade rendering checks and native Chrome visual inspection passed using /tmp/quikmedix-dashboard-review/pharmacy.html and admin.html with installed styles/icon font. Final isolated composer test passed 159 tests / 517 assertions plus 45 routing and 69 tariff checks; git diff --check passed. Pint invocation failed because vendor/bin/pint is absent. No production-connected application navigation, lookup edits, or order writes; changes uncommitted.",
         "2026-09-29 badge contrast: 17 synthetic Blade cases and static Chrome fixture using actual built CSS passed; blank-label fallback and escaping checked. All 11 color pairs measure at least 6.15:1. Vite build, 159 tests / 517 assertions, and 114 smoke checks passed with explicit in-memory SQLite settings. No requests to the production-connected application for this verification.",
@@ -35,7 +38,7 @@
         "2026-10-05 dashboard feedback is presentation work within this active feature. It does not rename production lookup rows, broaden status permissions, or resolve the prior scanner browser-verification requirement. Earlier QR/status work is now merged on main at c68d338; this session started from a clean worktree.",
         "Uses installed PHPUnit and Bootstrap without adding dependencies. Pint invocation failed because vendor/bin/pint is absent; new code was reviewed and syntax checked.",
         "Status changes are restricted to superadmin, admin, dispadmin, and logist. Existing pharmacy cancellation permissions remain; patient and driver roles cannot use the manual status endpoint.",
-        "Warehouse uses existing status ID 7 (Office), labeled Warehouse (Office) in the selector. No statuses or order rows were altered in the live database.",
+        "Hub uses existing status ID 7 (formerly Office/Warehouse); the selector now displays Hub. No statuses or order rows were altered in the live database.",
         "Missing historical statuses display Unknown status and can be corrected by authorized staff; they are not guessed or backfilled.",
         "Live MySQL spatial-query execution, browser status submission as operations staff, physical QR scanning/printing, and actual BestRx/push delivery remain unverified. HTTP/view tests use isolated SQLite and fake external boundaries. Signed-in pharmacy browser navigation, current-status display, and QR image display have been verified.",
         "Restored init.sh using existing composer test and npm build scripts. SKIP_INSTALL=1 used installed dependencies. Fresh installation and dev startup were not exercised; a missing .env produces an explicit setup error because this checkout has no .env.example.",
@@ -43,7 +46,10 @@
         "Shared order-status badge handles missing/unsupported colors and blank labels in list, details, preview, and tracking; preserves stored status names and IDs. Quick filters remain a proposal. Scanner interaction verification still outstanding, so feature remains in_progress.",
         "Status editing clarification pending: order-number badge is display-only; operations selector is above Order Details and absent from preview. Asked whether to permit pharmacy users to update their own orders; no permission expansion made without that decision.",
         "2026-09-29 placeholder-label diagnosis: edit/show read statuses.name directly, while shared list lookups cache reference records for one hour. No current source/setup generator for (dev) names was found; origin is unestablished without a database audit. Production label repair remains outstanding; retain IDs/order history and verify intended labels before updates. Pharmacy ID 1/5 restriction is a separate permission issue awaiting user scope confirmation.",
-        "2026-09-29 availability follow-up: the source maps 3/4/7 to On the way/Delivered/Office; pharmacy edit excludes them. Git HEAD confirms that restriction existed before the new gate. Own-pharmacy delivery-status permissions were explicitly requested for clarification again and remain unanswered; labels and pharmacy access are not yet repaired."
+        "2026-09-29 availability follow-up: the source maps 3/4/7 to On the way/Delivered/Office; pharmacy edit excludes them. Git HEAD confirms that restriction existed before the new gate. Own-pharmacy delivery-status permissions were explicitly requested for clarification again and remain unanswered; labels and pharmacy access are not yet repaired.",
+        "2026-10-09 requirement interpretation: pharmacy-created orders should display Ready for pickup; orders at the office should display Hub. Asked whether an outbound hub scan should change to On the way or remain Hub, because the quoted comment is ambiguous and current handoff logic changes to status 3. Keep scan transitions unchanged pending clarification; this review does not establish live lookup names or extend pharmacy status permissions.",
+        "2026-10-09 user confirmed that scanning out of the hub changes status to On the way. Implement consistent display labels by the existing status IDs without updating production lookup rows; preserve current inbound/outbound handoff timing and role permissions. The earlier outbound clarification is resolved.",
+        "2026-10-09 implemented the confirmed Ready for pickup → Hub → On the way wording using existing IDs, without rewriting lookup rows. Driver API QR pickup includes Hub with the same assigned-driver restriction, while staff hub check-in/out still waits for all bags. Automated display, API, creation, and handoff checks pass; live browser submissions, mobile/physical hardware, and actual push/BestRx delivery remain unverified. The broader feature stays in_progress for its previously recorded browser/scanner verification, not for an unanswered outbound requirement. Third-party machine status codes and BestRx protocol descriptions retain their existing contracts."
       ]
     },
     {
@@ -70,6 +76,32 @@
         "Browser checks used sample text only; no login or registration was submitted. Other browsers/mobile devices were not checked.",
         "Pint remains unavailable (vendor/bin/pint does not exist). Blade rendering is covered by the existing authentication tests.",
         "All changes remain uncommitted and undeployed; earlier order work preserved."
+      ]
+    },
+    {
+      "id": "lookup-production-names",
+      "priority": 3,
+      "area": "orders",
+      "title": "Replace (dev) placeholder names for delivery methods, order statuses, and copay statuses",
+      "user_visible_behavior": "Order forms, lists, filters, details, and the app API show real names instead of 'Delivery method N (dev)', 'Status N (dev)', and 'Copay status N (dev)'. Delivery methods: Hand to patient, Signature required, Leave at door, Leave with front desk. Statuses: Ready for pickup, In process, On the way, Delivered, Cancelled, Picked up, Hub, Patient unavailable, Refused, Returned to pharmacy. Copay: No copay, Copay due, Paid by card, Paid in cash, Not paid, Paid at pharmacy. IDs and order rows are unchanged.",
+      "status": "passing",
+      "verification_steps": [
+        "Read current rows and order usage (read-only); confirm no code branches on delivery method IDs.",
+        "Derive status names from SendOrderStatusToBestRx and copay names from the code paths that set each copay ID.",
+        "Back up the three lookup tables, run the migration on the user-authorized production database, and read the rows back.",
+        "Run the installed test suite and git diff --check."
+      ],
+      "evidence": [
+        "2026-10-09 read-only audit: delivery_methods 1-4, statuses 1-10, statuses_copay 1-6 all held '(dev)' placeholders; only 2 orders exist (methods 1 and 2, status 1, copay 1). Delivery method IDs are only compared for select-option state.",
+        "2026-10-09 user authorized updating production and running migrations. migrate:status showed nothing pending; migrate --pretend listed only 2026_10_09_153930_rename_placeholder_lookup_names. Pre-change rows saved outside the repo (session scratchpad lookup-backup-before.json). php artisan migrate --force ran it in batch 4 (DONE); readback shows all 20 new names.",
+        "2026-10-09 composer test passed 187 tests / 642 assertions, 45 routing checks, 69 tariff checks; php -l on the migration and git diff --check passed. Pint unavailable (vendor/bin/pint absent)."
+      ],
+      "notes": [
+        "Supersedes the earlier orders-qr-status decision not to rewrite production lookup rows, at the user's explicit request.",
+        "Delivery method names were chosen by the agent (the user delegated the choice); the code attaches no behavior to them. Rename via a follow-up migration if the business uses different methods.",
+        "The migration only renames rows whose name still ends in '(dev)' and skips missing tables, so reruns and fresh databases are safe; down() restores the placeholders.",
+        "Status colors remain the legacy #6c757d for every row; OrderStatus::label still overrides IDs 1/3/7 with identical wording.",
+        "Docker localdev-mysql was not migrated in this session; run php artisan migrate against it to keep it mirroring prod. Live browser display not checked."
       ]
     }
   ]
