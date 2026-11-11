@@ -85,7 +85,7 @@ class OrderStatusTest extends TestCase
         });
         Redis::shouldReceive('get')->andReturn(null);
         Redis::shouldReceive('setex')->andReturn(true);
-        config(['services.fcm.server_key' => null]);
+        config(['services.fcm.credentials' => null]);
         $this->withSession(['user_2fa' => true]);
     }
 

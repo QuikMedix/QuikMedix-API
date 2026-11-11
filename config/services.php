@@ -6,7 +6,10 @@ return [
         'secret_key' => env('PUSHER_BEAMS_SECRET_KEY'),
     ],
     'fcm' => [
-        'server_key' => env('FCM_SERVER_KEY'),
+        // FCM HTTP v1: path to (or raw JSON of) a Firebase service account key.
+        'credentials' => env('FCM_CREDENTIALS'),
+        // Optional; defaults to the project_id inside the service account JSON.
+        'project_id' => env('FCM_PROJECT_ID'),
         'notification_icon' => env('FCM_NOTIFICATION_ICON', 'quikmedix_notification'),
     ],
     'telegram' => [

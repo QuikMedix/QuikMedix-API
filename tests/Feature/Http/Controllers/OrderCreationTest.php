@@ -142,7 +142,7 @@ class OrderCreationTest extends TestCase
     {
         DB::table('users')->where('id', 40)->update(['role' => 'facility']);
         DB::connection()->getPdo()->sqliteCreateFunction('CURDATE', fn (): string => '2026-10-09');
-        config(['services.fcm.server_key' => null, 'app.twilio_sid' => null]);
+        config(['services.fcm.credentials' => null, 'app.twilio_sid' => null]);
 
         $this->actingAs($this->pharmacyAdmin)->post($path, $this->order(['facility' => 40]))
             ->assertRedirect($redirect)->assertSessionHasNoErrors();
