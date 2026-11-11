@@ -2,6 +2,11 @@
     <div class="card-body">
         <h5 class="qm-section-title">Order status</h5>
         <p>Current status: <x-order-status :status-id="$order->statuse_id ?? null" :name="$order->statusename ?? null" :color="$order->statusecolor ?? null" /></p>
+        @if(! empty($pendingException))
+            @can('review-delivery-report', $order->pharmacy_id)
+                @include('orders.dispatch-review')
+            @endcan
+        @endif
         @can('change-order-status')
             <form method="POST" action="{{ route('orders.status.update', [$order->pharmacy_id, $order->id]) }}" class="form-inline mb-3">
                 @csrf

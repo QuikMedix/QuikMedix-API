@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Actions\FinalizeFailedDelivery;
+use App\Actions\RequestDispatchApproval;
 use App\Notifications;
 use App\Support\OrderStatus;
 use Illuminate\Support\Facades\Cache;
@@ -1637,135 +1639,20 @@ class LexaAdminApi extends Controller
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id')) && !empty($request->input('status_id'))) {
                 $order_id = explode("_",$request->input('order_id'))[0];
-                $order = DB::table('orders')->where('id', $order_id)->first();
-                DB::table('orders')->where('id', $order_id)->update(['statuse_id'=>$request->input('status_id')]);
-                if($request->input('status_id')==8 || $request->input('status_id')==9) {
-                    $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
-                    $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
-                    $patient=DB::table('users')->where('users.id',$order->user_id)->first();
-                    $pharmacy_areas=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',1)->pluck('area_id')->toArray();
-                    $pharmacy_areas2=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',2)->pluck('area_id')->toArray();
-                    $pharmacy_areas3=DB::table('pharmacy_areas')->where('pharmacy_id',$order->pharmacy_id)->where('type',3)->pluck('area_id')->toArray();
-                    $zip_tariff=DB::table('area')->whereIn('area.id',$pharmacy_areas)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
-                    $zip_tariff2=DB::table('area')->whereIn('area.id',$pharmacy_areas2)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
-                    $zip_tariff3=DB::table('area')->whereIn('area.id',$pharmacy_areas3)->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', \App\Support\GeoPoint::bindings($patient->location))->select("area.id")->first();
-                    if(!empty($zip_tariff)){
-                        if(is_numeric($pharmacy->tariff)) {
-                            $tariff = $pharmacy->tariff;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff;
-                        }
-                    } else if(!empty($zip_tariff2)){
-                        if(is_numeric($pharmacy->tariff_area2)) {
-                            $tariff = $pharmacy->tariff_area2;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area2;
-                        }
-                    } else if(!empty($zip_tariff3)){
-                        if(is_numeric($pharmacy->tariff_area3)) {
-                            $tariff = $pharmacy->tariff_area3;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area3;
-                        }
-                    } else {
-                        if(is_numeric($pharmacy->tariff_area_more)) {
-                            $tariff = $pharmacy->tariff_area_more;
-                        } else {
-                            $tariff = $pharmacy_plan->tariff_area_more;
-                        }
+                $status_id = (int) $request->input('status_id');
+                if(in_array($status_id, OrderStatus::NEEDS_DISPATCH_APPROVAL, true)) {
+                    if(Auth::user()->role == 'driver') {
+                        // Unavailable / refused stops stay open until dispatch verifies them with the pharmacy.
+                        $exception = app(RequestDispatchApproval::class)->handle((int) $order_id, $status_id, Auth::user(), $request->input('note'));
+                        return response()->json([
+                            'message' => 'OK',
+                            'pending_approval' => true,
+                            'exception_id' => $exception['exception_id'],
+                        ], 200);
                     }
-                    if(is_numeric($pharmacy->tariff_next_day)) {
-                        $tariff_next_day = $pharmacy->tariff_next_day;
-                    } else {
-                        $tariff_next_day = $pharmacy_plan->tariff_next_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_same_day)) {
-                        $tariff_same_day = $pharmacy->tariff_same_day;
-                    } else {
-                        $tariff_same_day = $pharmacy_plan->tariff_same_day;
-                    }
-                    if(is_numeric($pharmacy->tariff_asap)) {
-                        $tariff_asap = $pharmacy->tariff_asap;
-                    } else {
-                        $tariff_asap = $pharmacy_plan->tariff_asap;
-                    }
-                    if(is_numeric($pharmacy->tariff_after_hours)) {
-                        $tariff_after_hours = $pharmacy->tariff_after_hours;
-                    } else {
-                        $tariff_after_hours = $pharmacy_plan->tariff_after_hours;
-                    }
-                    if(is_numeric($pharmacy->tariff_fridge)) {
-                        $tariff_fridge = $pharmacy->tariff_fridge;
-                    } else {
-                        $tariff_fridge = $pharmacy_plan->tariff_fridge;
-                    }
-                    if($order->type_driver==1) {
-                        if($order->delivery_time_id==1) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_next_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==2) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_same_day)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==3) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_asap)+floatval($order->extra_charge_driver));
-                        } elseif($order->delivery_time_id==4) {
-                            $tariff_res = (floatval($tariff)+floatval($tariff_after_hours)+floatval($order->extra_charge_driver));
-                        } else {
-                            throw new \UnexpectedValueException("Unknown delivery time {$order->delivery_time_id} for order {$order->id}");
-                        }
-                        if($order->fridge==1) {
-                            $tariff_res+= floatval($tariff_fridge);
-                        }
-                    } else {
-                        $tariff_res = floatval($tariff);
-                    }
-                    DB::table('orders')->where('id', $order_id)->update(['finish'=>date('Y-m-d H:i:s'),'drop_off_photo'=>NULL,'signature_photo'=>NULL,'signature_type'=>NULL,'tariff'=>$tariff_res]);
-                    $routes = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->get();
-                    if(!empty($routes) && isset($routes[0])){
-                        $routeNeed = $routes[0];
-                        foreach($routes as $routes_priority) {
-                            DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
-                            if($routes_priority->type_pay==1) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
-                            }
-                            if($routes_priority->type_pay==2) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
-                            }
-                            if($routes_priority->type_pay==3) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
-                            }
-                        }
-                        if(empty(Auth::user()->pharmacy_id)) {
-                            $next_office = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->where('type','office')->first();
-                            if(!empty($next_office)) {
-                                DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
-                            } else {
-                                $last_route = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->max('priority');
-                                if(!empty($routeNeed)) {
-                                    DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>1,'type_pay'=>$routeNeed->type_pay,'pay_value'=>$routeNeed->pay_value,'priority'=>(intval($last_route)+1)]);
-                                }
-                            }
-                        } else {
-                            $next_office = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id)->first();
-                            if(!empty($next_office)) {
-                                DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
-                            } else {
-                                $last_route = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->max('priority');
-                                if(!empty($routeNeed)) {
-                                    DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>Auth::user()->pharmacy_id,'type_pay'=>$routeNeed->type_pay,'pay_value'=>$routeNeed->pay_value,'priority'=>(intval($last_route)+1)]);
-                                }
-                            } 
-                        }
-                        if(!empty($routeNeed)) {
-                            $driver= DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',Auth::user()->id)->first();
-                            if(!empty($driver)){
-                                DB::table('packages_transitions')->insert(['order_id'=>$order_id,'user_id'=>$routeNeed->type_id,'driver_id'=>Auth::user()->id,'target'=>"faild",'location'=>$driver->location]);
-                            }
-                            $count_faild = DB::table('packages_transitions')->where('order_id',$order_id)->where('user_id',$routeNeed->type_id)->where('target',"faild")->count();
-                            if($count_faild>=3){
-                                DB::table('orders')->where('id', $order_id)->update(['not_delivered'=>1]);
-                            }
-                        }                 
-                        DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->delete();
-                    }
+                    app(FinalizeFailedDelivery::class)->handle((int) $order_id, $status_id, (int) Auth::user()->id, Auth::user()->pharmacy_id ? (int) Auth::user()->pharmacy_id : null);
+                } else {
+                    DB::table('orders')->where('id', $order_id)->update(['statuse_id'=>$request->input('status_id')]);
                 }
                 return response()->json([
                     'message' => 'OK'

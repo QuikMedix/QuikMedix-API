@@ -435,7 +435,8 @@ class OrderController extends Controller
             $rxs_id = DB::table('rxs')->where('order_id',$order_id)->pluck('rx_recipient')->toArray();
             $additional_recipients=DB::table('additional_recipients')->where('user_id',$order->user_id)->whereIn('id',$rxs_id)->get()->keyBy('id');;
             $family=DB::table('family_members')->where('id',$order->family_id)->first();
-            $res_view = view('orders.show',['statuses'=>DB::table('statuses')->orderBy('id')->get(), 'order'=>$order,'rxs'=>$rxs,'family'=>$family,'dispatcher_notes'=>$dispatcher_notes,'customer_notes'=>$customer_notes,'additional_recipients'=>$additional_recipients,'orders_transitions'=>$orders_transitions,'medicines'=>$medicines,'driver'=>$driver,'locations'=>$locations,'locationDrivers'=>$locationDrivers,'title'=>'Order Show','br1'=>'Orders','br2'=>'Order Show']);
+            [$pendingException, $pharmacyStaff] = Gate::allows('review-delivery-report', $order->pharmacy_id) ? $this->dispatchReview($order) : [null, collect()];
+            $res_view = view('orders.show',['statuses'=>DB::table('statuses')->orderBy('id')->get(), 'pendingException'=>$pendingException, 'pharmacyStaff'=>$pharmacyStaff, 'order'=>$order,'rxs'=>$rxs,'family'=>$family,'dispatcher_notes'=>$dispatcher_notes,'customer_notes'=>$customer_notes,'additional_recipients'=>$additional_recipients,'orders_transitions'=>$orders_transitions,'medicines'=>$medicines,'driver'=>$driver,'locations'=>$locations,'locationDrivers'=>$locationDrivers,'title'=>'Order Show','br1'=>'Orders','br2'=>'Order Show']);
             if(request()->query->has('ajax')) {
                 return $res_view->renderSections();
             } else {
@@ -444,6 +445,28 @@ class OrderController extends Controller
         } else {
             return abort(403, LexaAdmin::$err_perm);
         }
+    }
+
+    /**
+     * The driver's pending unavailable/refused report and the pharmacy staff dispatch can chat with to verify it.
+     *
+     * @return array{0: ?\stdClass, 1: \Illuminate\Support\Collection<int, \stdClass>}
+     */
+    private function dispatchReview(\stdClass $order): array
+    {
+        $pendingException = DB::table('order_exceptions')
+            ->leftJoin('users as driver', 'order_exceptions.driver_id', '=', 'driver.id')
+            ->where('order_exceptions.order_id', $order->id)->where('order_exceptions.status', 'pending')
+            ->select('order_exceptions.*', 'driver.name as driver_name', 'driver.last_name as driver_last_name', 'driver.phone as driver_phone')
+            ->first();
+        if ($pendingException === null) {
+            return [null, collect()];
+        }
+        // Pharmacy staff reviewing their own order chat with the driver; operations staff also get the pharmacy's contacts.
+        $pharmacyStaff = Auth::user()->role === 'medic' ? collect() : DB::table('users')->where('role', 'medic')
+            ->where('pharmacy_id', $order->pharmacy_id)->orderBy('id')->get(['id', 'name', 'last_name']);
+
+        return [$pendingException, $pharmacyStaff];
     }
 
     /**

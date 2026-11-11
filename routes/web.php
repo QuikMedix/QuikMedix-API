@@ -4,6 +4,7 @@ use App\Http\Controllers\LexaAdmin;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FacilityOrderController;
 use App\Http\Controllers\OrderPrintController;
+use App\Http\Controllers\OrderExceptionController;
 use App\Http\Controllers\OrderStatusController;
 use App\Http\Controllers\AllOrdersController;
 use App\Http\Controllers\LexaAdminApiNoAuth;
@@ -181,6 +182,8 @@ Route::post('/orders/{pharmacy_id}/facilitys_edit/{order_id}', [FacilityOrderCon
 
 Route::get('/orders/{pharmacy_id}/show/{order_id}', [OrderController::class, 'show'])->name('orders.show');
 Route::post('/orders/{pharmacy_id}/status/{order_id}', [OrderStatusController::class, 'update'])->whereNumber(['pharmacy_id', 'order_id'])->name('orders.status.update');
+Route::post('/orders/{pharmacy_id}/exceptions/{order_id}/{exception_id}/approve', [OrderExceptionController::class, 'approve'])->whereNumber(['pharmacy_id', 'order_id', 'exception_id'])->name('orders.exceptions.approve');
+Route::post('/orders/{pharmacy_id}/exceptions/{order_id}/{exception_id}/reject', [OrderExceptionController::class, 'reject'])->whereNumber(['pharmacy_id', 'order_id', 'exception_id'])->name('orders.exceptions.reject');
 Route::post('/orders/{pharmacy_id}/show/{order_id}', [OrderController::class, 'handleShowAction']);
 
 Route::get('/orders/{pharmacy_id}/add', [OrderController::class, 'create'])->whereNumber('pharmacy_id')->name('orders.pharmacy.create');
