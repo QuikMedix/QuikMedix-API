@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\RegisterController;
+use App\Http\Controllers\Api\DeleteAccountController;
 use App\Http\Controllers\BestRxApi;
 use App\Http\Controllers\LexaAdminApi;
 use App\Http\Controllers\LexaAdminApiNoAuth;
@@ -29,6 +30,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('register', RegisterController::class);
 Route::post('login', LoginController::class)->middleware('throttle:login');
 Route::post('logout', LogoutController::class)->middleware('auth:api');
+// Self-service account deletion; works even while the account is pending approval.
+Route::post('account/delete', DeleteAccountController::class)->middleware('auth:api');
 
 Route::get('/pharmacy-list', [LexaAdminApiNoAuth::class, 'pharmacyList']);
 Route::post('/driver-create', [LexaAdminApiNoAuth::class, 'driversUsersAddHandler']);

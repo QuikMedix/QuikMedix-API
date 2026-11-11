@@ -141,7 +141,7 @@ class OrderStatusApiTest extends TestCase
         $this->createOrders([7]);
         $driver = User::factory()->create(['role' => 'driver', 'isactive' => 1, 'isblocked' => 0]);
         DB::table('orders')->where('id', 7)->update(['driver_id' => $driver->id, 'statuse_id' => $status]);
-        config(['services.fcm.server_key' => null, 'app.twilio_sid' => null]);
+        config(['services.fcm.credentials' => null, 'app.twilio_sid' => null]);
 
         $this->actingAs($driver, 'api')->postJson('/api/orders/qr_scaned', ['order_id' => '7_1'])
             ->assertJson(['message' => 'Order was changed']);

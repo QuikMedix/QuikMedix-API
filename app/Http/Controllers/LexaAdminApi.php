@@ -1310,42 +1310,23 @@ class LexaAdminApi extends Controller
                 'errors' => 'Bad Request'
             ], 400);
         }
-        $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-        if(Auth::user()->os==1) {
-            if(Auth::user()->role=='driver') {
-                $bindings = $twilio->notify->v1->services(config('app.twilio_notifyDriverServiceSid'))->bindings->read(["identity"=>Auth::user()->id], 20);
-                foreach ($bindings as $record) {
-                    $twilio->notify->v1->services(config('app.twilio_notifyDriverServiceSid'))->bindings($record->sid)->delete();
+        // Save the token first: FCM pushes only need this column.
+        DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
+
+        // Optional legacy Twilio Notify binding. Never let it block saving the token.
+        $isAndroid = Auth::user()->os==1;
+        $isDriver = Auth::user()->role=='driver';
+        $serviceSid = config('app.twilio_notify'.($isDriver ? 'Driver' : 'Client').($isAndroid ? '' : 'IOS').'ServiceSid');
+        if(config('app.twilio_sid') && config('app.twilio_auth_token') && $serviceSid) {
+            try {
+                $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
+                $service = $twilio->notify->v1->services($serviceSid);
+                foreach ($service->bindings->read(["identity"=>Auth::user()->id], 20) as $record) {
+                    $service->bindings($record->sid)->delete();
                 }
-                $twilio->notify->v1->services(config('app.twilio_notifyDriverServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
-                DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
-            } else {
-                $bindings = $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings->read(["identity"=>Auth::user()->id], 20);
-                foreach ($bindings as $record) {
-                    $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings($record->sid)->delete();
-                }
-                $twilio->notify->v1->services(config('app.twilio_notifyClientServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
-                DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
-            }
-        } else {
-            if(Auth::user()->role=='driver') {
-                $bindings = $twilio->notify->v1->services(config('app.twilio_notifyDriverIOSServiceSid'))->bindings->read(["identity"=>Auth::user()->id], 20);
-                foreach ($bindings as $record) {
-                    $twilio->notify->v1->services(config('app.twilio_notifyDriverIOSServiceSid'))->bindings($record->sid)->delete();
-                }
-                $twilio->notify->v1->services(config('app.twilio_notifyDriverIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
-                DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
-            } else {
-                $bindings = $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings->read(["identity"=>Auth::user()->id], 20);
-                foreach ($bindings as $record) {
-                    $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings($record->sid)->delete();
-                }
-                $twilio->notify->v1->services(config('app.twilio_notifyClientIOSServiceSid'))->bindings->create(Auth::user()->id, "fcm", $device_token);
-                DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-                // Create a notification Notifications::send_push(Auth::user()->id,"QuikMedix","Hello Test");
+                $service->bindings->create(Auth::user()->id, "fcm", $device_token);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Twilio Notify binding failed', ['error' => $e->getMessage()]);
             }
         }
         return response()->json([
