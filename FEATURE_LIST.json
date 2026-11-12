@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-09",
+  "last_updated": "2026-11-11",
   "features": [
     {
       "id": "orders-qr-status",
@@ -103,6 +103,20 @@
         "Status colors remain the legacy #6c757d for every row; OrderStatus::label still overrides IDs 1/3/7 with identical wording.",
         "Docker localdev-mysql was not migrated in this session; run php artisan migrate against it to keep it mirroring prod. Live browser display not checked."
       ]
+    },
+    {
+      "id": "dispatch-exception-approval",
+      "priority": 4,
+      "area": "orders",
+      "title": "Dispatcher approval for patient unavailable / refused reports",
+      "user_visible_behavior": "When a driver reports Patient unavailable (8) or Refused (9) through the driver API, the order stays open and a pending dispatch request is recorded. The order's pharmacy staff (medic accounts of that pharmacy; support superadmins when the pharmacy has none) receive a live-chat message from the driver with the order number, reason, driver note, pharmacy name/address/phone and patient name/phone/address, plus a web notification that names only the order. The order page shows a review panel (to that pharmacy's staff and operations staff) with a Chat with driver link, pharmacy staff chat links for operations staff, and Approve / Reject (with instructions) actions. Approval closes the stop exactly as the old driver flow did, for the reporting driver; rejection keeps it open and pushes the instructions to the driver. Admin API status changes still close immediately.",
+      "status": "passing",
+      "verification_steps": [
+        "vendor/bin/phpunit tests/Feature/Http/Controllers/DispatchApprovalTest.php",
+        "Full phpunit suite plus page-routing and tariff smoke checks"
+      ],
+      "evidence": "2026-11-11: DispatchApprovalTest 9 tests / 68 assertions; full suite 205 tests / 739 assertions; 45 routing and 69 tariff smoke checks passed; git diff --check passed. Isolated in-memory SQLite; FCM/Twilio/Beams disabled in tests. 2026-11-11 (pharmacy reviewers): DispatchApprovalTest 10 / 73; full suite 206 / 744; smoke checks passed. Production MySQL 8.4 rehearsal of report -> chat message -> order page render -> approval as the pharmacy's medic passed inside one transaction that was rolled back; before/after snapshots identical. Production migration 2026_11_11_000000_create_order_exceptions_table ran with user approval; migrate:status shows 0 pending.",
+      "notes": "Reviewers are pharmacy staff by user decision (2026-11-11), plus admins/logists. Not verified: Pusher real-time chat delivery, FCM push to a driver phone, visual browser rendering of the panel. Pint unavailable. Assigned-driver check not added (legacy behavior preserved)."
     }
   ]
 }

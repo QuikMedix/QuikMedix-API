@@ -201,3 +201,16 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Blockers/limits: no implementation blocker for the confirmed flow. Live browser status submissions, physical/mobile hardware, real push and BestRx delivery, and prior native scanner-dialog verification remain unverified. No live application requests, production database queries/writes, migrations, lookup/cache rewrites, or permission changes were performed. Third-party machine status codes and BestRx protocol descriptions are preserved.
 - Commit status: all current implementation and session records remain uncommitted; no commit, push, or deployment requested. Earlier review-only session records are preserved.
 - Next action: review and deploy when requested, then verify the scan flow with actual hub/driver hardware. The outbound clarification is resolved; orders-qr-status remains in_progress only for its outstanding broader browser/integration verification.
+
+
+## Session log — 2026-11-11: dispatcher approval for unavailable / refused
+
+- Goal: driver "Patient unavailable" / "Refused" reports require dispatcher approval; order, pharmacy and patient details are forwarded to dispatch to verify with the pharmacy over live chat.
+- Changes: order_exceptions migration; App\Actions\RequestDispatchApproval (pending request, Chatify message from driver to dispatchers, web notification without patient details); App\Actions\FinalizeFailedDelivery (legacy update_status 8/9 completion extracted, parametrized by driver); LexaAdminApi::update_status routes driver 8/9 to approval and keeps the `message: OK` response for shipped apps (adds pending_approval, exception_id); OrderExceptionController approve/reject with change-order-status + access-order gates, row locks, and superseded handling for orders closed meanwhile; review panel on the order page with pharmacy staff chat links. Driver iOS confirmation copy updated (separate repository).
+- Verification: baseline 196 tests / 671 assertions passed before changes. After: DispatchApprovalTest 9 / 68; full suite 205 / 739; 45 routing and 69 tariff smoke checks; git diff --check passed. Pint absent.
+- Limits: migration not run against any real database; no live Chatify/Pusher, FCM or browser checks; no production data access.
+- Commit status: uncommitted on branch feature/dispatch-exception-approval; no commit or push requested.
+- Next action: run the migration in a staging environment, try the flow with a real driver device and a dispadmin account, then add a pending-state indicator and optional note field in the driver app.
+
+- Follow-up (same day): user decided the pharmacy's own staff act as dispatch. Reports now go to that pharmacy's medic accounts (support superadmins as fallback); new gate review-delivery-report lets them, admins and logists approve/reject their pharmacy's reports; panel adds Chat with driver. Tests 206 / 744 passed.
+- Production: with explicit user approval, ran the order_exceptions migration (0 pending afterward). Rehearsed the full flow on production MySQL 8.4 inside a rolled-back transaction with FCM/Twilio/Beams disabled; all checks passed and data snapshots matched before/after. Only side effect: order_exceptions auto-increment advanced.
