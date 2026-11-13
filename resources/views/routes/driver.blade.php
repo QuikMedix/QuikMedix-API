@@ -8,6 +8,8 @@
 <link href="{{ URL::asset('/css/select2.min.css')}}" rel="stylesheet" type="text/css">
 <link href="{{ URL::asset('/css/jquery.bootstrap-touchspin.min.css')}}" rel="stylesheet">
 <style>
+.route-map-area-controls { margin: 10px; padding: 6px; background: #fff; border-radius: 4px; }
+.route-map-area-controls [role="status"] { display: block; max-width: 300px; color: #212529; font-size: 12px; }
 .office-order-picker {
     min-width: 110px;
     max-width: 170px;
@@ -753,6 +755,11 @@ label {
                                                         </div>
                                                     @endif
                                                     @if($routes_priority[$n]->type=='office')
+                                                        @php
+                                                            if(request()->boolean('show_route')) {
+                                                                $show_ids[] = 'office'.$routes_priority[$n]->type_id;
+                                                            }
+                                                        @endphp
                                                         <div class="plus-item active-yellow office{{$routes_priority[$n]->type_id}}">
                                                             <input type="hidden" name="order_id[]" value="{{$routes_priority[$n]->order_id}}">
                                                             <input type="hidden" name="type[]" value="{{$routes_priority[$n]->type}}">
@@ -884,6 +891,7 @@ label {
                                             </div>
                                             @endif
                                         </div>
+                                        <p id="route-map-message" class="text-muted" role="status" hidden></p>
                                         <div id="map" style="height: 600px;width: 100%;"></div>
                                     </div>
                                 </div>
@@ -902,6 +910,7 @@ label {
 <script src="/js/BootstrapMenu.min.js"></script>
 <script src="{{ URL::asset('/js/route-order-select.js') }}"></script>
 <script src="{{ URL::asset('/js/office-order-picker.js?v=2') }}"></script>
+<script src="{{ URL::asset('/js/route-map-tools.js?v=1') }}"></script>
 @php($officeOrderIds = $orders->keys()->merge($orders_id->pluck('order_id'))->values()->all())
 <script type="text/javascript">
     window.officeOrderPicker.init(@json($officeOrderIds));
@@ -1185,13 +1194,13 @@ label {
             $('.modal2').fadeOut(300);
             $('.modal1').fadeOut(300);
             $('.order_ids').remove();
-            _myPolygon.setMap(null);
+            if (_myPolygon) { _myPolygon.setMap(null); }
         });
         $('body').on('click','.close0',function() {
             $('.modal1').fadeOut(300);
             $('.modal2').fadeOut(300);
             $('.order_ids').remove();
-            _myPolygon.setMap(null);
+            if (_myPolygon) { _myPolygon.setMap(null); }
         });
         draggablePharmacy();
         draggablePatient();
@@ -1398,27 +1407,49 @@ label {
         reload_priority();
     });
     $('#load_map').on('click',function(){
+        $(this).hide();
+        $('.block_map').show();
+        if (window.google && window.google.maps) {
+            if (google.maps.geometry) {
+                initMap();
+            } else {
+                google.maps.importLibrary('geometry').then(initMap).catch(function () {
+                    $('#route-map-message').text('The map could not load. Try Show Map again.').prop('hidden', false);
+                    $('#load_map').show();
+                });
+            }
+            return;
+        }
         var s = document.createElement("script");
         s.type = "text/javascript";
-        s.src = "https://maps.googleapis.com/maps/api/js?key={{config('app.googlemaps_apikey')}}&region=US&language=en&libraries=drawing,geometry&v=weekly&callback=initMap";
+        s.src = "https://maps.googleapis.com/maps/api/js?key={{config('app.googlemaps_apikey')}}&region=US&language=en&libraries=geometry&v=weekly&callback=initMap";
+        s.onerror = function () {
+            $('#route-map-message').text('The map could not load. Try Show Map again.').prop('hidden', false);
+            $('#load_map').show();
+        };
         $('#footerScript').append(s);
-        $(this).hide(300);
-        setTimeout(() => {
-            $('.block_map').show(300);
-        }, 200);
     });
 </script>
 <script>
     var map;
     var _myPolygon;
+    var areaSelector;
     var markersArray = [];
     var locationDriver = "{{ $locations->location ?? '' }}"; // empty until the driver shares a location
-    function mapCenter() { return locationDriver || locationPharmacy[0] || locationPatients[0] || '40.7128,-74.0060'; }
+    function mapCenter() { return window.routeMapTools.center([locationDriver].concat(locationPharmacy, locationPatients, locationOffice)); }
     var locationOffice = [@foreach($offices as $office)
-    "{{ $office->location }}",
+    @if(!request()->boolean('show_route') || in_array('office'.$office->id, $show_ids))
+    @if(!empty($office->location))
+    @json($office->location),
+    @endif
+    @endif
     @endforeach];
     var locationOfficeID = [@foreach($offices as $office)
-    "{{ $office->id }}",
+    @if(!request()->boolean('show_route') || in_array('office'.$office->id, $show_ids))
+    @if(!empty($office->location))
+    @json((string) $office->id),
+    @endif
+    @endif
     @endforeach];
     var locationPatients = [@foreach($patients_locations as $patients_location)
     @if(!empty($patients_location['id']) && !empty($patients_location['location']))
@@ -1432,7 +1463,7 @@ label {
     @endif
     @endforeach];
     var locationPharmacy = [@foreach($pharmacy_locations as $pharmacy_location)
-    @if(!empty($pharmacy_location['location']))
+    @if(!empty($pharmacy_location['id']) && !empty($pharmacy_location['location']))
     @if(!empty(request()->query('show_route')) && request()->query('show_route')>0)
         @if((!empty($show_ids) && in_array("pharmacy".$pharmacy_location['id'],$show_ids)))
         "{{ $pharmacy_location['location'] }}",
@@ -1458,7 +1489,7 @@ label {
     @endif
     @endforeach];
     var locationPharmacyID = [@foreach($pharmacy_locations as $pharmacy_location)
-    @if(!empty($pharmacy_location['id']))
+    @if(!empty($pharmacy_location['id']) && !empty($pharmacy_location['location']))
     @if(!empty(request()->query('show_route')) && request()->query('show_route')>0)
         @if(!empty($show_ids) && in_array("pharmacy".$pharmacy_location['id'],$show_ids))
             @if(isset($show_priority['pharmacy'.$pharmacy_location['id']]))
@@ -1473,7 +1504,9 @@ label {
     @endif
     @endforeach];
     function addMarker(latlng, text, color, background, id, map, weight="bold") {
-        var latLng = new google.maps.LatLng(parseFloat(latlng.split(",")[0]), parseFloat(latlng.split(",")[1]));
+        var point = window.routeMapTools.point(latlng);
+        if (!point) { return; }
+        var latLng = new google.maps.LatLng(point.lat, point.lng);
         if(markersArray.length != 0) {
             for (i=0; i < markersArray.length; i++) {
                 var existingMarker = markersArray[i];
@@ -1488,18 +1521,12 @@ label {
         }
         const marker = new google.maps.Marker({
             position: latLng,
-            icon: {
-                url: '/images/i033.svg', // url
-                scaledSize: new google.maps.Size(35, 35), // scaled size
-                origin: new google.maps.Point(0,0), // origin
-                anchor: new google.maps.Point(30, 30), // anchor
-                labelOrigin: new google.maps.Point(18, 31)
-            },
+            icon: window.routeMapTools.icon('#0e46b7'),
             label: {
                 text:text,
                 fontWeight: weight,
                 fontSize: '8px',
-                color: color
+                color: '#fff'
             },
             title: id,
             id: id,
@@ -1509,31 +1536,23 @@ label {
         attachSecretMessage(marker);
     }
     function addMarkerDriver(latlng, map) {
+        var point = window.routeMapTools.point(latlng);
+        if (!point) { return; }
         const marker = new google.maps.Marker({
-            position: { lat: parseFloat(latlng.split(",")[0]), lng: parseFloat(latlng.split(",")[1]) },
-            icon: {
-                @if($driver->transport=='1')
-                url: '/images/i022.svg', // url
-                @elseif($driver->transport=='2')
-                url: '/images/bicycle-map.svg', // url
-                @endif
-                scaledSize: new google.maps.Size(46, 46), // scaled size
-                origin: new google.maps.Point(0,0), // origin
-                anchor: new google.maps.Point(23, 23) // anchor
-            },
+            position: point,
+            icon: window.routeMapTools.icon('#242424'),
+            label: { text: 'D', color: '#fff', fontWeight: 'bold' },
             map: map,
         });
         attachSecretMessage(marker);
     }
     function addMarkerOffice(latlng, text, color, background, id, map, weight="bold") {
+        var point = window.routeMapTools.point(latlng);
+        if (!point) { return; }
         const marker = new google.maps.Marker({
-            position: { lat: parseFloat(latlng.split(",")[0]), lng: parseFloat(latlng.split(",")[1]) },
-            icon: {
-                url: '/images/i044.svg', // url
-                scaledSize: new google.maps.Size(30, 30), // scaled size
-                origin: new google.maps.Point(0,0), // origin
-                anchor: new google.maps.Point(30, 30) // anchor
-            },
+            position: point,
+            icon: window.routeMapTools.icon('#eca40d'),
+            label: { text: text, color: '#212529', fontWeight: 'bold' },
             title: id,
             id: id,
             map: map,
@@ -1541,15 +1560,11 @@ label {
         attachSecretMessage(marker);
     }
     function addMarkerPharmacy(latlng, text, color, background, id, map, weight="bold") {
+        var point = window.routeMapTools.point(latlng);
+        if (!point) { return; }
         const marker = new google.maps.Marker({
-            position: { lat: parseFloat(latlng.split(",")[0]), lng: parseFloat(latlng.split(",")[1]) },
-            icon: {
-                url: '/images/i011.svg', // url
-                scaledSize: new google.maps.Size(35, 35), // scaled size
-                origin: new google.maps.Point(0,0), // origin
-                anchor: new google.maps.Point(20, 20), // anchor
-                labelOrigin: new google.maps.Point(18, 31)
-            },
+            position: point,
+            icon: window.routeMapTools.icon('#19b313'),
             label: {
                 text:text,
                 fontWeight: weight,
@@ -1564,44 +1579,17 @@ label {
         attachSecretMessage(marker);
     }
     function initMap() {
+        if (!window.google || !window.google.maps) { return; }
+        if (areaSelector) { areaSelector.destroy(); }
+        _myPolygon = null;
+        markersArray = [];
         map = new google.maps.Map(document.getElementById("map"), {
             zoom: 11,
-            center: { lat: parseFloat(mapCenter().split(",")[0]), lng: parseFloat(mapCenter().split(",")[1]) },
+            center: mapCenter(),
             legend: 'none'
         });
 
-        const drawingManager = new google.maps.drawing.DrawingManager({
-            drawingControl: true,
-            drawingControlOptions: {
-                position: google.maps.ControlPosition.TOP_CENTER,
-                drawingModes: [google.maps.drawing.OverlayType.POLYGON],
-            },                               
-        });
-        drawingManager.setMap(map);
-        google.maps.event.addListener(drawingManager, 'overlaycomplete', function(e) {
-            _myPolygon = e.overlay;
-        });
-        google.maps.event.addListener(drawingManager,'polygoncomplete',function(polygon) {
-            for(n=0;n<locationPatients.length;n++) {
-                if(google.maps.geometry.poly.containsLocation(new google.maps.LatLng(parseFloat(locationPatients[n].split(',')[0]), parseFloat(locationPatients[n].split(',')[1])),polygon) && showPatient) {
-                    $("#region-form").append('<input class="order_ids" type="hidden" name="patients_id[]" value="'+locationPatientsID[n]+'">');
-                }
-            }
-            for(n1=0;n1<locationPharmacy.length;n1++) {
-                if(google.maps.geometry.poly.containsLocation(new google.maps.LatLng(parseFloat(locationPharmacy[n1].split(',')[0]), parseFloat(locationPharmacy[n1].split(',')[1])),polygon) && showPharmacy) {
-                    $("#region-form").append('<input class="order_ids" type="hidden" name="pharmacys_id[]" value="'+locationPharmacyID[n1]+'">');
-                }
-            }
-            for(n2=0;n2<locationOffice.length;n2++) {
-                if(google.maps.geometry.poly.containsLocation(new google.maps.LatLng(parseFloat(locationOffice[n2].split(',')[0]), parseFloat(locationOffice[n2].split(',')[1])),polygon)) {
-                    $("#region-form").append('<input class="order_ids" type="hidden" name="office_id[]" value="'+locationOfficeID[n2]+'">');
-                }
-            }
-            if(n>=locationPatients.length && n1>=locationPharmacy.length && n2>=locationOffice.length) {
-                $('.modal1').fadeIn(300);
-            }
-        });
-        if (locationDriver) addMarkerDriver(locationDriver,map);
+        if (locationDriver) { addMarkerDriver(locationDriver,map); }
         for(n=0;n<locationOffice.length;n++) {
             addMarkerOffice(locationOffice[n],locationOfficeID[n].toString(),"#000","#eca40d","office"+locationOfficeID[n].toString(),map);
         }
@@ -1629,6 +1617,35 @@ label {
                 }
             }
         }
+        var visibleStops = locationOffice.concat(showPatient ? locationPatients : [], showPharmacy ? locationPharmacy : []);
+        var visibleLocations = [locationDriver].concat(visibleStops);
+        window.routeMapTools.fitStops(map, visibleLocations);
+        $('#route-map-message').text('No mapped stops match this route or its filters. Check the selected stops and their addresses.').prop('hidden', visibleStops.some(function(location) { return window.routeMapTools.point(location); }));
+        areaSelector = window.routeMapTools.areaSelector(map, function(polygon) {
+            _myPolygon = polygon;
+            $('#region-form .order_ids').remove();
+            for(n=0;n<locationPatients.length;n++) {
+                var patientPoint = window.routeMapTools.point(locationPatients[n]);
+                if(patientPoint && google.maps.geometry.poly.containsLocation(new google.maps.LatLng(patientPoint.lat, patientPoint.lng),polygon) && showPatient) {
+                    $("#region-form").append('<input class="order_ids" type="hidden" name="patients_id[]" value="'+locationPatientsID[n].split(';')[0]+'">');
+                }
+            }
+            for(n1=0;n1<locationPharmacy.length;n1++) {
+                var pharmacyPoint = window.routeMapTools.point(locationPharmacy[n1]);
+                if(pharmacyPoint && google.maps.geometry.poly.containsLocation(new google.maps.LatLng(pharmacyPoint.lat, pharmacyPoint.lng),polygon) && showPharmacy) {
+                    $("#region-form").append('<input class="order_ids" type="hidden" name="pharmacys_id[]" value="'+locationPharmacyID[n1].split(';')[0]+'">');
+                }
+            }
+            for(n2=0;n2<locationOffice.length;n2++) {
+                var officePoint = window.routeMapTools.point(locationOffice[n2]);
+                if(officePoint && google.maps.geometry.poly.containsLocation(new google.maps.LatLng(officePoint.lat, officePoint.lng),polygon)) {
+                    $("#region-form").append('<input class="order_ids" type="hidden" name="office_id[]" value="'+locationOfficeID[n2]+'">');
+                }
+            }
+            if(n>=locationPatients.length && n1>=locationPharmacy.length && n2>=locationOffice.length) {
+                $('.modal1').fadeIn(300);
+            }
+        });
     }
     function attachSecretMessage(marker) {
         marker.addListener("click", () => {

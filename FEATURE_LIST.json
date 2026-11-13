@@ -161,6 +161,32 @@
         "2026-11-12 user still cannot use Choose orders after PR #23 was merged. Reopen the feature: prior browser evidence covered a small fixture, not the complete draggable route grid. Replace the office-only Bootstrap multiselect with a native dialog checkbox picker outside the scrolling grid, explicitly exclude interactive controls from sorting, include eligible visible orders as well as existing route orders, and verify actual Blade output with shipped drag/drop assets. Preserve backend validation and role/ownership rules.",
         "Latest implementation supersedes the office dropdown: routes/office-order-picker.blade.php and public/js/office-order-picker.js use a native dialog outside the grid, safe checkbox labels and explicit Apply/Cancel. Eligible order IDs come from existing authorized/filtered page data plus existing route IDs. Blank new office stops no longer temporarily store the office ID as an order ID. Sorting excludes interactive controls; blanket disableSelection removed. Empty Save opens the picker, while no eligible orders is explained. Existing server validation/authorization and pharmacy/patient selectors remain. No dependency/schema/Maps configuration changes. No live deployment or production submissions; publication to fork main completed as 27971c6 and official PR #24 is open for merge/deployment."
       ]
+    },
+    {
+      "id": "driver-route-map",
+      "priority": 6,
+      "area": "dispatching",
+      "title": "Restore driver map markers without retired drawing library or missing marker files",
+      "user_visible_behavior": "Driver route maps show valid pharmacy, patient, office and driver markers, fit visible stops, and honor route-only filters including offices. Area selection works with current core Maps Polygon APIs. Missing or invalid coordinates do not stop other markers rendering. Order/card assignment behavior is unchanged.",
+      "status": "passing",
+      "verification_steps": [
+        "Render driver route views for normal and route-only maps, including office-only routes and missing coordinates. Verify map point and ID arrays stay aligned and office filters are honored.",
+        "Run the actual rendered map initializer against an isolated Maps boundary with no drawing namespace; verify markers, symbols, viewport fitting, toggles, empty/invalid coordinates and repeated initialization.",
+        "Verify area-selection start/finish/cancel/cleanup using core Polygon/event APIs without the removed DrawingManager. Run the isolated build/full installed suite, focused tests, relevant smoke scripts, syntax/diff/formatter checks."
+      ],
+      "evidence": [
+        "2026-11-12 official API verification: https://developers.google.com/maps/deprecations and https://developers.google.com/maps/documentation/javascript/releases confirm DrawingManager removal (May/June 2026, including release 3.65.3b on June 4). Source initMap called it before markers; i011.svg/i022.svg/i033.svg/i044.svg were absent under public/images.",
+        "2026-11-12 focused DriverRouteOrdersTest passed 18 tests / 156 assertions. Four rendered view cases cover normal, office-first, route-only delivery and office-only maps; office filtering, selected priority labels, missing pharmacy coordinates and matching ID/location array lengths are checked. Existing route save/ownership tests remain.",
+        "2026-11-12 node tests/smoke/driver-route-map.js passed 34 checks. Executes the actual Blade marker/init functions against an isolated Maps boundary without any drawing namespace, validating all four marker types, vector symbols, coordinate guards, viewport fitting, filter toggles, empty/driver-only maps, clean reinitialization, native area controls and region submission IDs. No Google requests or production data.",
+        "2026-11-12 final isolated SKIP_INSTALL=1 ./init.sh passed Vite build, 257 tests / 1064 assertions, 45 routing and 69 tariff checks. Office picker and legacy selector checks passed 23 and 19. Modified PHP/JavaScript syntax and git diff --check passed. Required Pint command failed because Pint is absent; map checks reran after final cursor/control refinements."
+      ],
+      "notes": [
+        "User clarified on 2026-11-12 that only map markers are missing; leave route cards/order assignment behavior unchanged. The screenshot still has old picker guidance; PR #24 remains open and upstream main is e2c1d9b.",
+        "Source findings: initMap constructs a DrawingManager before adding any markers. Google states the drawing library was removed as of May/June 2026; this page loads weekly Maps. All four configured marker SVG paths (i011.svg/i022.svg/i033.svg/i044.svg) are absent locally. Route-only office IDs are not collected and pharmacy ID/location filters can become misaligned.",
+        "Baseline: clean main 6a1ec04; isolated SKIP_INSTALL=1 ./init.sh passed Vite, 255 tests / 1002 assertions, 45 routing and 69 tariff checks. Synchronized dependencies reused. No .ai/rules/Boost tools or production requests.",
+        "Implemented public/js/route-map-tools.js using supported core Polygon/click APIs for area selection and built-in circle symbols for all driver/stop markers. Stop markers render before optional area controls. Map becomes visible before SDK initialization; already loaded SDKs import geometry when necessary. Valid visible stops are fitted; invalid coordinates are skipped and empty maps explained. Office route-only IDs and pharmacy ID/location alignment corrected; redraw clears stale marker/control state. Cards, assignments, stored locations, role gates, dependencies and API credentials are unchanged.",
+        "Limits: actual Google-hosted SDK rendering, provider authentication/network and live production navigation/submission were not tested. Automated checks use a Maps boundary implementing documented core APIs. Full native picker/grid checks from the preceding feature remain applicable. No new database rows/schema/dependencies or production writes. Official PR #24 remains open; this fix will be pushed to fork main and included in that existing PR before deployment."
+      ]
     }
   ]
 }

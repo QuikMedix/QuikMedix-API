@@ -205,11 +205,16 @@ class DriverRouteOrdersTest extends TestCase
 
     public static function officeRouteViews(): array
     {
-        return ['existing route' => [true], 'office added first' => [false]];
+        return [
+            'existing route' => [true, false, false],
+            'office added first' => [false, false, false],
+            'route-only with delivery stops' => [true, true, true],
+            'route-only with office stop' => [true, true, false],
+        ];
     }
 
     #[DataProvider('officeRouteViews')]
-    public function test_route_view_offers_eligible_orders_in_a_picker_outside_the_grid(bool $hasExistingOrders): void
+    public function test_route_view_offers_orders_and_map_points_for_normal_and_route_only_views(bool $hasExistingOrders, bool $showRoute, bool $deliveryStops): void
     {
         $this->createRoute();
         $this->actingAs(User::factory()->state(['isactive' => 1, 'isblocked' => 0])->create(['role' => 'dispadmin']));
@@ -219,6 +224,12 @@ class DriverRouteOrdersTest extends TestCase
         app('view')->getFinder()->prependLocation($directory);
 
         try {
+            request()->query->set('show_route', $showRoute ? '1' : '0');
+            $routeStops = [(object) ['order_id' => $hasExistingOrders ? '4' : '', 'type' => 'office', 'type_id' => 1, 'eta' => 0]];
+            if ($deliveryStops) {
+                $routeStops[] = (object) ['order_id' => '4', 'type' => 'pharmacy', 'type_id' => 2, 'eta' => 0];
+                $routeStops[] = (object) ['order_id' => '4', 'type' => 'patient', 'type_id' => 20, 'eta' => 0];
+            }
             $orders = collect([4, 5])->mapWithKeys(fn (int $id): array => [$id => (object) [
                 'id' => $id, 'user_id' => $id + 16, 'pharmacy_id' => 2, 'delivery_date' => '2026-11-12',
                 'delivery_time_range' => '', 'delivery_time' => 'Next day', 'finish' => null, 'not_delivered' => 0,
@@ -227,11 +238,12 @@ class DriverRouteOrdersTest extends TestCase
             ]]);
             $view = $this->view('routes.driver', [
                 'driver' => (object) ['id' => $this->driver->id, 'name' => 'Test', 'last_name' => 'Driver', 'email' => 'driver@example.org', 'phone' => '555-0100', 'isactive' => 1, 'isblocked' => 0, 'transport' => 1, 'image' => null, 'eta' => 0, 'distance' => 0],
-                'locations' => null, 'orders' => $orders, 'pharmacys' => collect(), 'pharmacys_list' => collect(),
-                'delivery_times' => collect(), 'order_statuses' => collect(), 'offices' => collect([(object) ['id' => 1, 'location' => '40,-73']]),
-                'routes_priority' => [(object) ['order_id' => $hasExistingOrders ? '4' : '', 'type' => 'office', 'type_id' => 1, 'eta' => 0]],
+                'locations' => (object) ['location' => '37,-122'], 'orders' => $orders, 'pharmacys' => collect(), 'pharmacys_list' => collect(),
+                'delivery_times' => collect(), 'order_statuses' => collect(), 'offices' => collect([(object) ['id' => 1, 'location' => '40,-73'], (object) ['id' => 2, 'location' => '41,-74']]),
+                'routes_priority' => $routeStops,
                 'orders_id' => $hasExistingOrders ? collect([(object) ['order_id' => 4]]) : collect(), 'patient_routes_priority' => [], 'pharmacy_routes_priority' => [],
-                'filter' => ['start' => '', 'end' => '', 'pharmacy' => [], 'status' => [], 'delivery_time' => []], 'type_pay' => 4, 'pay_value' => -1, 'patients_locations' => [], 'pharmacy_locations' => [],
+                'filter' => ['start' => '', 'end' => '', 'pharmacy' => [], 'status' => [], 'delivery_time' => []], 'type_pay' => 4, 'pay_value' => -1, 'patients_locations' => [['id' => 20, 'location' => '40.2,-73.2'], ['id' => 21, 'location' => '40.3,-73.3'], ['id' => 22, 'location' => '']],
+                'pharmacy_locations' => [['id' => 99, 'location' => ''], ['id' => 2, 'location' => '40.1,-73.1'], ['id' => 4, 'location' => '42,-75']],
                 'show_ids' => [], 'show_priority' => [], 'errors' => new \Illuminate\Support\ViewErrorBag,
             ])->assertSee('/js/route-order-select.js', false)
                 ->assertSee('window.routeOrderSelect.options', false)
@@ -240,19 +252,42 @@ class DriverRouteOrdersTest extends TestCase
                 ->assertSee('window.officeOrderPicker.init([4,5', false)
                 ->assertSee('id="office-order-dialog"', false)
                 ->assertSee('data-office-order-picker', false)
+                ->assertSee('/js/route-map-tools.js?v=1', false)
+                ->assertDontSee('google.maps.drawing', false)
+                ->assertDontSee('libraries=drawing', false)
+                ->assertDontSee('i033.svg', false)
                 ->assertDontSee('.disableSelection()', false)
                 ->assertDontSee("class='multiple_select' required", false)
                 ->assertSee('active-yellow office1', false)
                 ->assertSee('Use Choose orders at each office stop to select its deliveries before saving.');
 
+            $html = (string) $view;
+            $this->assertSame($showRoute ? ['1'] : ['1', '2'], $this->mapValues($html, 'locationOfficeID'));
+            $this->assertSame($showRoute ? ($deliveryStops ? ['2;2'] : []) : ['2', '4'], $this->mapValues($html, 'locationPharmacyID'));
+            $this->assertSame($showRoute ? ($deliveryStops ? ['20;3'] : []) : ['20', '21'], $this->mapValues($html, 'locationPatientsID'));
+            foreach (['locationOffice', 'locationPharmacy', 'locationPatients'] as $field) {
+                $this->assertCount(count($this->mapValues($html, $field.'ID')), $this->mapValues($html, $field));
+            }
             if ($previewPath = getenv('QUIKMEDIX_OFFICE_PREVIEW_PATH')) {
-                $this->writeBrowserPreview((string) $view, $previewPath);
+                $suffix = $showRoute ? ($deliveryStops ? 'route' : 'office') : 'all';
+                $this->writeBrowserPreview($html, $previewPath.'.'.$suffix.'.html');
             }
         } finally {
             unlink($directory.'/layouts/master.blade.php');
             rmdir($directory.'/layouts');
             rmdir($directory);
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function mapValues(string $html, string $field): array
+    {
+        preg_match('/var '.preg_quote($field, '/').' = \[([\s\S]*?)\];/', $html, $match);
+        preg_match_all('/"([^"\n]*)"/', $match[1], $values);
+
+        return $values[1];
     }
 
     private function writeBrowserPreview(string $html, string $path): void
