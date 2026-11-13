@@ -352,8 +352,8 @@
     margin-top: 0px !important;
 }
 .multiselect-native-select>.btn-group {
-    height: 17px;
-    width: 60px;
+    height: 22px;
+    width: 110px;
 }
 .multiselect-native-select>.btn-group>button {
     font-size: 11px;
@@ -364,7 +364,7 @@
     overflow: hidden;
 }
 .multiselect-selected-text {
-    line-height: 1px;
+    line-height: normal;
 }
 .btn-check:active+.btn-outline-primary, .btn-check:checked+.btn-outline-primary, .btn-outline-primary.active, .btn-outline-primary.dropdown-toggle.show, .btn-outline-primary:active {
     color: #fff;
@@ -632,7 +632,14 @@ label {
                                             <label class="btn btn-outline-secondary" style="margin-left: -4px !important;border-top-left-radius: 0px;border-bottom-left-radius: 0px;" for="outlined3">First point</label>
                                         </form>
                                     </div>
-                                    <form method="POST">
+                                    <form method="POST" id="driver-route-form">
+                                        @if($errors->any())
+                                            <div class="alert alert-danger" role="alert">
+                                                @foreach($errors->all() as $error)
+                                                    <p class="mb-0">{{ $error }}</p>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                         <div class="tariff">
                                             <input type="radio" class="btn-check" value="4" name="type_pay" id="danger-outlined" required autocomplete="off" {{ ($type_pay==4)?'checked':'' }}>
                                             <label class="btn btn-outline-primary" for="danger-outlined">Half</label>
@@ -716,7 +723,7 @@ label {
                                                         </div>
                                                     @endif
                                                     @if($routes_priority[$n]->type=='office')
-                                                        <div class="plus-item active-yellow office{{$routes_priority[$n]->order_id}}">
+                                                        <div class="plus-item active-yellow office{{$routes_priority[$n]->type_id}}">
                                                             <input type="hidden" name="order_id[]" value="{{$routes_priority[$n]->order_id}}">
                                                             <input type="hidden" name="type[]" value="{{$routes_priority[$n]->type}}">
                                                             <input type="hidden" name="type_id[]" value="{{$routes_priority[$n]->type_id}}">
@@ -758,6 +765,7 @@ label {
                                         @csrf
                                         <br><br>
 
+                                        <p>Select the order numbers at each office stop before saving. Add a pickup or delivery to the route first if no orders are listed.</p>
                                         <button type="submit" class="btn btn-primary" style="margin: auto;width: 180px;display: grid;">Save</button>
                                     </form>
                                         <p style="text-align: left;position: absolute;left: 29px;bottom: 11px;">
@@ -870,6 +878,7 @@ label {
 <script src="{{ URL::asset('/js/jquery-ui.min.js')}}" type="text/javascript"></script>
 <script type="text/javascript" src="{{ URL::asset('/js/bootstrap-multiselect.min.js')}}"></script>
 <script src="/js/BootstrapMenu.min.js"></script>
+<script src="{{ URL::asset('/js/route-order-select.js') }}"></script>
 <script type="text/javascript">
     $(document).ready(function() {
         var menu = new BootstrapMenu('.plus-item.active-yellow,.plus-item.active-blue,.plus-item.active-green', {
@@ -961,9 +970,7 @@ label {
                                 $('.plus-item.patient'+$(el2).find('.type_id').data('id')).find('.multiple_select').change();
                             } else {
                                 $('.plus-item.patient'+$(el2).find('.type_id').data('id')).find('.order').html('Order: <select class="multiple_select" multiple="multiple"><option selected value="'+$('.plus-item.patient'+$(el2).find('.type_id').data('id')).find("input[name='order_id[]']").val()+'">'+$('.plus-item.patient'+$(el2).find('.type_id').data('id')).find("input[name='order_id[]']").val()+' ('+$('.plus-item.patient'+$(el2).find('.type_id').data('id')).find("span.badge").first().clone().children().remove().end().text().replace(/ /g,"")+')</option><option selected value="'+$(el2).find('.order_id').data('id')+'">'+$(el2).find('.order_id').data('id')+' ('+$(el2).find('.text-center.date span').first().clone().children().remove().end().text().replace(/ /g,"")+')</option></select>');
-                                $('.plus-item.patient'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect({
-                                    includeSelectAllOption: true
-                                });
+                                $('.plus-item.patient'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
                                 $('.plus-item.patient'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                                 $('.plus-item.patient'+$(el2).find('.type_id').data('id')).find('.multiple_select').change();
                             }
@@ -996,9 +1003,7 @@ label {
                                 $('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find('.multiple_select').change();
                             } else {
                                 $('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find('.order').html('Order: <select class="multiple_select" multiple="multiple"><option selected value="'+$('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find("input[name='order_id[]']").val()+'">'+$('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find("input[name='order_id[]']").val()+' ('+$('.plus-item.patient'+$(el2).find('.type_id').data('id')).find("span.badge").first().clone().children().remove().end().text().replace(/ /g,"")+')</option><option selected value="'+$(el2).find('.order_id').data('id')+'">'+$(el2).find('.order_id').data('id')+' ('+$(el2).find('.text-center.date span').first().clone().children().remove().end().text().replace(/ /g,"")+')</option></select>');
-                                $('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect({
-                                    includeSelectAllOption: true
-                                });
+                                $('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
                                 $('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                                 $('.plus-item.pharmacy'+$(el2).find('.type_id').data('id')).find('.multiple_select').change();
                             }
@@ -1031,18 +1036,14 @@ label {
                         el.addClass("office"+$(el2).find('.type_id').data('id'));
                         el.append("<p class='order'>Order: <select class='multiple_select' required multiple='multiple'></select></p>");
                         el.append("<p>Office #"+$(el2).find('.order_id').data('id')+"</p>");
-                        $('.plus-item.office'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect({
-                            includeSelectAllOption: true
-                        });
+                        $('.plus-item.office'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
                         $('.plus-item.office'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                         updateOfficeId(orderIds);
                     }
                 }
             }]
         });
-        $('.multiple_select').multiselect({
-            includeSelectAllOption: true
-        });
+        $('.multiple_select').multiselect(window.routeOrderSelect.options);
         $(".select2").selectize()
         $(document).on('change','.tariff [name="type_pay"]',function(){
             if($(this).val()=="1"){
@@ -1050,9 +1051,6 @@ label {
             } else {
                 $(".tariff .input-group").hide(200);
             }
-        });
-        $(document).on('change','.multiple_select',function(){
-            $(this).parent().parent().parent().find('input[name="order_id[]"]').val($(this).val().join());
         });
         $('.modal2 input[name="priority"]').TouchSpin({
             min: 1,
@@ -1150,24 +1148,7 @@ label {
     }
     var element = '<div class="plus-item no-active"><input type="hidden" name="order_id[]"><input type="hidden" name="type[]"><input type="hidden" name="type_id[]"><div class="eta_block" style="display:none;"><i class="mdi mdi-timer"></i> <span class="eta"></span><br><i class="mdi mdi-clock-outline"></i> <span class="time"></span><br><span class="num">$num</span></div><p class="number">$num</p></div>';
     function updateOfficeId(ids) {
-        $(".plus-item.active-yellow").each(function(index) {
-            var el0 =  $(this);
-            var arr = [];
-            el0.find('.multiple_select').find('option').each(function(index) {
-                if(ids.indexOf($(this).val().toString())==-1) {
-                    $(this).remove();
-                } else {
-                    arr.push($(this).val().toString());
-                }
-            });
-            ids.forEach(function(currentValue, index, array) {
-                if(arr.indexOf(currentValue)==-1) {
-                    el0.find('.multiple_select').append('<option value="'+currentValue+'">'+currentValue+'</option>');
-                }
-            });
-            el0.find('.multiple_select').multiselect('rebuild');
-            el0.find('.multiple_select').parent().parent().parent().find('input[name="order_id[]"]').val(el0.find('.multiple_select').val().join());
-        });
+        window.routeOrderSelect.updateOfficeId(ids);
     }
     var orderIds = [@foreach($orders_id as $order_id)
     "{{ $order_id->order_id }}",
@@ -1318,9 +1299,7 @@ label {
                             $('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').change();
                         } else {
                             $('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find('.order').html('Order: <select class="multiple_select" multiple="multiple"><option selected value="'+$('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find("input[name='order_id[]']").val()+'">'+$('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find("input[name='order_id[]']").val()+' ('+$('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find("span.badge").first().clone().children().remove().end().text().replace(/ /g,"")+')</option><option selected value="'+$(ui.draggable).find('.order_id').data('id')+'">'+$(ui.draggable).find('.order_id').data('id')+' ('+$(ui.draggable).find('.text-center.date span').first().clone().children().remove().end().text().replace(/ /g,"")+')</option></select>');
-                            $('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect({
-                                includeSelectAllOption: true
-                            });
+                            $('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
                             $('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                             $('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').change();
                         }
@@ -1353,9 +1332,7 @@ label {
                             $('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').change();
                         } else {
                             $('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find('.order').html('Order: <select class="multiple_select" multiple="multiple"><option selected value="'+$('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find("input[name='order_id[]']").val()+'">'+$('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find("input[name='order_id[]']").val()+' ('+$('.plus-item.patient'+$(ui.draggable).find('.type_id').data('id')).find("span.badge").first().clone().children().remove().end().text().replace(/ /g,"")+')</option><option selected value="'+$(ui.draggable).find('.order_id').data('id')+'">'+$(ui.draggable).find('.order_id').data('id')+' ('+$(ui.draggable).find('.text-center.date span').first().clone().children().remove().end().text().replace(/ /g,"")+')</option></select>');
-                            $('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect({
-                                includeSelectAllOption: true
-                            });
+                            $('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
                             $('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                             $('.plus-item.pharmacy'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').change();
                         }
@@ -1388,9 +1365,7 @@ label {
                     el.addClass("office"+$(ui.draggable).find('.type_id').data('id'));
                     el.append("<p class='order'>Order: <select class='multiple_select' required multiple='multiple'></select></p>");
                     el.append("<p>Office #"+$(ui.draggable).find('.order_id').data('id')+"</p>");
-                    $('.plus-item.office'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect({
-                        includeSelectAllOption: true
-                    });
+                    $('.plus-item.office'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
                     $('.plus-item.office'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                     updateOfficeId(orderIds);
                 }

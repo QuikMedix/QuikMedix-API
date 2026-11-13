@@ -127,6 +127,34 @@
         "2026-11-12 limits: automated HTTP/database/Blade tests and mocked broadcast boundary pass; live Pusher/FCM delivery, native browser appearance, actual driver-app refresh and MySQL-specific route queries were not exercised. No mobile source is present in this checkout; no mobile UI changed. No schema/dependency changes, production requests/writes, migration, commit, push or deployment in this session.",
         "2026-11-12 publication follow-up: implementation committed as 705fb0564823529997b8dde886d87e190993d8b6 and already pushed to shohinx/QuikMedix-API:main. Requested direct push to QuikMedix/QuikMedix-API:main failed with HTTP 403 (shohinx lacks write permission; GitHub connector also reports push=false). Opened PR https://github.com/QuikMedix/QuikMedix-API/pull/22 from shohinx:main to official main through authenticated GitHub CLI. No product code changed; existing verification remains applicable. Maintainer merge or write access is required; no deployment confirmed."
       ]
+    },
+    {
+      "id": "office-route-assignment",
+      "priority": 5,
+      "area": "dispatching",
+      "title": "Restore order selection and safe saving for office route stops",
+      "user_visible_behavior": "Dispatch can open office order selectors, choose deliveries for the office and save the correct order/office pairs. Empty office selections produce a clear error and preserve the existing route. Route selection works without loading Google Maps.",
+      "status": "passing",
+      "verification_steps": [
+        "Reproduce selector behavior using installed Bootstrap, jQuery and multiselect assets in an isolated browser fixture without Maps or production requests.",
+        "Verify loaded and newly added office selectors, order selection synchronization, deselection and updated available orders; preserve selected orders on rebuild.",
+        "Use isolated HTTP tests to verify office order/stop pairing and rejection of missing selections before route writes; run full installed tests, smoke checks and required formatter."
+      ],
+      "evidence": [
+        "2026-11-12: vendor/bin/phpunit tests/Feature/Http/Controllers/DriverRouteOrdersTest.php passed 14 tests / 72 assertions. Covers grouped office assignments, missing office choices preserving the route, empty grid slots preserving pairings, malformed inputs, deleted orders/offices, transaction rollback, pharmacy ownership, authentication and actual Blade inclusion/configuration.",
+        "2026-11-12: node tests/smoke/route-order-select.js passed 19 checks for Bootstrap 5 configuration, isolation from the legacy body click handler, loaded/new office selectors, selected IDs, rebuild preservation, removed orders, clearing and repeat AJAX initialization. node --check passed.",
+        "2026-11-12 native Chrome: isolated fixture /tmp/quikmedix-office-review/fixed.html with actual shipped jQuery/Bootstrap/multiselect assets and the new route-order-select.js opened the order menu, selected 4 then 5 and submitted IDs 4,5 to its synthetic Save handler. CSP blocks network and form submissions; no Maps loaded or production requests. The before fixture works when the existing layout compatibility handler is present, so the exact live initialization failure is not conclusively reproduced; the fix removes dependence on that handler.",
+        "2026-11-12 final isolated SKIP_INSTALL=1 ./init.sh passed Vite build, 253 tests / 980 assertions, 45 routing and 69 tariff smoke checks. Modified PHP syntax, JavaScript syntax, FEATURE_LIST JSON parsing and git diff --check passed. Required Pint invocation failed because vendor/bin/pint is not installed.",
+        "2026-11-12 publication: implementation commit a7db0a1 pushed to shohinx/QuikMedix-API:fix/office-route-orders; official PR https://github.com/QuikMedix/QuikMedix-API/pull/23 opened against main. Maintainer merge/deployment remains outstanding; no direct official-main push attempted because the account write limitation was already established.",
+        "2026-11-12 explicit direct-push follow-up: verified official main still at f7db383 and PR #23 OPEN; confirmed fast-forward ancestry and retried git push upstream HEAD:main. GitHub returned HTTP 403, Permission to QuikMedix/QuikMedix-API.git denied to shohinx. Connected GitHub metadata confirms push=false. Official main is unchanged; PR #23 remains the available maintainer merge path. No product code changed or tests rerun.",
+        "2026-11-12 corrected publication sequence at user request: fast-forwarded local main to the verified fix and pushed shohinx/QuikMedix-API:main from f7db383 to e15d541. Attempted to merge official PR #23 with expected head e15d541: the GitHub connector returned 403 Resource not accessible by integration; authenticated gh merge API returned HTTP 404. Official repository metadata reports push=false; PR #23 remains the upstream update path. No product code changed."
+      ],
+      "notes": [
+        "2026-11-12 baseline: clean main at f7db383 (PR #22 now merged). Synchronized dependencies reused with SKIP_INSTALL=1 ./init.sh under testing/in-memory SQLite and temporary cache paths: Vite build, 239 tests / 908 assertions, 45 routing and 69 tariff smoke checks passed. No .ai/rules or Boost tools; use installed PHPUnit 12.5.35/Laravel 13.33.0.",
+        "Findings: multiselect emits legacy data-toggle dropdown markup but route page loads Bootstrap 5.1.3; master loads Bootstrap 4.5.3 as well. New office selectors start empty/required; selecting no deliveries blocks browser submission. Existing save deletes routes before checking inputs and filters parallel form arrays independently, risking stop/order mismatches with empty slots. No production data accessed.",
+        "Implemented route-specific Bootstrap 5 button templates and click propagation isolation for all existing/dynamic multiselects; clearer/wider Choose orders controls and office-order guidance; closest-stop and null-safe hidden ID synchronization; office CSS identifier corrected to office ID. Manual save validates complete paired rows before writes, ignores fully empty grid slots, verifies selected orders/offices and updates stops/assignments/payment settings in one transaction. Existing role gates and rate formulas retained; no dependencies, schema or Maps configuration changed.",
+        "Limits: no live application submissions, MySQL-specific route-page queries, external routing/ETA, real device/push or full production-layout browser checks. The screenshot is native required-select validation, not a Maps response; mixed Bootstrap handling is a compatibility risk addressed locally rather than a proven live-provider outage. Changes published on fix/office-route-orders in official PR #23; maintainer merge and deployment are outstanding."
+      ]
     }
   ]
 }

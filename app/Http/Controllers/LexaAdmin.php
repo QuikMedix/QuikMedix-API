@@ -23,6 +23,7 @@ use App\Actions\LogUserChanges;
 use App\Actions\RotateSignature;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Validation\ValidationException;
 use QuickBooksOnline\API\DataService\DataService;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 
@@ -2468,61 +2469,35 @@ class LexaAdmin extends Controller
                 //DB::table('users')->where('id', $driver_id)->update(['route_status'=>'updated']);
                 Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
             } else {
-                DB::table('routes_priority')->where('driver_id', $driver_id)->delete();
-                $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id', 'orders.user_id', 'users.location as userlocation', 'pharmacys.location as pharmacylocation')->where('driver_id',$driver_id)->whereIn("statuse_id",[1,2,3,7,8,9])->get();
-                foreach($orders as $order) {
-                    DB::table('orders')->where('id', $order->id)->update(['driver_id'=>NULL]);
-                }
-                $order_ids = array_diff($request->input('order_id'), array(''));
-                $types = array_diff($request->input('type'), array(''));
-                $type_ids = array_diff($request->input('type_id'), array(''));
-                $data_array = [];    
-                for ($i=0, $c = count($order_ids); $i<$c; ++$i) {
-                    if(count(explode(',',$order_ids[$i]))>1) {
-                        foreach(explode(',',$order_ids[$i]) as $order_ids0) {
-                            if(!empty($order_ids0)){
-                                $record = [];
-                                $record['driver_id'] = $driver_id;
-                                $record['order_id'] = $order_ids0;
-                                DB::table('orders')->where('id', $order_ids0)->update(['driver_id'=>$driver_id,'ready'=>'2']);
-                                $record['type'] = $types[$i];
-                                $record['type_id'] = $type_ids[$i];
-                                $record['priority'] = $i+1;
-                                $data_array[] = $record; 
-                            }
-                        }
-                    } else {
-                        if(!empty($order_ids[$i])) {
-                            $record = [];
-                            $record['driver_id'] = $driver_id;
-                            $record['order_id'] = $order_ids[$i];
-                            DB::table('orders')->where('id', $order_ids[$i])->update(['driver_id'=>$driver_id,'ready'=>'2']);
-                            $record['type'] = $types[$i];
-                            $record['type_id'] = $type_ids[$i];
-                            $record['priority'] = $i+1;
-                            $data_array[] = $record;  
+                $stops = self::validateRouteStops($request);
+                DB::transaction(function () use ($request, $driver_id, $stops): void {
+                    DB::table('routes_priority')->where('driver_id', $driver_id)->delete();
+                    DB::table('orders')->where('driver_id', $driver_id)->whereIn('statuse_id', [1, 2, 3, 7, 8, 9])->update(['driver_id' => null]);
+                    $records = [];
+                    foreach ($stops as $index => $stop) {
+                        foreach ($stop['order_ids'] as $orderId) {
+                            DB::table('orders')->where('id', $orderId)->update(['driver_id' => $driver_id, 'ready' => '2']);
+                            $records[] = [
+                                'driver_id' => $driver_id,
+                                'order_id' => $orderId,
+                                'type' => $stop['type'],
+                                'type_id' => $stop['type_id'],
+                                'priority' => $index + 1,
+                            ];
                         }
                     }
-                }
-                DB::table('routes_priority')->insert($data_array);
-                $type_pay = $request->input('type_pay');
-                if($type_pay==3) {
-                    if(DB::table('routes_priority')->where('driver_id',$driver_id)->count()==0){
-                        $pay_value = 1;
-                    } else {
-                        $pay_value = floatval($request->input('pay_value'))/DB::table('routes_priority')->where('driver_id',$driver_id)->count();
+                    if ($records !== []) {
+                        DB::table('routes_priority')->insert($records);
                     }
-                } else if($type_pay==2) {
-                    $distance=100;
-                    if(DB::table('routes_priority')->where('driver_id',$driver_id)->count()==0){
-                        $pay_value = 1;
-                    } else {
-                        $pay_value = floatval($request->input('pay_value'))*$distance/DB::table('routes_priority')->where('driver_id',$driver_id)->count();
-                    }
-                } else {
-                    $pay_value = -1;
-                }
-                DB::table('routes_priority')->where('driver_id',$driver_id)->update(['type_pay'=>$type_pay,'pay_value'=>$pay_value]);
+                    $typePay = $request->input('type_pay');
+                    $count = count($records);
+                    $payValue = match ((int) $typePay) {
+                        3 => $count === 0 ? 1 : (float) $request->input('pay_value') / $count,
+                        2 => $count === 0 ? 1 : (float) $request->input('pay_value') * 100 / $count,
+                        default => -1,
+                    };
+                    DB::table('routes_priority')->where('driver_id', $driver_id)->update(['type_pay' => $typePay, 'pay_value' => $payValue]);
+                });
                 self::eta_calculate($driver_id);
                 Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
             }
@@ -2530,6 +2505,48 @@ class LexaAdmin extends Controller
         } else {
             return abort(403, self::$err_perm);
         }
+    }
+
+    /**
+     * @return list<array{order_ids: list<string>, type: string, type_id: int}>
+     */
+    private static function validateRouteStops(Request $request): array
+    {
+        $validated = $request->validate([
+            'order_id' => ['required', 'array'],
+            'order_id.*' => ['nullable', 'regex:/^\d+(,\d+)*$/'],
+            'type' => ['required', 'array'],
+            'type.*' => ['nullable', 'in:pharmacy,patient,office'],
+            'type_id' => ['required', 'array'],
+            'type_id.*' => ['nullable', 'integer', 'min:1'],
+        ]);
+        if (array_keys($validated['order_id']) !== array_keys($validated['type']) || array_keys($validated['type']) !== array_keys($validated['type_id'])) {
+            throw ValidationException::withMessages(['order_id' => 'The route stops are incomplete. Reload the route and try again.']);
+        }
+
+        $stops = [];
+        foreach ($validated['type'] as $index => $type) {
+            $orderIds = (string) ($validated['order_id'][$index] ?? '');
+            $typeId = $validated['type_id'][$index];
+            if (empty($type) && $orderIds === '' && empty($typeId)) {
+                continue;
+            }
+            if ($orderIds === '' || empty($type) || empty($typeId)) {
+                throw ValidationException::withMessages([
+                    'order_id.'.$index => $type === 'office' ? 'Select at least one order for each office stop before saving.' : 'Select an order and destination for each route stop before saving.',
+                ]);
+            }
+            $selectedIds = array_values(array_unique(explode(',', $orderIds)));
+            if (DB::table('orders')->whereIn('id', $selectedIds)->count() !== count($selectedIds)) {
+                throw ValidationException::withMessages(['order_id.'.$index => 'One of the selected orders no longer exists. Reload the route and try again.']);
+            }
+            if ($type === 'office' && ! DB::table('offices')->where('id', $typeId)->exists()) {
+                throw ValidationException::withMessages(['type_id.'.$index => 'Choose a valid office for this stop.']);
+            }
+            $stops[] = ['order_ids' => $selectedIds, 'type' => $type, 'type_id' => (int) $typeId];
+        }
+
+        return $stops;
     }
 
     /**
