@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Actions\FinalizeFailedDelivery;
 use App\Actions\RequestDispatchApproval;
 use App\Notifications;
 use App\Support\OrderStatus;
@@ -1638,8 +1637,13 @@ class LexaAdminApi extends Controller
         }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id')) && !empty($request->input('status_id'))) {
-                $order_id = explode("_",$request->input('order_id'))[0];
-                $status_id = (int) $request->input('status_id');
+                $validated = $request->validate([
+                    'order_id' => ['required', 'regex:/^\d+(?:_\d+)?$/'],
+                    'status_id' => ['required', 'integer'],
+                    'note' => ['nullable', 'string', 'max:1000'],
+                ]);
+                $order_id = explode('_', (string) $validated['order_id'])[0];
+                $status_id = (int) $validated['status_id'];
                 if(in_array($status_id, OrderStatus::NEEDS_DISPATCH_APPROVAL, true)) {
                     if(Auth::user()->role == 'driver') {
                         // Unavailable / refused stops stay open until dispatch verifies them with the pharmacy.
@@ -1650,9 +1654,12 @@ class LexaAdminApi extends Controller
                             'exception_id' => $exception['exception_id'],
                         ], 200);
                     }
-                    app(FinalizeFailedDelivery::class)->handle((int) $order_id, $status_id, (int) Auth::user()->id, Auth::user()->pharmacy_id ? (int) Auth::user()->pharmacy_id : null);
+                    return response()->json([
+                        'message' => 'Use dispatch review after obtaining pharmacy approval in live chat.',
+                        'errors' => 'Forbidden',
+                    ], 403);
                 } else {
-                    DB::table('orders')->where('id', $order_id)->update(['statuse_id'=>$request->input('status_id')]);
+                    DB::table('orders')->where('id', $order_id)->update(['statuse_id'=>$status_id]);
                 }
                 return response()->json([
                     'message' => 'OK'

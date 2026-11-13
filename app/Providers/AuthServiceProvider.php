@@ -42,9 +42,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('admin', fn (User $user): bool => $user->isAdmin());
         Gate::define('change-order-status', fn (User $user): bool => $user->isAdmin() || $user->role === 'logist');
-        // Driver "unavailable" / "refused" reports are approved by the order's pharmacy staff, or by operations staff.
-        Gate::define('review-delivery-report', fn (User $user, int|string|null $pharmacyId = null): bool => $user->isAdmin() || $user->role === 'logist'
-            || ($user->role === 'medic' && $pharmacyId !== null && (string) $user->pharmacy_id === (string) $pharmacyId));
+        Gate::define('review-delivery-report', fn (User $user): bool => $user->isAdmin() || $user->role === 'logist');
         Gate::define('manage-pharmacy', fn (User $user, int|string|null $pharmacyId = null): bool => $user->canManagePharmacy($pharmacyId));
         // Admin staff manage any driver or patient; a pharmacy user only those of their own pharmacy.
         $managesMember = fn (User $user, int|string|null $pharmacyId, int|string|null $memberId, string $role): bool => $user->canManagePharmacy($pharmacyId)

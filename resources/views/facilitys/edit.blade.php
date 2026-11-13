@@ -201,7 +201,7 @@
                                                                     @else
                                                                         @if(!(Auth::user()->role=="superadmin" || Auth::user()->role=="admin") && in_array($statuse->id,[1,5]))
                                                                         <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
-                                                                        @elseif((Auth::user()->role=="superadmin" || Auth::user()->role=="admin"))
+                                                                        @elseif((Auth::user()->role=="superadmin" || Auth::user()->role=="admin") && !in_array((int) $statuse->id, \App\Support\OrderStatus::NEEDS_DISPATCH_APPROVAL, true))
                                                                         <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
                                                                         @endif
                                                                     @endif

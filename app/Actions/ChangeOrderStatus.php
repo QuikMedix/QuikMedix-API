@@ -4,18 +4,30 @@ namespace App\Actions;
 
 use App\Notifications;
 use App\Support\GeoPoint;
+use App\Support\OrderStatus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use stdClass;
 
 class ChangeOrderStatus
 {
     public function __construct(private SendOrderStatusToBestRx $sendOrderStatusToBestRx) {}
 
+    public function assertCanChangeManually(int $currentStatusId, int $statusId): void
+    {
+        if ($currentStatusId !== $statusId && in_array($statusId, OrderStatus::NEEDS_DISPATCH_APPROVAL, true)) {
+            throw ValidationException::withMessages([
+                'statuse' => 'Use dispatch review to select Unavailable or Refused after pharmacy approval in live chat.',
+            ]);
+        }
+    }
+
     public function handle(int $orderId, int $statusId): void
     {
         DB::transaction(function () use ($orderId, $statusId): void {
             $order = DB::table('orders')->where('id', $orderId)->lockForUpdate()->first();
             abort_if($order === null, 404, 'Order not found');
+            $this->assertCanChangeManually((int) $order->statuse_id, $statusId);
 
             if ((int) $order->statuse_id === $statusId) {
                 return;

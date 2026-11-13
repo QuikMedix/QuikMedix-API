@@ -462,8 +462,7 @@ class OrderController extends Controller
         if ($pendingException === null) {
             return [null, collect()];
         }
-        // Pharmacy staff reviewing their own order chat with the driver; operations staff also get the pharmacy's contacts.
-        $pharmacyStaff = Auth::user()->role === 'medic' ? collect() : DB::table('users')->where('role', 'medic')
+        $pharmacyStaff = DB::table('users')->where('role', 'medic')->where('isactive', 1)->where('isblocked', 0)
             ->where('pharmacy_id', $order->pharmacy_id)->orderBy('id')->get(['id', 'name', 'last_name']);
 
         return [$pendingException, $pharmacyStaff];
@@ -637,6 +636,7 @@ class OrderController extends Controller
                 if ($statusId !== (int) $order->statuse_id && ! Auth::user()->can('change-order-status')) {
                     abort_unless((int) $order->statuse_id === 1 && $statusId === 5, 403);
                 }
+                $changeOrderStatus->assertCanChangeManually((int) $order->statuse_id, $statusId);
 
                 $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
                 $statuse_copay = (empty($request->input('copay')))?'1':'2';
