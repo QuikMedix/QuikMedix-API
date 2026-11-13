@@ -6,6 +6,7 @@ use App\ChMessage;
 use App\Notifications;
 use App\Support\OrderStatus;
 use App\User;
+use Chatify\Facades\ChatifyMessenger as Chatify;
 use Illuminate\Support\Facades\DB;
 use stdClass;
 
@@ -23,10 +24,20 @@ class RequestDispatchApproval
         $exception = DB::transaction(function () use ($orderId, $statusId, $driver, $driverNote): array {
             $order = DB::table('orders')->where('id', $orderId)->lockForUpdate()->first();
             abort_if($order === null, 404, 'Order not found');
+            abort_unless((int) $order->driver_id === (int) $driver->id, 403, 'This order is not assigned to you.');
+            abort_if(in_array((int) $order->statuse_id, [4, 5, 8, 9, 10], true), 409, 'This order is already closed.');
 
             $pending = DB::table('order_exceptions')->where('order_id', $orderId)->where('status', 'pending')->first();
-            if ($pending !== null) {
+            if ($pending !== null && (int) $pending->driver_id === (int) $driver->id) {
                 return ['exception_id' => (int) $pending->id, 'created' => false];
+            }
+            if ($pending !== null) {
+                DB::table('order_exceptions')->where('id', $pending->id)->update([
+                    'status' => 'superseded',
+                    'review_note' => 'Order was reassigned before the current driver submitted a new report.',
+                    'reviewed_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             $id = DB::table('order_exceptions')->insertGetId([
@@ -39,26 +50,23 @@ class RequestDispatchApproval
                 'updated_at' => now(),
             ]);
 
+            DB::afterCommit(fn () => $this->forwardToDispatch($id));
+
             return ['exception_id' => $id, 'created' => true];
         });
-
-        if ($exception['created']) {
-            $this->forwardToDispatch($exception['exception_id']);
-        }
 
         return $exception;
     }
 
     /**
-     * The order's pharmacy staff, who verify and approve the report; the support superadmins when the pharmacy has no staff account.
+     * Active dispatch staff receive reports and obtain pharmacy approval in live chat.
      *
      * @return list<int>
      */
-    public static function reviewerIds(int|string $pharmacyId): array
+    public static function reviewerIds(): array
     {
-        $ids = User::where('role', 'medic')->where('pharmacy_id', $pharmacyId)->orderBy('id')->pluck('id')->map(fn ($id): int => (int) $id)->all();
-
-        return $ids !== [] ? $ids : User::supportContactIds();
+        return User::whereIn('role', [...User::ADMIN_ROLES, 'logist'])->where('isactive', 1)->where('isblocked', 0)
+            ->orderBy('id')->pluck('id')->map(fn ($id): int => (int) $id)->all();
     }
 
     private function forwardToDispatch(int $exceptionId): void
@@ -68,7 +76,7 @@ class RequestDispatchApproval
             $order = DB::table('orders')->where('id', $exception->order_id)->first();
             $summary = $this->summary($exception, $order);
             $link = url(route('orders.show', [$order->pharmacy_id, $order->id], false));
-            $reviewerIds = self::reviewerIds($order->pharmacy_id);
+            $reviewerIds = self::reviewerIds();
 
             foreach ($reviewerIds as $reviewerId) {
                 $message = new ChMessage;
@@ -76,6 +84,7 @@ class RequestDispatchApproval
                 $message->to_id = $reviewerId;
                 $message->body = htmlentities($summary."\n".$link, ENT_QUOTES, 'UTF-8');
                 $message->save();
+                $this->broadcastMessage($message);
             }
 
             // Push services are third parties: the notification names the order, never the patient.
@@ -88,6 +97,21 @@ class RequestDispatchApproval
             );
         } catch (\Throwable $e) {
             // The request is already recorded and visible on the order page; a messaging outage must not fail the driver.
+            report($e);
+        }
+    }
+
+    private function broadcastMessage(ChMessage $message): void
+    {
+        try {
+            $data = Chatify::parseMessage($message);
+            Chatify::push('private-chatify.'.$message->to_id, 'messaging', [
+                'from_id' => $message->from_id,
+                'to_id' => $message->to_id,
+                'message' => Chatify::messageCard($data, true),
+                'data' => $data,
+            ]);
+        } catch (\Throwable $e) {
             report($e);
         }
     }
@@ -120,7 +144,7 @@ class RequestDispatchApproval
                 .(! empty($patient->{'zip'.$suffix}) ? ', '.$patient->{'zip'.$suffix} : '') : null,
             ! empty($order->special_instructions) ? 'Special instructions: '.$order->special_instructions : null,
             '',
-            'Verify the issue (reply here to reach the driver), then approve or reject on the order page:',
+            'Dispatch: obtain pharmacy approval through live chat before selecting Unavailable or Refused on the order page. Reply here to reach the driver:',
         ];
 
         return implode("\n", array_filter($lines, fn (?string $line): bool => $line !== null));

@@ -3,12 +3,15 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\User;
+use Chatify\Facades\ChatifyMessenger as Chatify;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\CreatesAuthenticationSchema;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class DispatchApprovalTest extends TestCase
 {
@@ -121,6 +124,7 @@ class DispatchApprovalTest extends TestCase
         Redis::shouldReceive('setex')->andReturn(true);
         // No real pushes, SMS or web notifications leave the test run.
         config(['services.fcm.credentials' => null, 'app.twilio_sid' => null, 'services.beams.instance_id' => null]);
+        Chatify::partialMock()->shouldReceive('push')->andReturn(true)->byDefault();
         $this->withSession(['user_2fa' => true]);
 
         DB::table('plans')->insert(['id' => 1, 'tariff_area_more' => 8]);
@@ -147,11 +151,24 @@ class DispatchApprovalTest extends TestCase
         return $this->actingAs($this->driver, 'api')->postJson('/api/orders/update_status', ['order_id' => '2_1', 'status_id' => 9, 'note' => $note]);
     }
 
-    public function test_driver_report_waits_for_pharmacy_staff_and_forwards_order_pharmacy_and_patient_details(): void
+    public function test_driver_report_waits_for_dispatch_and_forwards_order_pharmacy_and_patient_details(): void
     {
-        $dispatchers = [$this->user(['role' => 'medic', 'pharmacy_id' => 2]), $this->user(['role' => 'medic', 'pharmacy_id' => 2])];
+        $dispatchers = [];
+        foreach (['superadmin', 'admin', 'dispadmin', 'logist'] as $role) {
+            $dispatchers[] = $this->user(['role' => $role]);
+        }
+        $this->user(['role' => 'medic', 'pharmacy_id' => 2]);
         $this->user(['role' => 'medic', 'pharmacy_id' => 3]);
-        $this->user(['role' => 'superadmin']);
+        $this->user(['role' => 'sale']);
+        $this->user(['role' => 'dispadmin', 'isactive' => 0]);
+        $this->user(['role' => 'logist', 'isblocked' => 1]);
+        foreach ($dispatchers as $dispatcher) {
+            Chatify::shouldReceive('push')->once()->with('private-chatify.'.$dispatcher->id, 'messaging', \Mockery::on(
+                fn (array $payload): bool => (int) $payload['from_id'] === $this->driver->id
+                    && (int) $payload['to_id'] === $dispatcher->id
+                    && str_contains($payload['message'], 'Order #2'),
+            ))->andReturn(true);
+        }
 
         $this->reportRefused()->assertOk()->assertJson(['message' => 'OK', 'pending_approval' => true]);
 
@@ -159,20 +176,20 @@ class DispatchApprovalTest extends TestCase
         $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient']);
         $this->assertDatabaseHas('order_exceptions', ['order_id' => 2, 'driver_id' => $this->driver->id, 'requested_status_id' => 9, 'status' => 'pending', 'driver_note' => 'Patient says wrong medication']);
 
-        $this->assertSame([$dispatchers[0]->id, $dispatchers[1]->id], DB::table('ch_messages')->orderBy('to_id')->pluck('to_id')->map(fn ($id): int => (int) $id)->all());
+        $this->assertSame(array_map(fn (User $user): int => $user->id, $dispatchers), DB::table('ch_messages')->orderBy('to_id')->pluck('to_id')->map(fn ($id): int => (int) $id)->all());
         $body = html_entity_decode(DB::table('ch_messages')->value('body'), ENT_QUOTES);
         $this->assertSame($this->driver->id, (int) DB::table('ch_messages')->value('from_id'));
         foreach (['Order #2', 'Delivery refused', 'Dan Driver, 212-555-0142', 'Patient says wrong medication', 'Wall St Pharmacy', '5 Broad St', '212-555-0100', 'QA Patient', '212-555-0199', '1 Wall St, Apt 4B, 10005', 'Ring twice', '/orders/2/show/2'] as $detail) {
             $this->assertStringContainsString($detail, $body);
         }
 
-        $this->assertSame(2, DB::table('notifications')->where('type_text', 'dispatch_approval')->count());
+        $this->assertSame(4, DB::table('notifications')->where('type_text', 'dispatch_approval')->count());
         $this->assertStringNotContainsString('QA Patient', DB::table('notifications')->value('text'));
     }
 
     public function test_repeated_report_does_not_duplicate_the_request_or_messages(): void
     {
-        $this->user(['role' => 'medic', 'pharmacy_id' => 2]);
+        $this->user(['role' => 'dispadmin']);
 
         $first = $this->reportRefused()->json('exception_id');
         $this->reportRefused()->assertJson(['exception_id' => $first]);
@@ -181,7 +198,7 @@ class DispatchApprovalTest extends TestCase
         $this->assertDatabaseCount('ch_messages', 1);
     }
 
-    public function test_reports_go_to_support_superadmins_when_the_pharmacy_has_no_staff_account(): void
+    public function test_reports_go_to_dispatch_even_when_the_pharmacy_has_no_staff_account(): void
     {
         $this->user(['role' => 'medic', 'pharmacy_id' => 3]);
         $superadmin = $this->user(['role' => 'superadmin']);
@@ -199,7 +216,7 @@ class DispatchApprovalTest extends TestCase
         DB::table('locations')->insert(['user_id' => $this->driver->id, 'location' => '40.7,-74.0']);
         $dispatcher = $this->user(['role' => 'dispadmin']);
 
-        $this->actingAs($dispatcher)->post("/orders/2/exceptions/2/{$exceptionId}/approve")
+        $this->actingAs($dispatcher)->post("/orders/2/exceptions/2/{$exceptionId}/approve", ['pharmacy_approval' => 1, 'statuse' => 9])
             ->assertRedirect('/orders/2/show/2')->assertSessionHas('success');
 
         $order = DB::table('orders')->where('id', 2)->first();
@@ -211,8 +228,10 @@ class DispatchApprovalTest extends TestCase
         $this->assertDatabaseHas('payouts_driver', ['order_id' => 2, 'driver_id' => $this->driver->id, 'amount' => 6]);
         $this->assertDatabaseHas('packages_transitions', ['order_id' => 2, 'driver_id' => $this->driver->id, 'target' => 'faild']);
         $this->assertDatabaseHas('order_exceptions', ['id' => $exceptionId, 'status' => 'approved', 'reviewed_by' => $dispatcher->id]);
+        $this->assertStringContainsString('Pharmacy approval obtained through live chat', DB::table('order_exceptions')->value('review_note'));
+        $this->assertNotNull(DB::table('order_exceptions')->value('reviewed_at'));
 
-        $this->post("/orders/2/exceptions/2/{$exceptionId}/approve")->assertSessionHas('error', 'This report was already reviewed.');
+        $this->post("/orders/2/exceptions/2/{$exceptionId}/approve", ['pharmacy_approval' => 1, 'statuse' => 9])->assertSessionHas('error', 'This report was already reviewed.');
         $this->assertDatabaseCount('payouts_driver', 1);
     }
 
@@ -242,22 +261,24 @@ class DispatchApprovalTest extends TestCase
         $exceptionId = DB::table('order_exceptions')->value('id');
         DB::table('orders')->where('id', 2)->update(['statuse_id' => 4]);
 
-        $this->actingAs($this->user(['role' => 'admin']))->post("/orders/2/exceptions/2/{$exceptionId}/approve")->assertSessionHas('error');
+        $this->actingAs($this->user(['role' => 'admin']))->post("/orders/2/exceptions/2/{$exceptionId}/approve", ['pharmacy_approval' => 1, 'statuse' => 9])->assertSessionHas('error');
 
         $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 4]);
         $this->assertDatabaseHas('order_exceptions', ['id' => $exceptionId, 'status' => 'superseded']);
     }
 
-    public function test_the_orders_pharmacy_staff_can_approve(): void
+    public function test_the_orders_pharmacy_staff_cannot_finalize_or_reject(): void
     {
         $this->reportRefused();
         $exceptionId = DB::table('order_exceptions')->value('id');
         $pharmacist = $this->user(['role' => 'medic', 'pharmacy_id' => 2]);
 
-        $this->actingAs($pharmacist)->post("/orders/2/exceptions/2/{$exceptionId}/approve")->assertSessionHas('success');
+        $this->actingAs($pharmacist)->post("/orders/2/exceptions/2/{$exceptionId}/approve", ['pharmacy_approval' => 1, 'statuse' => 9])->assertForbidden();
+        $this->post("/orders/2/exceptions/2/{$exceptionId}/reject", ['review_note' => 'Approved in chat'])->assertForbidden();
 
-        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 9]);
-        $this->assertDatabaseHas('order_exceptions', ['id' => $exceptionId, 'status' => 'approved', 'reviewed_by' => $pharmacist->id]);
+        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 3]);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient']);
+        $this->assertDatabaseHas('order_exceptions', ['id' => $exceptionId, 'status' => 'pending', 'reviewed_by' => null]);
     }
 
     public function test_other_pharmacies_and_drivers_cannot_review_reports(): void
@@ -274,15 +295,191 @@ class DispatchApprovalTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 3]);
     }
 
-    public function test_admin_api_status_change_still_closes_the_stop_immediately(): void
+    public function test_admin_api_cannot_bypass_dispatch_review(): void
     {
         $admin = $this->user(['role' => 'admin']);
 
         $this->actingAs($admin, 'api')->postJson('/api/orders/update_status', ['order_id' => '2', 'status_id' => 8])
-            ->assertOk()->assertJsonMissing(['pending_approval' => true]);
+            ->assertForbidden()->assertJsonPath('message', 'Use dispatch review after obtaining pharmacy approval in live chat.');
+
+        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 3, 'finish' => null]);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient']);
+        $this->assertDatabaseCount('order_exceptions', 0);
+    }
+
+    public static function reviewerPermissions(): array
+    {
+        return [
+            ['superadmin', true], ['admin', true], ['dispadmin', true], ['logist', true],
+            ['medic', false], ['driver', false], ['user', false], ['sale', false], ['facility', false],
+        ];
+    }
+
+    #[DataProvider('reviewerPermissions')]
+    public function test_only_dispatch_roles_can_finalize_delivery_reports(string $role, bool $allowed): void
+    {
+        $this->assertSame($allowed, Gate::forUser(new User(['role' => $role, 'pharmacy_id' => 2]))->allows('review-delivery-report', 2));
+    }
+
+    public static function invalidApprovals(): array
+    {
+        return [
+            'missing approval' => [['statuse' => 9], 'pharmacy_approval'],
+            'unconfirmed approval' => [['statuse' => 9, 'pharmacy_approval' => 0], 'pharmacy_approval'],
+            'missing selection' => [['pharmacy_approval' => 1], 'statuse'],
+            'other status' => [['statuse' => 4, 'pharmacy_approval' => 1], 'statuse'],
+            'noninteger status' => [['statuse' => 'refused', 'pharmacy_approval' => 1], 'statuse'],
+        ];
+    }
+
+    #[DataProvider('invalidApprovals')]
+    public function test_dispatch_must_confirm_pharmacy_live_chat_approval_and_select_a_valid_status(array $payload, string $error): void
+    {
+        $this->reportRefused();
+        $exceptionId = DB::table('order_exceptions')->value('id');
+
+        $this->actingAs($this->user(['role' => 'dispadmin']))
+            ->post("/orders/2/exceptions/2/{$exceptionId}/approve", $payload)->assertSessionHasErrors([
+                $error => $error === 'pharmacy_approval'
+                    ? 'Obtain pharmacy approval in live chat and confirm it before closing this delivery.'
+                    : 'Select Unavailable or Refused.',
+            ]);
+
+        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 3, 'finish' => null]);
+        $this->assertDatabaseHas('order_exceptions', ['id' => $exceptionId, 'status' => 'pending']);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient']);
+        $this->assertDatabaseCount('payouts_driver', 0);
+    }
+
+    public function test_dispatch_can_select_unavailable_after_pharmacy_approval(): void
+    {
+        $this->reportRefused();
+        $exceptionId = DB::table('order_exceptions')->value('id');
+
+        $this->actingAs($this->user(['role' => 'logist']))->post("/orders/2/exceptions/2/{$exceptionId}/approve", [
+            'pharmacy_approval' => 1, 'statuse' => 8,
+        ])->assertSessionHas('success');
 
         $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 8]);
+        $this->assertDatabaseMissing('routes_priority', ['order_id' => 2, 'type' => 'patient']);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'office']);
+        $this->assertDatabaseHas('order_exceptions', [
+            'id' => $exceptionId, 'status' => 'approved', 'requested_status_id' => 9,
+            'review_note' => 'Pharmacy approval obtained through live chat. Final status: Patient unavailable.',
+        ]);
+    }
+
+    public function test_a_report_does_not_close_a_reassigned_order(): void
+    {
+        $this->reportRefused();
+        $exceptionId = DB::table('order_exceptions')->value('id');
+        $newDriver = $this->user(['role' => 'driver']);
+        DB::table('orders')->where('id', 2)->update(['driver_id' => $newDriver->id]);
+        DB::table('routes_priority')->where('order_id', 2)->update(['driver_id' => $newDriver->id]);
+
+        $this->actingAs($this->user(['role' => 'dispadmin']))->post("/orders/2/exceptions/2/{$exceptionId}/approve", [
+            'pharmacy_approval' => 1, 'statuse' => 9,
+        ])->assertSessionHas('error');
+
+        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 3, 'driver_id' => $newDriver->id, 'finish' => null]);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient', 'driver_id' => $newDriver->id]);
+        $this->assertDatabaseHas('order_exceptions', ['id' => $exceptionId, 'status' => 'superseded']);
+        $this->assertDatabaseCount('payouts_driver', 0);
+    }
+
+    public function test_other_drivers_cannot_submit_reports_and_closed_orders_return_409(): void
+    {
+        $this->actingAs($this->user(['role' => 'driver']), 'api')->postJson('/api/orders/update_status', [
+            'order_id' => '2', 'status_id' => 8,
+        ])->assertForbidden();
         $this->assertDatabaseCount('order_exceptions', 0);
+
+        DB::table('orders')->where('id', 2)->update(['statuse_id' => 4]);
+        $this->reportRefused()->assertConflict();
+
+        $this->assertDatabaseCount('order_exceptions', 0);
+        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 4]);
+    }
+
+    public function test_new_drivers_report_supersedes_the_previous_drivers_pending_report(): void
+    {
+        $oldExceptionId = $this->reportRefused()->json('exception_id');
+        $newDriver = $this->user(['role' => 'driver']);
+        DB::table('orders')->where('id', 2)->update(['driver_id' => $newDriver->id]);
+        DB::table('routes_priority')->where('order_id', 2)->update(['driver_id' => $newDriver->id]);
+
+        $this->actingAs($newDriver, 'api')->postJson('/api/orders/update_status', [
+            'order_id' => 2, 'status_id' => 8,
+        ])->assertOk()->assertJsonPath('pending_approval', true);
+
+        $this->assertDatabaseHas('order_exceptions', ['id' => $oldExceptionId, 'status' => 'superseded']);
+        $this->assertSame(1, DB::table('order_exceptions')->where('order_id', 2)->where('status', 'pending')->count());
+        $this->assertDatabaseHas('order_exceptions', ['order_id' => 2, 'driver_id' => $newDriver->id, 'status' => 'pending', 'requested_status_id' => 8]);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient', 'driver_id' => $newDriver->id]);
+    }
+
+    public static function malformedReports(): array
+    {
+        return [
+            'fractional status' => [['status_id' => 7.9], 'status_id'],
+            'text status' => [['status_id' => '8 invalid'], 'status_id'],
+            'array order' => [['order_id' => [2]], 'order_id'],
+            'invalid order' => [['order_id' => '2_not-a-bag'], 'order_id'],
+            'array note' => [['note' => ['invalid']], 'note'],
+            'long note' => [['note' => str_repeat('x', 1001)], 'note'],
+        ];
+    }
+
+    #[DataProvider('malformedReports')]
+    public function test_malformed_reports_return_422_without_changing_the_order(array $payload, string $error): void
+    {
+        $this->actingAs($this->driver, 'api')->postJson('/api/orders/update_status', array_replace([
+            'order_id' => '2_1', 'status_id' => 9,
+        ], $payload))->assertUnprocessable()->assertJsonValidationErrors($error);
+
+        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 3, 'finish' => null]);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient']);
+        $this->assertDatabaseCount('order_exceptions', 0);
+        $this->assertDatabaseCount('ch_messages', 0);
+    }
+
+    public function test_reports_are_still_saved_and_notified_when_chat_broadcasting_fails(): void
+    {
+        $first = $this->user(['role' => 'dispadmin']);
+        $second = $this->user(['role' => 'logist']);
+        Chatify::shouldReceive('push')->twice()->andThrow(new \RuntimeException('Chat unavailable'));
+
+        $this->reportRefused()->assertOk()->assertJsonPath('pending_approval', true);
+
+        $this->assertDatabaseHas('ch_messages', ['to_id' => $first->id]);
+        $this->assertDatabaseHas('ch_messages', ['to_id' => $second->id]);
+        $this->assertDatabaseCount('notifications', 2);
+        $this->assertDatabaseHas('order_exceptions', ['order_id' => 2, 'status' => 'pending']);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 2, 'type' => 'patient']);
+    }
+
+    public function test_review_requires_authentication(): void
+    {
+        $this->post('/orders/2/exceptions/2/1/approve')->assertRedirectToRoute('login');
+        $this->post('/orders/2/exceptions/2/1/reject')->assertRedirectToRoute('login');
+        $this->postJson('/api/orders/update_status', ['order_id' => '2', 'status_id' => 8])->assertUnauthorized();
+
+        $this->assertDatabaseHas('orders', ['id' => 2, 'statuse_id' => 3]);
+        $this->assertDatabaseCount('order_exceptions', 0);
+    }
+
+    public function test_review_controls_are_hidden_from_pharmacy_staff_and_driver(): void
+    {
+        $this->reportRefused();
+        $pendingException = DB::table('order_exceptions')->first();
+        foreach ([$this->user(['role' => 'medic', 'pharmacy_id' => 2]), $this->driver] as $user) {
+            $this->actingAs($user);
+            $this->view('orders.dispatch-review', [
+                'order' => (object) ['id' => 2, 'pharmacy_id' => 2],
+                'pendingException' => $pendingException,
+                'pharmacyStaff' => collect(),
+            ])->assertDontSee('dispatch-status', false)->assertDontSee('pharmacy_approval', false);
+        }
     }
 
     public function test_review_panel_links_dispatch_to_the_pharmacy_chat(): void
@@ -306,7 +503,11 @@ class DispatchApprovalTest extends TestCase
         $this->assertStringContainsString(url('chat/'.$this->driver->id), $html);
         $this->assertStringContainsString('Patient says wrong medication', $html);
         $this->assertStringContainsString(url('chat/'.$medic->id), $html);
-        $this->assertStringContainsString('Chat with Pat Pharmacist', $html);
+        $this->assertStringContainsString('Pharmacy chat: Pat Pharmacist', $html);
+        $this->assertStringContainsString('name="pharmacy_approval"', $html);
+        $this->assertStringContainsString('I obtained pharmacy approval for this status through live chat.', $html);
+        $this->assertStringContainsString('>Unavailable</option>', $html);
+        $this->assertStringContainsString('>Refused</option>', $html);
         $this->assertStringContainsString('/orders/2/exceptions/2/'.$pendingException->id.'/approve', $html);
     }
 }

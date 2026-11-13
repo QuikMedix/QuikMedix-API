@@ -1,5 +1,11 @@
 # Progress
 
+## Current verified state — 2026-11-12
+
+Feature `dispatch-exception-approval` passes isolated automated verification. Driver unavailable/refused reports remain pending with the patient delivery stop intact and forward order, pharmacy, patient and driver details to active dispatch accounts (superadmin/admin/dispadmin/logist), including a persisted chat message, real-time Chatify broadcast and order notification. Only dispatch sees the review controls and can finalize or reject. Dispatch opens the pharmacy chat, obtains approval, confirms that approval and selects Unavailable or Refused; the confirmation, reviewer, time and final status are audited. Confirmation is a human attestation; the application does not interpret chat text. Finalization removes the active patient stop while preserving existing return routing and driver pay. General web/edit/API status changes cannot skip review. Reassigned or closed orders cannot be closed by stale reports.
+
+Final `composer test` passed 239 tests / 908 assertions plus 45 routing and 69 tariff smoke checks; focused dispatch/status checks passed 81 tests / 359 assertions. The startup Vite build passed. PHP syntax, JSON parsing and `git diff --check` passed. Pint is absent. Implementation is committed as `705fb05` on `shohinx/QuikMedix-API:main`. Direct push to `QuikMedix/QuikMedix-API:main` was denied for lack of write permission; PR [#22](https://github.com/QuikMedix/QuikMedix-API/pull/22) proposes the verified change to the official repository. Deployment remains unverified. No production requests or writes, schema changes or dependency changes. Live Pusher/FCM delivery, native browser appearance and actual driver-app refresh remain unverified; this checkout contains no mobile source. Earlier QR/scanner integration checks remain outstanding under `orders-qr-status`.
+
 ## Session log — 2026-10-09: production lookup names
 
 - Goal: remove "(dev)" placeholder names visible to production users (reported on "Delivery method 2 (dev)").
@@ -41,7 +47,7 @@
 - Commit status: this session's three-file change is uncommitted; no commit or push requested.
 - Next action: refresh the dashboard to load the Blade wording/icon updates; continue prior scanner verification in an isolated environment when requested.
 
-## Current verified state — 2026-10-09
+## Historical verified state — 2026-10-09
 
 The checkout is at `af3a93d`, which includes the earlier dashboard and label changes through merged PR #18. The 2026-10-09 session began with a clean worktree. Its isolated baseline build passed with 168 tests / 577 assertions plus 114 smoke checks. Confirmed hub label and driver pickup changes are implemented locally and remain uncommitted. Final isolated composer test passed 187 tests / 642 assertions plus 114 smoke checks; the asset build and 68 scanner checks also passed.
 
@@ -214,3 +220,32 @@ Limits: status submission through an authenticated browser, physical printer/sca
 
 - Follow-up (same day): user decided the pharmacy's own staff act as dispatch. Reports now go to that pharmacy's medic accounts (support superadmins as fallback); new gate review-delivery-report lets them, admins and logists approve/reject their pharmacy's reports; panel adds Chat with driver. Tests 206 / 744 passed.
 - Production: with explicit user approval, ran the order_exceptions migration (0 pending afterward). Rehearsed the full flow on production MySQL 8.4 inside a rolled-back transaction with FCM/Twilio/Beams disabled; all checks passed and data snapshots matched before/after. Only side effect: order_exceptions auto-increment advanced.
+
+
+## Session log — 2026-11-12: dispatch-only failed-delivery decisions
+
+- Goal: drivers forward unavailable/refused order information to dispatch; dispatch obtains pharmacy approval through live chat and alone finalizes the status, removing the active patient delivery stop. Latest requirement supersedes the prior pharmacy-reviewer decision.
+- Intended behavior: reports go to active operations accounts (superadmin/admin/dispadmin/logist), remain pending and visible to the driver, and can be finalized only through dispatch review with an explicit pharmacy-live-chat approval confirmation and final Unavailable/Refused selection. Record confirmation, reviewer and time in the existing audit fields. Pharmacy staff use chat and cannot approve/reject the report directly. General status/edit/API paths must not bypass review. Preserve existing return routing and driver pay behavior.
+- Verification plan: isolated HTTP tests for routing, complete role matrix, confirmation/selection validation, route removal for both statuses, rejection and duplicate/stale handling, and manual/API bypass prevention; Blade rendering checks for controls/chat links; focused/full installed tests and smoke checks, formatter attempt and final diff review.
+- Baseline: clean worktree at 47611a2. Composer dry run reports no dependency changes; npm dependency tree passes. SKIP_INSTALL=1 ./init.sh with explicit testing/in-memory SQLite, array cache/session and temporary configuration/route/event cache paths passed: Vite build, 206 tests / 744 assertions, 45 routing and 69 tariff smoke checks. Laravel 13.33.0, PHPUnit 12.5.35, PHP 8.5.0; no .ai/rules directory or Boost tools; installed PHPUnit is used because Pest is absent.
+- Findings: prior reports are sent to pharmacy medic accounts; pharmacy reviewers can close reports; admin API closes immediately and general status forms can bypass report review. These are the defects addressed in this session. No production requests or writes.
+- Initial commit status: clean worktree; no commit, push or deployment requested. Final evidence is recorded below.
+
+- Final changes: report recipients corrected to active dispatch roles, Chatify broadcasts added with outage isolation, pharmacy chat links and approval attestation/final-status selection added, pharmacy/driver finalization removed, general status and edit controls blocked from bypassing dispatch review, admin API bypass blocked and report inputs validated. Report creation checks the assigned driver and open order; stale reports are superseded after reassignment. Existing return stops, payouts and rejected-report instructions remain. No schema/dependency changes.
+- Final verification: focused dispatch/status suite passed 81 tests / 359 assertions; final composer test passed 239 tests / 908 assertions, 45 page-routing checks and 69 tariff smoke checks. Tests cover dispatch role matrix, active recipients and real-time payloads, pharmacy/driver denial, required approval/status validation, both final statuses, patient-stop removal, duplicate submissions, closed/reassigned reports, rejection, chat broadcast failure and status/edit/API bypasses. All modified non-Blade PHP syntax checks, FEATURE_LIST.json parsing and git diff --check passed.
+- Formatter: required vendor/bin/pint --dirty --format agent could not run (vendor/bin/pint absent); code reviewed against neighboring conventions. No dependency installation.
+- Limits: pharmacy approval is dispatch’s recorded attestation after their live-chat conversation. Real Pusher/FCM delivery, actual mobile refresh, native browser appearance and MySQL-specific route-query execution remain unverified; isolated database and Blade tests plus mocked external boundaries were used. No mobile source is present in this checkout. No production data accessed or changed.
+- Commit status: all changes remain uncommitted and undeployed; no commit or push requested. Feature dispatch-exception-approval marked passing with actual evidence; earlier orders-qr-status restored as the only in_progress entry for its existing outstanding checks.
+- Next action: review/deploy these changes, then verify the report → dispatch/pharmacy live chat → dispatch confirmation → driver route refresh flow with actual accounts/device when authorized. No new migration is needed for these changes.
+
+
+## Session log — 2026-11-12: publish dispatch changes to official repository
+
+- Goal: push the verified dispatch changes to https://github.com/QuikMedix/QuikMedix-API as explicitly requested.
+- Initial state: clean local main at 705fb0564823529997b8dde886d87e190993d8b6, already present on origin/main (shohinx/QuikMedix-API). Official main is ef2c898c002b52ee56b0745838f630ab59f5d2de, exactly one commit behind; no divergent commits.
+- Actions: fetched upstream/main and reviewed the one-commit publication diff. A normal git push upstream HEAD:main failed with HTTP 403, Permission denied to shohinx. Connected GitHub metadata independently reports push=false. No remote history was rewritten.
+- Fallback: the GitHub connector could not create a PR (Resource not accessible by integration). Authenticated GitHub CLI successfully opened PR https://github.com/QuikMedix/QuikMedix-API/pull/22 from shohinx:main to official main, with the behavior and verification evidence in its description.
+- Verification: no product code changed in this follow-up; reused the recorded 239 tests / 908 assertions, 114 smoke checks and successful build. Publication diff and session-documentation diff checks passed; FEATURE_LIST.json parses.
+- Commit status: product implementation remains in 705fb05; this documentation-only handoff is committed and pushed to the fork PR branch. No official-main push or deployment succeeded.
+- Blocker: current GitHub account lacks write permission to the official repository. A repository maintainer must merge PR #22, or grant write access for a direct push.
+- Next action: merge PR #22 in the official repository, then verify the live driver/dispatch/pharmacy flow after deployment.

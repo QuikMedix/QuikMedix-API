@@ -301,7 +301,7 @@
                                                         @else
                                                             @if(!(Auth::user()->can('change-order-status')) && in_array($statuse->id,[1,5]))
                                                             <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
-                                                            @elseif(Auth::user()->can('change-order-status'))
+                                                            @elseif(Auth::user()->can('change-order-status') && !in_array((int) $statuse->id, \App\Support\OrderStatus::NEEDS_DISPATCH_APPROVAL, true))
                                                             <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
                                                             @endif
                                                         @endif

@@ -217,6 +217,30 @@ class OrderStatusTest extends TestCase
         return [['edit'], ['facilitys_edit']];
     }
 
+    public static function failedDeliveryBypasses(): array
+    {
+        return [
+            ['status', 8], ['status', 9], ['edit', 8], ['edit', 9], ['facilitys_edit', 8], ['facilitys_edit', 9],
+        ];
+    }
+
+    #[DataProvider('failedDeliveryBypasses')]
+    public function test_manual_status_forms_cannot_bypass_pharmacy_approval(string $path, int $statusId): void
+    {
+        $this->createOrder(['statuse_id' => 3]);
+        DB::table('statuses')->insert([['id' => 8, 'name' => 'Patient unavailable'], ['id' => 9, 'name' => 'Refused']]);
+        DB::table('rxs')->insert(['order_id' => 20, 'rx_id' => 'RX100-0']);
+        DB::table('routes_priority')->insert(['order_id' => 20]);
+
+        $this->actingAs(User::factory()->create(['role' => 'dispadmin', 'isactive' => 1, 'isblocked' => 0]))
+            ->post('/orders/2/'.$path.'/20', ['save' => 1, 'statuse' => $statusId, 'pharmacy_approval' => 1, 'count_bags' => 4])
+            ->assertSessionHasErrors(['statuse' => 'Use dispatch review to select Unavailable or Refused after pharmacy approval in live chat.']);
+
+        $this->assertDatabaseHas('orders', ['id' => 20, 'statuse_id' => 3, 'finish' => null, 'count_bags' => 2]);
+        $this->assertDatabaseHas('routes_priority', ['order_id' => 20]);
+        $this->assertDatabaseHas('rxs', ['order_id' => 20, 'rx_id' => 'RX100-0']);
+    }
+
     #[DataProvider('editPaths')]
     public function test_editing_an_order_with_a_disabled_status_preserves_status_and_bags(string $path): void
     {

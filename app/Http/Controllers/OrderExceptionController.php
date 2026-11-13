@@ -5,15 +5,17 @@ namespace App\Http\Controllers;
 use App\Actions\FinalizeFailedDelivery;
 use App\Actions\RequestDispatchApproval;
 use App\Notifications;
+use App\Support\OrderStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use stdClass;
 
 /**
- * The order's pharmacy staff (or operations staff) approve or reject a driver's "patient unavailable" / "refused" report after checking with the pharmacy.
+ * Dispatch finalizes a driver's report after obtaining pharmacy approval through live chat.
  */
 class OrderExceptionController extends Controller
 {
@@ -29,33 +31,49 @@ class OrderExceptionController extends Controller
         $this->middleware(['auth', '2fa', 'active']);
     }
 
-    public function approve(int $pharmacy_id, int $order_id, int $exception_id, FinalizeFailedDelivery $finalizeFailedDelivery): RedirectResponse
+    public function approve(Request $request, int $pharmacy_id, int $order_id, int $exception_id, FinalizeFailedDelivery $finalizeFailedDelivery): RedirectResponse
     {
         $this->authorizeReview($pharmacy_id, $order_id);
+        $validated = $request->validate([
+            'pharmacy_approval' => ['accepted'],
+            'statuse' => ['required', 'integer', Rule::in(OrderStatus::NEEDS_DISPATCH_APPROVAL)],
+        ], [
+            'pharmacy_approval.accepted' => 'Obtain pharmacy approval in live chat and confirm it before closing this delivery.',
+            'statuse.required' => 'Select Unavailable or Refused.',
+            'statuse.integer' => 'Select Unavailable or Refused.',
+            'statuse.in' => 'Select Unavailable or Refused.',
+        ]);
 
-        $outcome = DB::transaction(function () use ($order_id, $exception_id, $finalizeFailedDelivery): string {
+        $outcome = DB::transaction(function () use ($order_id, $exception_id, $finalizeFailedDelivery, $validated): string {
+            $order = DB::table('orders')->where('id', $order_id)->lockForUpdate()->first();
             $exception = $this->lockPending($order_id, $exception_id);
             if ($exception === null) {
                 return 'This report was already reviewed.';
             }
 
-            $order = DB::table('orders')->where('id', $order_id)->lockForUpdate()->first();
             if (in_array((int) $order->statuse_id, self::CLOSED_STATUSES, true)) {
                 $this->close($exception, 'superseded', 'Order was already closed when dispatch reviewed it.');
 
                 return 'The order was already closed, so the report was not applied.';
             }
 
-            $driverPharmacyId = DB::table('users')->where('id', $exception->driver_id)->value('pharmacy_id');
-            $finalizeFailedDelivery->handle($order_id, (int) $exception->requested_status_id, (int) $exception->driver_id, $driverPharmacyId ? (int) $driverPharmacyId : null);
-            $this->close($exception, 'approved', null);
+            if ((int) $order->driver_id !== (int) $exception->driver_id) {
+                $this->close($exception, 'superseded', 'Order was reassigned before dispatch reviewed it.');
 
-            DB::afterCommit(fn () => $this->notifyDriver($exception, "Dispatch approved \"".RequestDispatchApproval::reasonLabel($exception->requested_status_id)."\" for order #{$order_id}. Return the packages as routed."));
+                return 'The order was reassigned. Ask the current driver to submit a new report.';
+            }
+
+            $driverPharmacyId = DB::table('users')->where('id', $exception->driver_id)->value('pharmacy_id');
+            $statusId = (int) $validated['statuse'];
+            $finalizeFailedDelivery->handle($order_id, $statusId, (int) $exception->driver_id, $driverPharmacyId ? (int) $driverPharmacyId : null);
+            $this->close($exception, 'approved', 'Pharmacy approval obtained through live chat. Final status: '.RequestDispatchApproval::reasonLabel($statusId).'.');
+
+            DB::afterCommit(fn () => $this->notifyDriver($exception, "Dispatch confirmed pharmacy approval and marked \"".RequestDispatchApproval::reasonLabel($statusId)."\" for order #{$order_id}. Return the packages as routed."));
 
             return 'approved';
         });
 
-        return $this->backToOrder($pharmacy_id, $order_id, $outcome === 'approved' ? 'Report approved and the order was closed.' : null, $outcome !== 'approved' ? $outcome : null);
+        return $this->backToOrder($pharmacy_id, $order_id, $outcome === 'approved' ? 'Status confirmed and the delivery stop was removed from the driver’s active route.' : null, $outcome !== 'approved' ? $outcome : null);
     }
 
     public function reject(Request $request, int $pharmacy_id, int $order_id, int $exception_id): RedirectResponse

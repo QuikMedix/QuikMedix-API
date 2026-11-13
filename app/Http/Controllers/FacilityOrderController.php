@@ -334,6 +334,7 @@ class FacilityOrderController extends Controller
                 if ($statusId !== (int) $order->statuse_id && ! Auth::user()->can('change-order-status')) {
                     abort_unless((int) $order->statuse_id === 1 && $statusId === 5, 403);
                 }
+                $changeOrderStatus->assertCanChangeManually((int) $order->statuse_id, $statusId);
 
                 $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
                 $statuse_copay = (empty($request->input('copay')))?'1':'2';

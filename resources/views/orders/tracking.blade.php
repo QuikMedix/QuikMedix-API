@@ -14,11 +14,14 @@
                 <select id="order-status" name="statuse" class="form-control mr-2" required>
                     <option value="">Choose status…</option>
                     @foreach($statuses as $status)
-                        <option value="{{ $status->id }}" @selected((string) old('statuse', $order->statuse_id) === (string) $status->id)>{{ \App\Support\OrderStatus::label($status->id, $status->name) }}</option>
+                        @if(!in_array((int) $status->id, \App\Support\OrderStatus::NEEDS_DISPATCH_APPROVAL, true))
+                            <option value="{{ $status->id }}" @selected((string) old('statuse', $order->statuse_id) === (string) $status->id)>{{ \App\Support\OrderStatus::label($status->id, $status->name) }}</option>
+                        @endif
                     @endforeach
                 </select>
                 <button type="submit" class="btn btn-primary">Update status</button>
             </form>
+            <p>Unavailable and Refused require dispatch review after pharmacy approval in live chat.</p>
             @error('statuse')
                 <p class="text-danger" role="alert">{{ $message }}</p>
             @enderror
