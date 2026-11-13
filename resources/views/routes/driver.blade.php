@@ -8,6 +8,36 @@
 <link href="{{ URL::asset('/css/select2.min.css')}}" rel="stylesheet" type="text/css">
 <link href="{{ URL::asset('/css/jquery.bootstrap-touchspin.min.css')}}" rel="stylesheet">
 <style>
+.office-order-picker {
+    min-width: 110px;
+    max-width: 170px;
+    padding: 2px 6px;
+    font-size: 11px;
+    white-space: normal;
+}
+.office-order-dialog {
+    width: min(480px, calc(100vw - 32px));
+    max-height: 85vh;
+    padding: 24px;
+    border: 0;
+    border-radius: 8px;
+    color: #212529;
+    background: #fff;
+}
+.office-order-dialog::backdrop {
+    background: rgba(0, 0, 0, .45);
+}
+.office-order-options {
+    max-height: 45vh;
+    overflow-y: auto;
+}
+.office-order-options label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    cursor: pointer;
+}
 .wrapper {
     display: flex;
     flex-wrap: wrap;
@@ -732,17 +762,8 @@ label {
                                                                 <i class="mdi mdi-clock-outline"></i> <span class="time">{{date("h:i A",strtotime('now + '.$routes_priority[$n]->eta.' minutes'))}}</span><br>
                                                                 <span class="num">{{($n+1)}}</span>
                                                             </div>
-                                                            <p class="order">Order:
-                                                                <select class="multiple_select" required multiple="multiple">
-                                                                    @foreach(explode(',',$routes_priority[$n]->order_id) as $row)
-                                                                        <option selected value="{{$row}}">{{$row}}</option>
-                                                                    @endforeach
-                                                                @foreach($orders_id as $row)
-                                                                    @if(!in_array($row->order_id,explode(',',$routes_priority[$n]->order_id)))
-                                                                    <option value="{{$row->order_id}}">{{$row->order_id}}</option>
-                                                                    @endif
-                                                                @endforeach
-                                                                </select>
+                                                            <p class="order">Orders:
+                                                                <button type="button" class="btn btn-light office-order-picker" data-office-order-picker>Choose orders</button>
                                                             </p>
                                                             <p>Office #{{$routes_priority[$n]->type_id}}</p>
                                                         </div>
@@ -765,7 +786,7 @@ label {
                                         @csrf
                                         <br><br>
 
-                                        <p>Select the order numbers at each office stop before saving. Add a pickup or delivery to the route first if no orders are listed.</p>
+                                        <p>Use Choose orders at each office stop to select its deliveries before saving.</p>
                                         <button type="submit" class="btn btn-primary" style="margin: auto;width: 180px;display: grid;">Save</button>
                                     </form>
                                         <p style="text-align: left;position: absolute;left: 29px;bottom: 11px;">
@@ -869,6 +890,7 @@ label {
                             </div>
                         </div>
                     </div>
+@include('routes.office-order-picker')
 @endsection
 @section('footerScript')
 <script src="{{ URL::asset('/js/bootstrap.bundle.min.js')}}"></script>
@@ -879,7 +901,10 @@ label {
 <script type="text/javascript" src="{{ URL::asset('/js/bootstrap-multiselect.min.js')}}"></script>
 <script src="/js/BootstrapMenu.min.js"></script>
 <script src="{{ URL::asset('/js/route-order-select.js') }}"></script>
+<script src="{{ URL::asset('/js/office-order-picker.js?v=2') }}"></script>
+@php($officeOrderIds = $orders->keys()->merge($orders_id->pluck('order_id'))->values()->all())
 <script type="text/javascript">
+    window.officeOrderPicker.init(@json($officeOrderIds));
     $(document).ready(function() {
         var menu = new BootstrapMenu('.plus-item.active-yellow,.plus-item.active-blue,.plus-item.active-green', {
             fetchElementData: function($rowElem) {
@@ -1034,10 +1059,9 @@ label {
                         el.find("input[name='type_id[]']").val($(el2).find('.type_id').data('id'));
                         el.addClass("active-yellow");
                         el.addClass("office"+$(el2).find('.type_id').data('id'));
-                        el.append("<p class='order'>Order: <select class='multiple_select' required multiple='multiple'></select></p>");
+                        el.find("input[name='order_id[]']").val('');
+                        el.append("<p class='order'>Orders: <button type='button' class='btn btn-light office-order-picker' data-office-order-picker>Choose orders</button></p>");
                         el.append("<p>Office #"+$(el2).find('.order_id').data('id')+"</p>");
-                        $('.plus-item.office'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
-                        $('.plus-item.office'+$(el2).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                         updateOfficeId(orderIds);
                     }
                 }
@@ -1148,7 +1172,7 @@ label {
     }
     var element = '<div class="plus-item no-active"><input type="hidden" name="order_id[]"><input type="hidden" name="type[]"><input type="hidden" name="type_id[]"><div class="eta_block" style="display:none;"><i class="mdi mdi-timer"></i> <span class="eta"></span><br><i class="mdi mdi-clock-outline"></i> <span class="time"></span><br><span class="num">$num</span></div><p class="number">$num</p></div>';
     function updateOfficeId(ids) {
-        window.routeOrderSelect.updateOfficeId(ids);
+        window.officeOrderPicker.updateOfficeId(ids);
     }
     var orderIds = [@foreach($orders_id as $order_id)
     "{{ $order_id->order_id }}",
@@ -1185,7 +1209,7 @@ label {
             alert("You cannot deliver this order to the patient, since it has been returned to the office more than 3 times, you can return this order to the pharmacy");
         });
         @if(!empty($routes_priority[0]))
-            $(".wrapper").sortable({cursor: "move", cursorAt: { top: 30, left: 55 },revert:"invalid", revertDuration: 100,
+            $(".wrapper").sortable({cancel: "input,select,textarea,button,label,a,[data-office-order-picker]", cursor: "move", cursorAt: { top: 30, left: 55 },revert:"invalid", revertDuration: 100,
             start: function() {
                 $(".trash_block").addClass("active");
             }, 
@@ -1200,7 +1224,6 @@ label {
                 });
                 reload_priority();
             }});
-            $(".wrapper").disableSelection();
         @endif
         $(".trash_block").droppable({
             over:function(){
@@ -1271,7 +1294,7 @@ label {
         });
         $(".wrapper").droppable({
             drop:function(event, ui){
-                $(".wrapper").sortable({cursor: "move", cursorAt: { top: 30, left: 55 },revert:"valid", revertDuration: 100,
+                $(".wrapper").sortable({cancel: "input,select,textarea,button,label,a,[data-office-order-picker]", cursor: "move", cursorAt: { top: 30, left: 55 },revert:"valid", revertDuration: 100,
                 start: function() {
                     $(".trash_block").addClass("active");
                 }, 
@@ -1286,7 +1309,6 @@ label {
                     });
                     reload_priority();
                 }});
-                $(".wrapper").disableSelection();
                 var type = $(ui.draggable).find('.order_id').data('type');
                 $(".wrapper").addClass("activeted");
                 var el = $(this).find(".plus-item.no-active").first();
@@ -1363,10 +1385,9 @@ label {
                     el.find("input[name='type_id[]']").val($(ui.draggable).find('.type_id').data('id'));
                     el.addClass("active-yellow");
                     el.addClass("office"+$(ui.draggable).find('.type_id').data('id'));
-                    el.append("<p class='order'>Order: <select class='multiple_select' required multiple='multiple'></select></p>");
+                    el.find("input[name='order_id[]']").val('');
+                    el.append("<p class='order'>Orders: <button type='button' class='btn btn-light office-order-picker' data-office-order-picker>Choose orders</button></p>");
                     el.append("<p>Office #"+$(ui.draggable).find('.order_id').data('id')+"</p>");
-                    $('.plus-item.office'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect(window.routeOrderSelect.options);
-                    $('.plus-item.office'+$(ui.draggable).find('.type_id').data('id')).find('.multiple_select').multiselect('selectAll', false);
                     updateOfficeId(orderIds);
                 }
             }
