@@ -6,13 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Actions\RequestDispatchApproval;
 use App\Notifications;
+use App\Support\HereMaps;
 use App\Support\OrderStatus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Twilio\Rest\Client;
-use Illuminate\Support\Facades\Redis;
 
 
 class LexaAdminApi extends Controller
@@ -1801,10 +1801,7 @@ class LexaAdminApi extends Controller
             return false;
         }
         $last_loc=str_replace(' ','',$patient['location']);
-        $access_token = Redis::get('here_access_token');
-        if(empty($access_token)) {
-            $access_token = self::update_here_access_token();
-        }
+        $access_token = HereMaps::accessToken();
         $options = array(
             'http' => array(
                 'method'  => 'GET',
@@ -1830,34 +1827,4 @@ class LexaAdminApi extends Controller
         Notifications::send_push($next_route->type_id,"QuikMedix","Your delivery is next. \nPlease track your order #".$next_route->order_id." via our app. ETA: $duration \nThank you for using our service.");
         return true;
     }
-
-    public static function update_here_access_token() {
-        $nonce     = bin2hex(random_bytes(4));
-        $timestamp = time();
-        $string='POST&'.urlencode('https://account.api.here.com/oauth2/token').'&'.urlencode('grant_type=client_credentials&'.'oauth_consumer_key='.config('app.hereAccessId').'&oauth_nonce='.$nonce.'&oauth_signature_method=HMAC-SHA256&oauth_timestamp='.$timestamp.'&oauth_version=1.0');
-        $signature = urlencode(base64_encode(hash_hmac('sha256', $string, config('app.hereAccessSecret').'&',TRUE)));
-        $curl = curl_init();
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://account.api.here.com/oauth2/token',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => 'grant_type=client_credentials',
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/x-www-form-urlencoded',
-                'Authorization: OAuth oauth_consumer_key="'.config('app.hereAccessId').'",oauth_nonce="'.$nonce.'",oauth_signature_method="HMAC-SHA256",oauth_timestamp="'.$timestamp.'",oauth_version="1.0",oauth_signature="'.$signature.'"'
-            ),
-        )); 
-        $response = json_decode(curl_exec($curl));
-        if(isset($response->access_token) && isset($response->expires_in)) {
-            Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
-            return $response->access_token;
-        } else {
-            throw new \RuntimeException('Could not refresh the HERE Maps access token.');
-        }
-    } 
 }
