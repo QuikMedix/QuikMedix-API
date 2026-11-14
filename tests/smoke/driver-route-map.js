@@ -131,6 +131,12 @@ check(context.map.markers.every(marker => marker.options.icon.path === 'circle' 
 check(context.map.markers.some(marker => marker.id === 'pharmacy4' && marker.getPosition().lat() === 42), 'A pharmacy marker retains its matching ID and location');
 check(context.map.bounds.points.length === 7 && message.hidden, 'All visible stops fit and the empty-map message stays hidden');
 check(context.markersArray.length === 4, 'Only patient/pharmacy markers participate in route priority updates');
+const driverMarker = context.map.markers.find(marker => marker.id === undefined);
+driverMarker.fire('click');
+context.setup_route = true;
+driverMarker.fire('click');
+context.setup_route = false;
+check(driverMarker.getLabel().text === 'D' && confirmations === 0, 'Clicking the driver marker does nothing instead of failing or opening the stop dialog');
 
 const oldMap = context.map;
 context.showPatient = false;

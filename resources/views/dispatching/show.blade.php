@@ -438,7 +438,8 @@ label {
                             $(".zdrm-webphone-call-btn").get(0).click();
                         });
                     </script>
-                    <script src="https://maps.googleapis.com/maps/api/js?key={{config('app.googlemaps_apikey')}}&region=US&language=en&libraries=drawing,geometry&v=weekly&callback=initMap" defer></script>
+                    <script src="https://maps.googleapis.com/maps/api/js?key={{config('app.googlemaps_apikey')}}&region=US&language=en&libraries=geometry&v=weekly&callback=initMap" defer></script>
                     @include('dispatching.stop-map-data')
-                    <script src="{{ URL::asset('/js/dispatch-stop-map.js?v=1') }}"></script>
+                    <script src="{{ URL::asset('/js/route-map-tools.js?v=1') }}"></script>
+                    <script src="{{ URL::asset('/js/dispatch-stop-map.js?v=2') }}"></script>
 @endsection

@@ -1,13 +1,16 @@
 // Stop map shared by the dispatch driver page and the pharmacy process page.
-// The page supplies locationDriver, locationPatients, locationPharmacy, their *ID lists and mapCenter()
-// (resources/views/dispatching/stop-map-data.blade.php) plus setup_route, showPatient and showPharmacy.
+// The page supplies locationDriver, locationPatients, locationPharmacy and their *ID lists
+// (resources/views/dispatching/stop-map-data.blade.php) plus setup_route, showPatient and showPharmacy,
+// and loads route-map-tools.js first for coordinate checks and the built-in marker symbols.
 // Google Maps calls initMap once its script has loaded.
 var map;
 var _myPolygon;
 var markersArray = [];
 
 function addMarker(latlng, text, color, background, id, map, weight="bold") {
-    var latLng = new google.maps.LatLng(parseFloat(latlng.split(",")[0]), parseFloat(latlng.split(",")[1]));
+    var point = window.routeMapTools.point(latlng);
+    if (!point) { return; }
+    var latLng = new google.maps.LatLng(point.lat, point.lng);
     if(markersArray.length != 0) {
         for (i=0; i < markersArray.length; i++) {
             var existingMarker = markersArray[i];
@@ -22,18 +25,12 @@ function addMarker(latlng, text, color, background, id, map, weight="bold") {
     }
     const marker = new google.maps.Marker({
         position: latLng,
-        icon: {
-            url: '/images/i033.svg', // url
-            scaledSize: new google.maps.Size(35, 35), // scaled size
-            origin: new google.maps.Point(0,0), // origin
-            anchor: new google.maps.Point(30, 30), // anchor
-            labelOrigin: new google.maps.Point(18, 31)
-        },
+        icon: window.routeMapTools.icon('#0e46b7'),
         label: {
             text:text,
             fontWeight: weight,
             fontSize: '8px',
-            color: color
+            color: '#fff'
         },
         title: id,
         id: id,
@@ -43,27 +40,23 @@ function addMarker(latlng, text, color, background, id, map, weight="bold") {
     attachSecretMessage(marker);
 }
 function addMarkerDriver(latlng, map) {
-    const marker = new google.maps.Marker({
-        position: { lat: parseFloat(latlng.split(",")[0]), lng: parseFloat(latlng.split(",")[1]) },
-        icon: {
-            url: '/images/i022.svg', // url
-            scaledSize: new google.maps.Size(46, 46), // scaled size
-            origin: new google.maps.Point(0,0), // origin
-            anchor: new google.maps.Point(23, 23) // anchor
-        },
+    var point = window.routeMapTools.point(latlng);
+    if (!point) { return; }
+    new google.maps.Marker({
+        position: point,
+        icon: window.routeMapTools.icon('#242424'),
+        label: { text: 'D', color: '#fff', fontWeight: 'bold' },
+        title: 'Driver',
         map: map,
     });
-    attachSecretMessage(marker);
 }
 function addMarkerOffice(latlng, text, color, background, id, map, weight="bold") {
+    var point = window.routeMapTools.point(latlng);
+    if (!point) { return; }
     const marker = new google.maps.Marker({
-        position: { lat: parseFloat(latlng.split(",")[0]), lng: parseFloat(latlng.split(",")[1]) },
-        icon: {
-            url: '/images/i044.svg', // url
-            scaledSize: new google.maps.Size(30, 30), // scaled size
-            origin: new google.maps.Point(0,0), // origin
-            anchor: new google.maps.Point(30, 30) // anchor
-        },
+        position: point,
+        icon: window.routeMapTools.icon('#eca40d'),
+        label: { text: text, color: '#212529', fontWeight: 'bold' },
         title: id,
         id: id,
         map: map,
@@ -71,15 +64,11 @@ function addMarkerOffice(latlng, text, color, background, id, map, weight="bold"
     attachSecretMessage(marker);
 }
 function addMarkerPharmacy(latlng, text, color, background, id, map, weight="bold") {
+    var point = window.routeMapTools.point(latlng);
+    if (!point) { return; }
     const marker = new google.maps.Marker({
-        position: { lat: parseFloat(latlng.split(",")[0]), lng: parseFloat(latlng.split(",")[1]) },
-        icon: {
-            url: '/images/i011.svg', // url
-            scaledSize: new google.maps.Size(35, 35), // scaled size
-            origin: new google.maps.Point(0,0), // origin
-            anchor: new google.maps.Point(20, 20), // anchor
-            labelOrigin: new google.maps.Point(18, 31)
-        },
+        position: point,
+        icon: window.routeMapTools.icon('#19b313'),
         label: {
             text:text,
             fontWeight: weight,
@@ -96,7 +85,7 @@ function addMarkerPharmacy(latlng, text, color, background, id, map, weight="bol
 function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
         zoom: 11,
-        center: { lat: parseFloat(mapCenter().split(",")[0]), lng: parseFloat(mapCenter().split(",")[1]) },
+        center: window.routeMapTools.center([locationDriver].concat(locationPharmacy, locationPatients)),
         legend: 'none'
     });
 
@@ -129,7 +118,7 @@ function initMap() {
 function attachSecretMessage(marker) {
     marker.addListener("click", () => {
         var id = marker.get('id');
-        if(id!="") {
+        if(id) {
             if(setup_route==true) {
                 $('.modal2').find('input[name="id"]').val(id);
                 if($('.wrapper .plus-item').index($('.wrapper').find("."+id))<0) {

@@ -5,9 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const source = fs.readFileSync(path.join(__dirname, '../../public/js/dispatch-stop-map.js'), 'utf8');
-// mapCenter() is plain JavaScript in the Blade partial that also prints the stop locations.
-const partial = fs.readFileSync(path.join(__dirname, '../../resources/views/dispatching/stop-map-data.blade.php'), 'utf8');
-const mapCenter = partial.split('\n').find(line => line.includes('function mapCenter()'));
+// The pages load the shared coordinate and marker-symbol helpers before the stop map.
+const toolsSource = fs.readFileSync(path.join(__dirname, '../../public/js/route-map-tools.js'), 'utf8');
 let checks = 0;
 function check(condition, message) { assert(condition, message); checks++; }
 // Values built inside the vm context have their own prototypes, so compare plain copies.
@@ -35,7 +34,7 @@ function page(data, dom = {}) {
         addListener(name, callback) { this.listeners[name] = callback; }
     }
     const google = { maps: {
-        LatLng, Marker, Size: Pair, Point: Pair,
+        LatLng, Marker, Size: Pair, Point: Pair, SymbolPath: { CIRCLE: 'circle' },
         Map: class { constructor(element, options) { this.element = element; this.options = options; trace.maps.push(this); } },
     } };
     // Records every jQuery call as "selector.method(args)"; lookups answer from the dom fixture.
@@ -55,12 +54,14 @@ function page(data, dom = {}) {
         };
         return element;
     }
-    const context = vm.createContext({
+    const sandbox = {
         google, $, parseFloat, Math, document: { getElementById: id => ({ id }) },
         setup_route: false, setup_marker: undefined, showPatient: true, showPharmacy: true,
         ...data,
-    });
-    vm.runInContext(mapCenter, context, { filename: 'stop-map-data.blade.php' });
+    };
+    sandbox.window = sandbox;
+    const context = vm.createContext(sandbox);
+    vm.runInContext(toolsSource, context, { filename: 'route-map-tools.js' });
     vm.runInContext(source, context, { filename: 'dispatch-stop-map.js' });
     return { context, trace };
 }
@@ -73,7 +74,7 @@ const stops = {
     locationPharmacyID: ['5;1', '0'],
 };
 const describe = marker => ({
-    id: marker.options.id, title: marker.options.title, icon: marker.options.icon.url,
+    id: marker.options.id, title: marker.options.title, icon: [marker.options.icon.path, marker.options.icon.fillColor],
     label: marker.options.label && [marker.options.label.text, marker.options.label.color, marker.options.label.fontWeight, marker.options.label.fontSize],
     lat: marker.getPosition().lat(), lng: marker.getPosition().lng(),
 });
@@ -88,17 +89,19 @@ same(trace.maps[0].options.center, { lat: 40.7, lng: -74 }, 'The map centres on 
 check(context.map === trace.maps[0], 'The map is kept in the global the page uses');
 const markers = trace.markers.map(describe);
 same(markers.length, 6, 'One marker each for the driver, three patients and two pharmacies');
-same(markers[0], { id: undefined, title: undefined, icon: '/images/i022.svg', label: undefined, lat: 40.7, lng: -74 }, 'Driver marker is drawn first, without an id');
-same(markers[1], { id: 'patient11', title: 'patient11', icon: '/images/i033.svg', label: ['2', '#000', 'bold', '8px'], lat: 40.71, lng: -74.01 }, 'Routed patient is labelled with its stop number');
+same(markers[0], { id: undefined, title: 'Driver', icon: ['circle', '#242424'], label: ['D', '#fff', 'bold', undefined], lat: 40.7, lng: -74 }, 'Driver marker is drawn first as a dark built-in symbol labelled D, without an id');
+same(markers[1], { id: 'patient11', title: 'patient11', icon: ['circle', '#0e46b7'], label: ['2', '#fff', 'bold', '8px'], lat: 40.71, lng: -74.01 }, 'Routed patient is a blue built-in symbol labelled with its stop number');
 same([markers[2].id, markers[2].label[0]], ['patient0', '0'], 'Unrouted patient keeps the placeholder id and label');
 same([markers[3].id, markers[3].label[0]], ['patient13', '4'], 'Second routed patient is labelled with its stop number');
 check(markers[3].lat !== 40.71 || markers[3].lng !== -74.01, 'A patient at an already used position is nudged aside');
 check(Math.abs(markers[3].lat - 40.71) < 0.0001 && Math.abs(markers[3].lng + 74.01) < 0.0001, 'The nudge stays within a few metres');
-same(markers[4], { id: 'pharmacy5', title: 'pharmacy5', icon: '/images/i011.svg', label: ['1', '#fff', 'bold', '8px'], lat: 40.73, lng: -74.03 }, 'Routed pharmacy is labelled with its stop number');
+same(markers[4], { id: 'pharmacy5', title: 'pharmacy5', icon: ['circle', '#19b313'], label: ['1', '#fff', 'bold', '8px'], lat: 40.73, lng: -74.03 }, 'Routed pharmacy is a green built-in symbol labelled with its stop number');
 same([markers[5].id, markers[5].label[0]], ['pharmacy0', '0'], 'Unrouted pharmacy keeps the placeholder id and label');
 same(context.markersArray.length, 5, 'Patient and pharmacy markers are tracked for overlap checks; the driver is not');
 check(trace.markers.every(marker => marker.options.map === context.map), 'Every marker is placed on the page map');
-check(trace.markers.every(marker => typeof marker.listeners.click === 'function'), 'Every marker reacts to clicks');
+check(trace.markers.slice(1).every(marker => typeof marker.listeners.click === 'function'), 'Every stop marker reacts to clicks');
+check(trace.markers[0].listeners.click === undefined, 'The driver marker is not a stop and has no click behaviour');
+check(trace.markers.every(marker => !('url' in marker.options.icon)), 'No marker requests an image file');
 
 // Clicking a routed patient that is on the route card highlights and scrolls to it.
 ({ context, trace } = page(stops, { present: ['.wrapper .patient11'], top: { '.wrapper .patient11': 900 } }));
@@ -158,6 +161,23 @@ same([trace.markers.length, trace.maps[0].options.center], [0, { lat: 40.7128, l
 ({ context, trace } = page(stops));
 context.map = new context.google.maps.Map({ id: 'map' }, {});
 context.addMarkerOffice('40.75,-74.05', '', '', '', 'office7', context.map);
-same([trace.markers[0].options.id, trace.markers[0].options.icon.url, context.markersArray.length], ['office7', '/images/i044.svg', 0], 'Office markers are drawn untracked with the office icon');
+same([trace.markers[0].options.id, trace.markers[0].options.icon.fillColor, context.markersArray.length], ['office7', '#eca40d', 0], 'Office markers are drawn untracked with the amber office symbol');
+
+// A marker without an id is ignored when clicked, in both modes, instead of throwing.
+context.addMarkerOffice('40.76,-74.06', '', '', '', undefined, context.map);
+trace.markers[1].listeners.click();
+context.setup_route = true;
+trace.markers[1].listeners.click();
+same([trace.jquery, context.setup_marker], [[], undefined], 'Clicking a marker without an id does nothing');
+
+// A bad coordinate skips only its own marker and never becomes the map centre.
+({ context, trace } = page({
+    locationDriver: 'unknown',
+    locationPatients: ['', '40.72,-74.02', '95,-74'], locationPatientsID: ['11;1', '12;2', '13;3'],
+    locationPharmacy: ['40.73'], locationPharmacyID: ['5;4'],
+}));
+context.initMap();
+same(trace.markers.map(marker => marker.options.id), ['patient12'], 'Only the stop with a usable coordinate is drawn, under its own id');
+same(trace.maps[0].options.center, { lat: 40.72, lng: -74.02 }, 'The map centres on the first usable coordinate');
 
 console.log(`${checks} dispatch stop map checks passed with isolated Maps and jQuery boundaries.`);
