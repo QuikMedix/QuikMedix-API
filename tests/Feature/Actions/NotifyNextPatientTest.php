@@ -200,13 +200,17 @@ class NotifyNextPatientTest extends TestCase
     }
 
     #[DataProvider('entryPoints')]
-    public function test_patient_is_still_notified_when_no_route_is_found(string $controller): void
+    public function test_without_a_route_the_patient_is_notified_without_a_travel_time(string $controller): void
     {
+        DB::table('orders')->where('id', $this->orderId)->update(['eta' => 40]);
         FakeHttpsStream::$withoutRoutes = true;
 
         $this->assertTrue($controller::next_patient_push($this->driver->id, $this->nextStop()));
 
-        $this->assertStringContainsString('ETA: 0 hours 0 minutes', $this->pushes()[0]);
-        $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 0]);
+        $this->assertSame(
+            ["patient-device: Your delivery is next. \nPlease track your order #{$this->orderId} via our app. \nThank you for using our service."],
+            $this->pushes(),
+        );
+        $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 40]);
     }
 }

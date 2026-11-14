@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Tells the next patient on a driver's route that their delivery is next, with the travel time
  * from the driver's last shared location to the patient's primary address, and sets the order's ETA.
+ * When HERE finds no route the notification goes out without a travel time.
  *
  * One implementation for the dispatch pages and the driver app. The dispatch pages used to carry
  * a copy that always measured to the patient's first address, whichever address was primary.
@@ -17,8 +18,6 @@ use Illuminate\Support\Facades\DB;
 class NotifyNextPatient
 {
     private const BICYCLE = '2';
-
-    private const MILES_PER_METER = 0.000621371192;
 
     /**
      * @param  object  $nextRoute  the patient stop: type_id is the patient, order_id the order
@@ -45,20 +44,19 @@ class NotifyNextPatient
             'header' => 'Authorization: Bearer '.HereMaps::accessToken(),
         ]]);
         $directions = json_decode(file_get_contents("https://router.hereapi.com/v8/routes?transportMode=$transport&origin=$origin&destination=$destination&return=summary", false, $context));
-        $distance = 0;
-        $duration = 0;
+        $message = "Your delivery is next. \nPlease track your order #".$nextRoute->order_id.' via our app.';
         if (! empty($directions->routes)) {
+            $duration = 0;
             foreach ($directions->routes[0]->sections as $leg) {
-                $distance += $leg->summary->length;
                 $duration += $leg->summary->duration;
             }
+            // Order ETAs are kept in minutes, as the route recalculation stores them and the order pages read them.
+            $minutes = ceil($duration / 60);
+            DB::table('orders')->where('id', $nextRoute->order_id)->update(['eta' => $minutes]);
+            $message .= ' ETA: '.floor($minutes / 60).' hours '.($minutes % 60).' minutes';
         }
-
-        // Order ETAs are kept in minutes, as the route recalculation stores them and the order pages read them.
-        $minutes = ceil($duration / 60);
-        DB::table('orders')->where('id', $nextRoute->order_id)->update(['eta' => $minutes]);
-        $travelTime = floor($minutes / 60).' hours '.($minutes % 60).' minutes';
-        Notifications::send_push($nextRoute->type_id, 'QuikMedix', "Your delivery is next. \nPlease track your order #".$nextRoute->order_id." via our app. ETA: $travelTime \nThank you for using our service.");
+        // Without a route the patient is still told, but no travel time is claimed and the order keeps its ETA.
+        Notifications::send_push($nextRoute->type_id, 'QuikMedix', $message." \nThank you for using our service.");
 
         return true;
     }
