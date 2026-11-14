@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * A patient's note on, and rating of, their own order. Formerly customer_notesAddHandler and
- * ratingHandler of LexaAdminApi. A missing order is still unhandled for patients, as it was there.
+ * ratingHandler of LexaAdminApi. A patient asking about an order that does not exist is told so,
+ * with the same answer the delivery time endpoint gives.
  */
 class OrderFeedbackController extends Controller
 {
@@ -27,6 +28,9 @@ class OrderFeedbackController extends Controller
     public function storeNote(Request $request, string $order_id): JsonResponse
     {
         $order = DB::table('orders')->where('orders.id', $order_id)->first();
+        if ($this->isMissingForPatient($request, $order)) {
+            return $this->notFound('Order not found');
+        }
         if (! $this->isPatientOf($request, $order)) {
             return $this->forbidden();
         }
@@ -50,6 +54,9 @@ class OrderFeedbackController extends Controller
     public function storeRating(Request $request, string $order_id): JsonResponse
     {
         $order = DB::table('orders')->where('orders.id', $order_id)->first();
+        if ($this->isMissingForPatient($request, $order)) {
+            return $this->notFound('Order not found');
+        }
         if (! $this->isPatientOf($request, $order) || $order->statuse_id != self::DELIVERED || ! empty($order->rating)) {
             return $this->forbidden();
         }
@@ -66,8 +73,16 @@ class OrderFeedbackController extends Controller
         return response()->json(['message' => 'OK']);
     }
 
+    /**
+     * Other roles are refused before the order matters, so only a patient can learn that an order is missing.
+     */
+    private function isMissingForPatient(Request $request, ?object $order): bool
+    {
+        return $order === null && $request->user()->role == 'user';
+    }
+
     private function isPatientOf(Request $request, ?object $order): bool
     {
-        return $request->user()->role == 'user' && $request->user()->id == $order->user_id;
+        return $request->user()->role == 'user' && $order !== null && $request->user()->id == $order->user_id;
     }
 }

@@ -136,6 +136,31 @@ class PatientOrderEndpointsTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => 2, 'rating' => null]);
     }
 
+    /**
+     * @return array<string, array{string, array<string, mixed>}>
+     */
+    public static function feedbackEndpoints(): array
+    {
+        return ['note' => ['/api/orders/99/add_note', ['note' => 'Ring twice']], 'rating' => ['/api/orders/99/rating', ['rating' => 5]]];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    #[DataProvider('feedbackEndpoints')]
+    public function test_feedback_on_an_order_that_does_not_exist_is_not_found_for_a_patient(string $uri, array $payload): void
+    {
+        $this->actingAs($this->patient, 'api')->postJson($uri, $payload)
+            ->assertNotFound()->assertExactJson(['message' => 'Order not found', 'errors' => 'Not Found']);
+
+        // Other roles are refused as before, whether or not the order exists.
+        $this->actingAs($this->account('driver'), 'api')->postJson($uri, $payload)
+            ->assertForbidden()->assertExactJson(self::FORBIDDEN);
+
+        $this->assertDatabaseCount('notes', 0);
+        $this->assertDatabaseMissing('orders', ['id' => 99]);
+    }
+
     public function test_delivery_times_are_listed_for_any_active_account(): void
     {
         DB::table('delivery_times')->insert([['id' => 1, 'name' => 'Next day'], ['id' => 2, 'name' => 'Same day']]);
