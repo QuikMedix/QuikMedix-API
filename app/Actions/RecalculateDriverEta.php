@@ -30,7 +30,8 @@ class RecalculateDriverEta
 
     /**
      * @param  bool  $force  recalculate even when the driver has not moved since the last calculation
-     * @return float|false the route distance in miles, or false when nothing was calculated
+     * @return float|false the route distance in miles, or false when nothing was calculated:
+     *                     unknown driver or location, no movement since the last calculation, or no route found
      */
     public function handle(int|string|null $driverId, bool $force = false): float|false
     {
@@ -51,7 +52,12 @@ class RecalculateDriverEta
         $distance = 0;
         $duration = 0;
         $stops = $this->locatedStops($driver->id);
-        foreach ($this->legs($origin, array_column($stops, 'location'), $driver->transport == self::BICYCLE ? 'bicycle' : 'car') as $key => $leg) {
+        $legs = $this->legs($origin, array_column($stops, 'location'), $driver->transport == self::BICYCLE ? 'bicycle' : 'car');
+        if ($stops !== [] && $legs === []) {
+            // HERE found no route. Keep the last good values and leave the location unmarked so the next run tries again.
+            return false;
+        }
+        foreach ($legs as $key => $leg) {
             $distance += $leg->summary->length;
             $duration += $leg->summary->duration + self::SECONDS_PER_STOP;
             if (! isset($stops[$key])) {
@@ -124,7 +130,9 @@ class RecalculateDriverEta
     }
 
     /**
-     * The routed legs, one per stop, requested from HERE in groups of fifty stops.
+     * The routed legs, one per stop, requested from HERE in groups of fifty stops. Each request
+     * continues from the last stop of the one before. When a request finds no route the legs
+     * stop there, so every leg returned still belongs to the stop at the same position.
      *
      * @param  list<string>  $locations
      * @return list<object>
@@ -148,9 +156,11 @@ class RecalculateDriverEta
                 $url .= '&via='.implode('&via=', $chunk);
             }
             $directions = json_decode(file_get_contents($url, false, $context));
-            if (! empty($directions->routes)) {
-                array_push($legs, ...$directions->routes[0]->sections);
+            if (empty($directions->routes)) {
+                break;
             }
+            array_push($legs, ...$directions->routes[0]->sections);
+            $origin = $destination;
         }
 
         return $legs;
