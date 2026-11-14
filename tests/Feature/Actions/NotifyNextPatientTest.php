@@ -127,7 +127,8 @@ class NotifyNextPatientTest extends TestCase
             ["patient-device: Your delivery is next. \nPlease track your order #{$this->orderId} via our app. ETA: 0 hours 25 minutes \nThank you for using our service."],
             $this->pushes(),
         );
-        $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 1]);
+        // The order keeps the same 25 minutes the patient was told.
+        $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 25]);
     }
 
     #[DataProvider('entryPoints')]
@@ -140,7 +141,7 @@ class NotifyNextPatientTest extends TestCase
 
         $this->assertSame('bicycle', FakeHereRouting::query(0)['transportMode']);
         $this->assertStringContainsString('ETA: 1 hours 15 minutes', $this->pushes()[0]);
-        $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 2]);
+        $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 75]);
     }
 
     /**

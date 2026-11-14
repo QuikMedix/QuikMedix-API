@@ -57,8 +57,9 @@ class NotifyNextPatient
             }
         }
 
+        // Order ETAs are kept in minutes, as the route recalculation stores them and the order pages read them.
         $minutes = ceil($duration / 60);
-        DB::table('orders')->where('id', $nextRoute->order_id)->update(['eta' => ceil($minutes / 60)]);
+        DB::table('orders')->where('id', $nextRoute->order_id)->update(['eta' => $minutes]);
         $travelTime = floor($minutes / 60).' hours '.($minutes % 60).' minutes';
         Notifications::send_push($nextRoute->type_id, 'QuikMedix', "Your delivery is next. \nPlease track your order #".$nextRoute->order_id." via our app. ETA: $travelTime \nThank you for using our service.");
 
