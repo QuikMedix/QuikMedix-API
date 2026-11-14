@@ -5,8 +5,9 @@ namespace App\Console;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redis;
+use App\Actions\RecalculateDriverEta;
 use App\Notifications;
+use App\Support\HereMaps;
 use App\User;
 use Carbon\Carbon;
 
@@ -52,107 +53,7 @@ class Kernel extends ConsoleKernel
             $drivers = User::where('role','driver')->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->whereNotNull('routes_priority.id')->select('users.id')->groupBy('users.id')->get();
             foreach($drivers as $driver){
                 try {
-                    $driver_location = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->value('location');
-                    if(empty($driver_location)) {
-                        continue;
-                    }
-                    $driver_loc = self::slice_location($driver_location);
-                    $eta = DB::table('drivers_eta')->where('driver_id',$driver->id)->first();
-                    $access=TRUE;
-                    if(!empty($eta)) {
-                        if($eta->last_location==$driver_loc) {
-                            $access=FALSE;
-                        }
-                    }
-                    if($access){
-                        $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver->id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
-                        $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver->id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
-                        $routes = array();
-                        foreach ($routes_priority1 as $key => $value) {
-                            array_push($routes,$value);
-                        }
-                        foreach ($routes_priority0 as $key => $value) {
-                            array_push($routes,$value);
-                        }
-                        usort($routes, function($a, $b){
-                            return ($a->priority - $b->priority);
-                        });
-                        $distance=0;
-                        $duration=0;
-                        if(count($routes)>0) {
-                            if($driver->transport=='2') {
-                                $transport = "bicycle";
-                            } else {
-                                $transport = "car";
-                            }
-                            $loc_arr = [];
-                            $orders_arr = [];
-                            foreach ($routes as $key => $value) {
-                                $location = null;
-                                if($value->type=='pharmacy') {
-                                    $location = DB::table('pharmacys')->where('id',$value->type_id)->value('location');
-                                }
-                                if($value->type=='patient') {
-                                    $location = DB::table('users')->where('id',$value->type_id)->value('location');
-                                }
-                                if($value->type=='office') {
-                                    $location = DB::table('offices')->where('id',$value->type_id)->value('location');
-                                }
-                                if(empty($location)) {
-                                    continue;
-                                }
-                                array_push($loc_arr,self::slice_location(str_replace(' ','',$location)));
-                                array_push($orders_arr,["order_id"=>$value->order_id,"type"=>$value->type,"type_id"=>$value->type_id,"priority"=>$value->priority]);
-                            }
-                            $access_token = Redis::get('here_access_token');
-                            if(empty($access_token)) {
-                                $access_token = self::update_here_access_token();
-                            }
-                            $options = array(
-                                'http' => array(
-                                    'method'  => 'GET',
-                                    'ignore_errors' => true,
-                                    'header' => 'Authorization: Bearer '.$access_token
-                                )
-                            );
-                            $context  = stream_context_create($options);
-                            $legs_arr = [];
-                            for($i=0; $i < count($loc_arr); $i+=50) {
-                                $location_arr = array_slice($loc_arr,$i,50);
-                                $last_loc = $location_arr[count($location_arr)-1];
-                                unset($location_arr[count($location_arr)-1]);
-                                if(empty($location_arr)) {
-                                    $directions = json_decode(file_get_contents("https://router.hereapi.com/v8/routes?transportMode=$transport&origin=$driver_loc&destination=$last_loc&return=summary",false,$context));
-                                } else {
-                                    $directions = json_decode(file_get_contents("https://router.hereapi.com/v8/routes?transportMode=$transport&origin=$driver_loc&destination=$last_loc&return=summary&via=".implode('&via=',$location_arr),false,$context));
-                                }
-                                if(!empty($directions->routes)) {
-                                    foreach($directions->routes[0]->sections as $key => $legs) {
-                                        array_push($legs_arr,$legs);
-                                    }
-                                }
-                            }
-                            if(!empty($legs_arr)) {
-                                foreach($legs_arr as $key => $legs) {
-                                    $distance=$distance+$legs->summary->length;
-                                    $duration=$duration+$legs->summary->duration+240;
-                                    if(isset($orders_arr[$key])) {
-                                        DB::table('routes_priority')->where('driver_id', $driver->id)->where('type',$orders_arr[$key]["type"])->where('type_id',$orders_arr[$key]["type_id"])->where('priority',$orders_arr[$key]["priority"])->update(["eta"=>ceil($duration / 60)]);
-                                        if($orders_arr[$key]["type"]=='patient') {
-                                            DB::table('orders')->whereIn('id',explode(",",$orders_arr[$key]["order_id"]))->update(["eta"=>ceil($duration / 60)]);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        $min = ceil($duration / 60);
-                        $distance=round($distance*0.000621371192,1);
-                        if(!empty($eta)) {
-                            DB::table('drivers_eta')->where('driver_id',$driver->id)->update(["distance"=>$distance,"eta"=>$min,"last_location"=>$driver_loc]);
-                        } else {
-                            DB::table('drivers_eta')->insert(["driver_id"=>$driver->id,"distance"=>$distance,"eta"=>$min,"last_location"=>$driver_loc]);
-                        }
-                    }
+                    app(RecalculateDriverEta::class)->handle($driver->id);
                 } catch (\Throwable) {
                     //throw $th;
                 }
@@ -168,7 +69,7 @@ class Kernel extends ConsoleKernel
                     if(empty($driver_location)) {
                         continue;
                     }
-                    $driver_loc = self::slice_location($driver_location);
+                    $driver_loc = HereMaps::roundLocation($driver_location);
                     $eta = DB::table('drivers_eta')->where('driver_id',$driver->id)->first();
                     $access=TRUE;
                     if(!empty($eta)) {
@@ -248,52 +149,6 @@ class Kernel extends ConsoleKernel
         $schedule->call(function () {
             DB::table('orders')->where('statuse_id',1)->where('created', '<', Carbon::now()->subDays(7)->startOfDay())->update(['statuse_id'=>5]);
         })->dailyAt('12:00');
-    }
-
-    /**
-     * @param mixed $location
-     */
-    public static function slice_location($location) {
-        if(!is_string($location) || $location === '') {
-            return '';
-        }
-        $arr = explode(',',$location);
-        if(count($arr)>1) {
-            $arr[0]=round(floatval($arr[0]),5);
-            $arr[1]=round(floatval($arr[1]),5);
-        }
-        $location = implode(',',$arr);
-        return $location;
-    }
-
-    public static function update_here_access_token() {
-        $nonce     = bin2hex(random_bytes(4));
-        $timestamp = time();
-        $string='POST&'.urlencode('https://account.api.here.com/oauth2/token').'&'.urlencode('grant_type=client_credentials&'.'oauth_consumer_key='.config('app.hereAccessId').'&oauth_nonce='.$nonce.'&oauth_signature_method=HMAC-SHA256&oauth_timestamp='.$timestamp.'&oauth_version=1.0');
-        $signature = urlencode(base64_encode(hash_hmac('sha256', $string, config('app.hereAccessSecret').'&',TRUE)));
-        $curl = curl_init();
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://account.api.here.com/oauth2/token',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => 'grant_type=client_credentials',
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/x-www-form-urlencoded',
-                'Authorization: OAuth oauth_consumer_key="'.config('app.hereAccessId').'",oauth_nonce="'.$nonce.'",oauth_signature_method="HMAC-SHA256",oauth_timestamp="'.$timestamp.'",oauth_version="1.0",oauth_signature="'.$signature.'"'
-            ),
-        ));
-        $response = json_decode(curl_exec($curl));
-        if(isset($response->access_token) && isset($response->expires_in)) {
-            Redis::setex('here_access_token', intval($response->expires_in), $response->access_token);
-            return $response->access_token;
-        } else {
-            throw new \RuntimeException('Could not refresh the HERE Maps access token.');
-        }
     }
 
     /**
