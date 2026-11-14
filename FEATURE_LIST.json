@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-12",
+  "last_updated": "2026-11-13",
   "features": [
     {
       "id": "orders-qr-status",
@@ -187,6 +187,39 @@
         "Baseline: clean main 6a1ec04; isolated SKIP_INSTALL=1 ./init.sh passed Vite, 255 tests / 1002 assertions, 45 routing and 69 tariff checks. Synchronized dependencies reused. No .ai/rules/Boost tools or production requests.",
         "Implemented public/js/route-map-tools.js using supported core Polygon/click APIs for area selection and built-in circle symbols for all driver/stop markers. Stop markers render before optional area controls. Map becomes visible before SDK initialization; already loaded SDKs import geometry when necessary. Valid visible stops are fitted; invalid coordinates are skipped and empty maps explained. Office route-only IDs and pharmacy ID/location alignment corrected; redraw clears stale marker/control state. Cards, assignments, stored locations, role gates, dependencies and API credentials are unchanged.",
         "Limits: actual Google-hosted SDK rendering, provider authentication/network and live production navigation/submission were not tested. Automated checks use a Maps boundary implementing documented core APIs. Full native picker/grid checks from the preceding feature remain applicable. No new database rows/schema/dependencies or production writes. Official PR #24 remains open; this fix is pushed to fork main as 32f5afb and included in PR #24, with official merge/deployment pending."
+      ]
+    },
+    {
+      "id": "codebase-modularization-phase-1",
+      "priority": 7,
+      "area": "maintainability",
+      "title": "Start splitting LexaAdmin/LexaAdminApi and inline Blade JavaScript into smaller tested pieces",
+      "user_visible_behavior": "No user-visible change. Every web and API URL, verb, route name and order, response body, status code, role check, view and redirect stays as it was. Internally the mobile API account check is one middleware, ten API actions and the FAQ pages live in their own controllers, LexaAdmin's pasted page-rendering/pagination blocks and the three copies of the HERE token/rounding code are single helpers, and the dispatch/process pages share one stop-map script.",
+      "status": "passing",
+      "verification_steps": [
+        "Before each move, add feature tests that pin the existing responses (status, exact JSON/view data, database effect, permissions) and pass against the untouched code; rerun them unchanged after the move.",
+        "Confirm the route table (method, URI, name, order) is identical before and after, and that exactly the 42 previously guarded API routes carry the account middleware.",
+        "For mechanical replacements, confirm the diff contains only the replaced blocks and compare the helper with the original block across inputs.",
+        "For extracted JavaScript, run the old inline scripts and the new file through the same isolated Maps/jQuery scenario and compare the recorded markers and DOM calls; compile every Blade view.",
+        "Run the full installed PHP suite and both PHP smoke scripts on in-memory SQLite, all Node smoke scripts, PHP/JS syntax checks, git diff --check and the formatter."
+      ],
+      "evidence": [
+        "2026-11-13 baseline at 6f267a1 (PHP 8.4.27 CLI, Composer dependencies installed from the lockfile, in-memory SQLite, array cache/session): vendor/bin/phpunit passed 257 tests / 1064 assertions once phpunit.xml supplied placeholder PUSHER_* values; without them 37 DispatchApprovalTest cases errored on a checkout with no .env Pusher keys. 45 routing and 69 tariff checks passed.",
+        "2026-11-13 API account guard: ActiveAccountGuardTest (88 tests / 177 assertions) passed against the unchanged LexaAdminApi and again after the 42 in-method guards were replaced by EnsureApiAccountIsActive (alias active.api). It covers blocked and unapproved accounts on all 42 endpoints, blocked-pharmacy staff, guests, and token expiry extension/non-extension with real Passport tokens. route:list shows active.api on exactly 42 routes, all under auth:api.",
+        "2026-11-13 API controllers: DriverShiftControllerTest and PatientOrderEndpointsTest (19 tests / 79 assertions) passed against LexaAdminApi, then unchanged against Api\\DriverShiftController, Api\\OrderFeedbackController and Api\\DeliveryTimeController.",
+        "2026-11-13 LexaAdmin helpers: 65 AJAX render blocks and 29 page-number/page-link blocks replaced; git diff -U0 lists only those block lines plus the helpers. PageLinksTest compares App\\Support\\PageLinks::around with the original block for pages -3..12 and eight page counts. FaqControllerTest (17 tests / 70 assertions) passed against the LexaAdmin FAQ actions before the replacement, after it, and after the move to FaqController.",
+        "2026-11-13 HERE helpers: App\\Support\\HereMaps replaces three token-refresh copies, two rounding copies and five cached-token lookups; HereMapsTest passed 9 tests; php artisan schedule:list still lists all seven scheduled closures.",
+        "2026-11-13 stop map: node tests/smoke/dispatch-stop-map.js passed 30 checks against public/js/dispatch-stop-map.js; the removed inline scripts of dispatching/show and process/show passed the same 30 checks and produced a byte-identical marker/jQuery trace. The stop data rendered by the old inline block and the new partial matched for the same input. DispatchStopMapTest passed 5 tests / 33 assertions. php artisan view:cache compiled every Blade view and the compiled files passed php -l.",
+        "2026-11-13 route table: route:list --json with the routes files of 6f267a1 and of the final commit lists the same 317 application routes in the same order with the same methods, URIs and names; 14 actions point at new controllers.",
+        "2026-11-13 final: composer test passed 397 tests / 1563 assertions, 45 routing and 69 tariff checks. Node smoke scripts passed 30/34/23/20/68/19/23/25 checks. php -l on every changed PHP file, node --check on the new script, FEATURE_LIST.json parsing and git diff --check passed. vendor/bin/pint is not installed, so the formatter could not run."
+      ],
+      "notes": [
+        "Scope chosen from the audit: LexaAdmin (8243 lines) and LexaAdminApi (2364 lines) first, by removing repetition and moving self-contained groups, then the one pair of Blade views whose inline script was duplicated line for line. LexaAdmin is now 7418 lines and LexaAdminApi 1830; the two views lost about 200 inline script lines each.",
+        "Not verified: npm ci could not reach the npm registry in this session, so npm run build (Vite) and therefore the full ./init.sh did not run. No Vite input changed; the new script is a static file under public/js. No browser, Google Maps, HERE, Pusher, FCM or production request was made, and no real database was touched.",
+        "Environment differences: tests ran on PHP 8.4.27 rather than 8.5, with a local .env containing only isolated testing values.",
+        "Existing defects seen and deliberately left unchanged: the dispatch/process stop map still references /images/i011.svg, i022.svg, i033.svg and i044.svg, which are absent from public/images; its patient/pharmacy ID lists can fall out of step with the location lists when a selected stop has no location; clicking its driver marker throws. The patient note and rating endpoints answer a missing order with a server error. LexaAdmin and LexaAdminApi keep different next_patient_push and profile change-log logic, so those were not merged. The scheduled ETA job never reads the driver's transport, so it always routes by car.",
+        "FaqController does not repeat LexaAdmin's ini_set('memory_limit', '-1'). RendersLegacyPages::pageLinks and PageLinks::around differ only for a page number past the last page; they were not unified, to keep each caller's output unchanged.",
+        "Commit status: seven code commits plus this record on local branch refactor/modularize-phase-1 in the session workspace, exported as a patch series. Nothing was pushed: this session has no push access to QuikMedix/QuikMedix-API."
       ]
     }
   ]
