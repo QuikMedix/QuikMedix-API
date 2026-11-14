@@ -3,12 +3,14 @@
 namespace App\Actions;
 
 use App\Support\HereMaps;
+use App\Support\PatientAddress;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Recalculates a driver's ETAs from their last shared location: asks HERE to route the remaining
  * stops in order, then stores the running arrival time on each stop, on the patient orders of a
- * stop and on the driver. The driver's own transport decides the routing mode.
+ * stop and on the driver. The driver's own transport decides the routing mode, and a patient
+ * stop is the patient's primary address, where dispatch and the driver app send the delivery.
  *
  * One implementation for the dispatch pages (LexaAdmin::eta_calculate) and the scheduled task,
  * which used to carry its own copy that never loaded the driver's transport and so routed by car.
@@ -88,10 +90,9 @@ class RecalculateDriverEta
         $routes = [...$pickupsAndDeliveries, ...$officeVisits];
         usort($routes, fn ($a, $b) => $a->priority - $b->priority);
 
-        $tables = ['pharmacy' => 'pharmacys', 'patient' => 'users', 'office' => 'offices'];
         $stops = [];
         foreach ($routes as $route) {
-            $location = isset($tables[$route->type]) ? DB::table($tables[$route->type])->where('id', $route->type_id)->value('location') : null;
+            $location = $this->stopLocation($route->type, $route->type_id);
             if (empty($location)) {
                 continue;
             }
@@ -105,6 +106,21 @@ class RecalculateDriverEta
         }
 
         return $stops;
+    }
+
+    /**
+     * Where a stop is: a patient's primary address, or the pharmacy's or office's own location.
+     */
+    private function stopLocation(string $type, int|string $id): ?string
+    {
+        if ($type === 'patient') {
+            $patient = DB::table('users')->where('id', $id)->first();
+
+            return $patient ? PatientAddress::primaryLocation($patient) : null;
+        }
+        $tables = ['pharmacy' => 'pharmacys', 'office' => 'offices'];
+
+        return isset($tables[$type]) ? DB::table($tables[$type])->where('id', $id)->value('location') : null;
     }
 
     /**

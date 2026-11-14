@@ -37,7 +37,10 @@ class RecalculateDriverEtaTest extends TestCase
             $table->integer('isblocked')->default(0);
             $table->integer('work_now')->default(0);
             $table->string('transport')->nullable();
+            $table->integer('primary_address')->default(1);
             $table->string('location')->nullable();
+            $table->string('location2')->nullable();
+            $table->string('location3')->nullable();
         });
         Schema::create('locations', function (Blueprint $table): void {
             $table->increments('id');
@@ -179,6 +182,26 @@ class RecalculateDriverEtaTest extends TestCase
         $this->assertSame([self::PATIENT], FakeHereRouting::query(0)['via']);
         $this->assertSame([null, null, 10, 10, 20], $this->stopEtas($driver));
         $this->assertDatabaseHas('drivers_eta', ['driver_id' => $driver->id, 'eta' => 20, 'distance' => 2.0]);
+    }
+
+    public function test_a_patient_stop_is_the_patients_primary_address(): void
+    {
+        $driver = $this->driverWithRoute();
+        $patient = User::where('role', 'user')->firstOrFail();
+        $patient->forceFill(['primary_address' => 2, 'location2' => '40.82, -74.02', 'location3' => '40.93,-74.03'])->save();
+
+        LexaAdmin::eta_calculate($driver->id);
+        $this->assertSame([self::PHARMACY, '40.82,-74.02'], FakeHereRouting::query(0)['via']);
+
+        $patient->forceFill(['primary_address' => 3])->save();
+        LexaAdmin::eta_calculate($driver->id, true);
+        $this->assertSame([self::PHARMACY, '40.93,-74.03'], FakeHereRouting::query(1)['via']);
+
+        // A primary address without a location leaves the stop out, as any stop without a location is.
+        $patient->forceFill(['location3' => null])->save();
+        LexaAdmin::eta_calculate($driver->id, true);
+        $this->assertSame([self::PHARMACY], FakeHereRouting::query(2)['via']);
+        $this->assertSame(self::OFFICE, FakeHereRouting::query(2)['destination']);
     }
 
     public function test_long_routes_are_requested_fifty_stops_at_a_time_from_the_driver(): void

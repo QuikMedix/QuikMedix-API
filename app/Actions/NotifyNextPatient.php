@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Notifications;
 use App\Support\HereMaps;
+use App\Support\PatientAddress;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -31,12 +32,8 @@ class NotifyNextPatient
         if (empty($origin) || empty($driver) || empty($patient)) {
             return false;
         }
-        $location = match ((int) $patient->primary_address) {
-            3 => $patient->location3,
-            2 => $patient->location2,
-            default => $patient->location,
-        };
-        if (empty($location)) {
+        $location = PatientAddress::primaryLocation($patient);
+        if ($location === null) {
             return false;
         }
 
