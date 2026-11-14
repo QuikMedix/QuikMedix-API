@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Gate;
 use Twilio\Rest\Client;
 use App\User;
 use App\Notifications;
+use App\Support\PageLinks;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +25,7 @@ use App\Actions\RotateSignature;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use QuickBooksOnline\API\DataService\DataService;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 
@@ -41,6 +43,22 @@ class LexaAdmin extends Controller
     public static $err_act_ban = "We're sorry for the inconvenience, but it seems we have a little hiccup here. Our team is already on the case, working hard to get things back on track as quickly as possible.";
     public static $err_perm = 'Permision error.';
 
+    /**
+     * Pages are also loaded into the dashboard over AJAX, which wants only the sections.
+     *
+     * @return View|array<string, string>
+     */
+    private static function renderPage(View $view): View|array {
+        return request()->query->has('ajax') ? $view->renderSections() : $view;
+    }
+
+    /**
+     * The page number from the query string; a missing, empty or zero value is the first page.
+     */
+    private static function currentPage(): int {
+        return empty(request()->query('page')) ? 1 : intval(request()->query('page'));
+    }
+
     public function home() {
         return redirect()->route('home');
     }
@@ -53,11 +71,7 @@ class LexaAdmin extends Controller
         // Render perticular view file by foldername and filename
         if (view()->exists($folderName . "." . $fileName)) {
             $res_view = view($folderName . "." . $fileName);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         }
         return abort(404);
     }
@@ -508,31 +522,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('pharmacy.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'title'=>'Pharmacy Users','br1'=>'Pharmacy','br2'=>'Users']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -583,24 +577,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('pharmacy.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'title'=>'Pharmacy Users','br1'=>'Pharmacy','br2'=>'Users']);
         } else {
@@ -621,11 +599,7 @@ class LexaAdmin extends Controller
             $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('pharmacy.user_edit',['user'=> $user, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -691,11 +665,7 @@ class LexaAdmin extends Controller
             $input['pharmacy']=$pharmacy_id;
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('pharmacy.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -777,11 +747,7 @@ class LexaAdmin extends Controller
                 }   
             }
             $res_view = view('pharmacy.tariff_map',['pharmacy'=>$pharmacy,'polygons'=>$polygons,'pharmacy_plan'=>$pharmacy_plan,'pharmacy_areas'=>$pharmacy_areas,'alert'=>'','title'=>'Tariff Map','br1'=>'Tariff','br2'=>'Tariff Map']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -848,24 +814,8 @@ class LexaAdmin extends Controller
             $pharmacys = $pharmacys->groupBy("pharmacys.id","pharmacys.isactive","pharmacys.isblocked","pharmacys.email","pharmacys.phone","pharmacys.name","pharmacys.tariff","pharmacys.address","pharmacys.location","pharmacys.logo","pharmacys.image_front","pharmacys.admin_id","users.isactive","pharmacys.ref_id","pharmacys.balance")->orderBy(DB::raw("count(DISTINCT orders.id)"),"desc");
             $countOnPage=30;
             $max_pages=ceil($pharmacys->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $pharmacys = $pharmacys->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_arr = ['pages'=>$pages,'page0'=>$page,'search'=>$search,'pharmacys'=>$pharmacys,'filter'=>$filter,'title'=>'Pharmacies List','br1'=>'Pharmacy','br2'=>'List'];
             return view('pharmacy.list',$res_arr);
@@ -884,31 +834,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($pharmacys->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $pharmacys = $pharmacys->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('pharmacy.list_sale',['pages'=>$pages,'page0'=>$page,'search'=>$search,'pharmacys'=>$pharmacys,'title'=>'Pharmacies List','br1'=>'Pharmacy','br2'=>'List']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -961,11 +891,7 @@ class LexaAdmin extends Controller
             $admin= DB::table('users')->where('id', $pharmacy->admin_id)->first();
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('pharmacy.pharmacy_edit',['pharmacy'=>$pharmacy,'admin_areas'=>$admin_areas,'pharmacy_areas1'=>$pharmacy_areas1,'pharmacy_areas2'=>$pharmacy_areas2,'pharmacy_areas3'=>$pharmacy_areas3,'plans'=>$plans,'pharmacy_plan'=>$pharmacy_plan,'areas'=>$areas,'admin'=>$admin, 'title'=>'Pharmacy Edit','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Edit','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1152,11 +1078,7 @@ class LexaAdmin extends Controller
             $input['tariff_areas']=[];
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('pharmacy.pharmacy_add',['plans'=>$plans,'areas'=>$areas,'admin_areas'=>$admin_areas,'title'=>'Pharmacy Add','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Add','alert'=>'','input'=>$input]);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1297,31 +1219,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($offices->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $offices = $offices->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('offices.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'offices'=>$offices,'title'=>'Offices List','br1'=>'Office','br2'=>'List']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1349,31 +1251,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($offices->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $offices = $offices->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('offices.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'offices'=>$offices,'title'=>'Offices List','br1'=>'Office','br2'=>'List']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1393,11 +1275,7 @@ class LexaAdmin extends Controller
             }
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas, 'title'=>'Office Edit','br1'=>'Offices','br2'=>'Office','br3'=>'Office Edit','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1458,11 +1336,7 @@ class LexaAdmin extends Controller
             $office->zone_id='';
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas,'title'=>'Office Add','br1'=>'Offices','br2'=>'Office','br3'=>'Office Add','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1523,24 +1397,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($pharmacys->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             if(!empty(Auth::user()->zone_id)){
                 $pharmacys=$pharmacys->where('pharmacys.zone_id',Auth::user()->zone_id);
             }
@@ -1598,32 +1456,12 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($max_page->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $duty = DB::table('cash_log')->where('driver_id',$driver_id)->where('return','0')->sum('copay');
             $res_view = view('drivers.payouts',['user'=>$user,'orders'=>$orders,'pages'=>$pages,'duty'=>$duty,'title'=>'Drivers Payouts','br1'=>'Drivers','br2'=>'Payouts']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1638,11 +1476,7 @@ class LexaAdmin extends Controller
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $res_view = view('patients.import',['step'=>"1",'title'=>'Patients Import','br1'=>'Patients','br2'=>'Patient Import','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1841,33 +1675,13 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($max_page->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $statuses = DB::table('statuses')->get();
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('routes.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'pharmacys'=>$pharmacys,'title'=>'Routes','br1'=>'Routes','br2'=>'List']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1921,27 +1735,11 @@ class LexaAdmin extends Controller
                 $search='';
             }
             $countOnPage=20;
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
+            $page = self::currentPage();
             $total_users = DB::query()->fromSub($users0, 'drivers')->count();
             $max_pages=ceil($total_users/$countOnPage);
             $users = $users->orderBy(DB::raw("(case when routes_priority.count_delivery is null then 0 else routes_priority.count_delivery end)+(case when routes_priority_logs.count_delivered is null then 0 else routes_priority_logs.count_delivered end)"),"desc")->orderBy("routes_priority.count_delivery","asc");
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_arr = ['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Active Drivers','br1'=>'Routes','br2'=>'Drivers','alert'=>''];
             return view('routes.drivers',$res_arr);
@@ -1967,11 +1765,7 @@ class LexaAdmin extends Controller
                 $driver="";
             }
             $res_view = view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -1997,11 +1791,7 @@ class LexaAdmin extends Controller
                 $driver="";
             }
             $res_view= view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -2148,11 +1938,7 @@ class LexaAdmin extends Controller
             $show_ids = [];
             $show_priority = [];
             $res_view = view('routes.driver',['orders'=>$orders,'pharmacys'=>$pharmacys,'pharmacys_list'=>$pharmacys_list,'locations'=>$locations,'driver'=>$driver,'delivery_times'=>$delivery_times,'filter'=>$filter,'offices'=>$offices,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'pay_value'=>$pay_value,'type_pay'=>$type_pay,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'order_statuses'=>$order_statuses,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'orders_id'=>$orders_id,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Driver Detail','br1'=>'Routes','br2'=>'Driver Detail']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -2625,11 +2411,7 @@ class LexaAdmin extends Controller
                 $error = session()->get('error');
                 $pharmacy_plan = DB::table('plans')->where('id', $pharmacy->plan_id)->first();
                 $res_view = view('billing.list',['invoices'=>$invoices,'pharmacy'=>$pharmacy,'pharmacy_plan'=>$pharmacy_plan,'payment_account'=>$payment_account,'error'=>$error,'pharmacy_id'=>$pharmacy_id,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
-                if(request()->query->has('ajax')) {
-                    return $res_view->renderSections();
-                } else {
-                    return $res_view;
-                }
+                return self::renderPage($res_view);
             } else {
                 return abort(403, self::$err_perm);
             }
@@ -2996,11 +2778,7 @@ class LexaAdmin extends Controller
                 $invoice->date_to="";
                 $invoice_exclusions=[];
                 $res_view = view('billing.invoice_form',['invoice'=>$invoice,'invoice_exclusions'=>$invoice_exclusions,'alert'=>'','title'=>'Billing Invoice Add','br1'=>'Billings','br2'=>'Invoice Add']);
-                if(request()->query->has('ajax')) {
-                    return $res_view->renderSections();
-                } else {
-                    return $res_view;
-                }
+                return self::renderPage($res_view);
             } else {
                 return abort(403, self::$err_perm);
             }
@@ -3167,11 +2945,7 @@ class LexaAdmin extends Controller
                 }
                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id', $invoice_id)->get();
                 $res_view = view('billing.invoice_form',['invoice'=>$invoice,'invoice_exclusions'=>$invoice_exclusions,'alert'=>'','title'=>'Billing Invoice Edit','br1'=>'Billings','br2'=>'Invoice Edit']);
-                if(request()->query->has('ajax')) {
-                    return $res_view->renderSections();
-                } else {
-                    return $res_view;
-                }
+                return self::renderPage($res_view);
             } else {
                 return abort(403, self::$err_perm);
             }
@@ -3364,24 +3138,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.admins',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Admins','br1'=>'Settings','br2'=>'Admins','alert'=>'']);
         } else {
@@ -3549,31 +3307,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.users',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -3635,24 +3373,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.users',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
@@ -3678,31 +3400,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.medics',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -3764,24 +3466,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.medics',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
@@ -3807,31 +3493,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.drivers',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -3900,24 +3566,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.drivers',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
@@ -3943,31 +3593,11 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('settings.logists',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -4029,24 +3659,8 @@ class LexaAdmin extends Controller
             }
             $countOnPage=30;
             $max_pages=ceil($users->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.logists',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
@@ -4068,11 +3682,7 @@ class LexaAdmin extends Controller
             $user_actions = DB::table('action_log')->where('user_id', $user_id)->get(); 
             $admin_areas = DB::table('admin_areas')->get();
             $res_view = view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Settings','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -4177,11 +3787,7 @@ class LexaAdmin extends Controller
         $user = Auth::user();
         $admin_areas = DB::table('admin_areas')->get();
         $res_view = view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas,'pharmacys'=>$pharmacys,'title'=>'Profile','br1'=>'Profile','alert'=>'']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public static function profileHandler(Request $request) {
@@ -4273,11 +3879,7 @@ class LexaAdmin extends Controller
             $input['pharmacy']='';
             $pharmacys = DB::table('pharmacys')->get();
             $res_view = view('settings.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Settings','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -5082,33 +4684,13 @@ class LexaAdmin extends Controller
     public static function notifications() {
         $countOnPage=30;
         $max_pages=ceil(DB::table('notifications')->where('user_id', Auth::user()->id)->count()/$countOnPage);
-        $page=1;
-        if(!empty(request()->query('page'))) {
-            $page=intval(request()->query('page'));
-        }
-        $pages = array();
-        if($page>2){
-            array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-        }
-        if($page>1){
-            array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-        }
-        array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-        if($page+1<=$max_pages){
-            array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-        }
-        if($page+2<=$max_pages){
-            array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-        }
+        $page = self::currentPage();
+        $pages = PageLinks::around($page, $max_pages);
         $notifications = DB::table('notifications')->where('user_id', Auth::user()->id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         DB::table('notifications')->whereIn('id',DB::table('notifications')->where('user_id', Auth::user()->id)->orderBy('id','desc')->pluck('id')->toArray())->update(['viewed' => 1]);
         Redis::del(request()->getHttpHost().':notification_count:'.Auth::user()->id);
         $res_view = view('notifications.list',['notifications'=>$notifications,'pages'=>$pages,'title'=>'Notifications','br1'=>'Notifications','br2'=>'List']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public static function driversQr(Request $request) {
@@ -5789,11 +5371,7 @@ class LexaAdmin extends Controller
                 $need_cash = DB::table('cash_log')->where('driver_id', $user_id)->where("return","0")->sum('copay');
             }
             $res_view = view('drivers.packages',['driver'=>$driver,'need_cash'=>$need_cash,'orders_transfer'=>$orders_transfer,'orders_pick_up'=>$orders_pick_up,'title'=>'Drivers Packages','br1'=>'Drivers','br2'=>'Drivers Packages','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -5879,11 +5457,7 @@ class LexaAdmin extends Controller
                 $success='';
                 $error='';
                 $res_view = view('card.pay-copay',['payment_account'=>$payment_account,'order'=>$order,'success'=>$success,'error'=>$error,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
-                if(request()->query->has('ajax')) {
-                    return $res_view->renderSections();
-                } else {
-                    return $res_view;
-                }
+                return self::renderPage($res_view);
             } else {
                 return abort(403, self::$err_perm);
             }
@@ -6169,24 +5743,8 @@ class LexaAdmin extends Controller
     public static function news() {
         $countOnPage=20;
         $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
-        $page=1;
-        if(!empty(request()->query('page'))) {
-            $page=intval(request()->query('page'));
-        }
-        $pages = array();
-        if($page>2){
-            array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-        }
-        if($page>1){
-            array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-        }
-        array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-        if($page+1<=$max_pages){
-            array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-        }
-        if($page+2<=$max_pages){
-            array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-        }
+        $page = self::currentPage();
+        $pages = PageLinks::around($page, $max_pages);
         $news = DB::table('news')->orderBy('id','desc')->leftJoin('news_read',function ($join) {
             $join->on("news_read.news_id","=","news.id") ;
             $join->where("news_read.user_id",Auth::user()->id);
@@ -6198,11 +5756,7 @@ class LexaAdmin extends Controller
             }
         }
         $res_view = view('news.list',['news'=>$news,'pages'=>$pages,'title'=>'News','br1'=>'News','br2'=>'List']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public static function newsAdd() {
@@ -6214,11 +5768,7 @@ class LexaAdmin extends Controller
             $input['title']='';
             $input['text']='';
             $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6241,31 +5791,11 @@ class LexaAdmin extends Controller
     public static function news_patient() {
         $countOnPage=20;
         $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
-        $page=1;
-        if(!empty(request()->query('page'))) {
-            $page=intval(request()->query('page'));
-        }
-        $pages = array();
-        if($page>2){
-            array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-        }
-        if($page>1){
-            array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-        }
-        array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-        if($page+1<=$max_pages){
-            array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-        }
-        if($page+2<=$max_pages){
-            array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-        }
+        $page = self::currentPage();
+        $pages = PageLinks::around($page, $max_pages);
         $news = DB::table('news_patient')->where("pharmacy_id",Auth::user()->pharmacy_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('news.list_patient',['news'=>$news,'pages'=>$pages,'title'=>'Patients','br1'=>'News','br2'=>'List']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public static function news_patientAdd() {
@@ -6277,11 +5807,7 @@ class LexaAdmin extends Controller
             $input['title']='';
             $input['text']='';
             $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6305,31 +5831,11 @@ class LexaAdmin extends Controller
         if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('wishes_category')->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $wishes_categorys = DB::table('wishes_category')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('wishes.category',['wishes_categorys'=>$wishes_categorys,'pages'=>$pages,'title'=>'Print Text Category','br1'=>'Print Text','br2'=>'Category']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6367,11 +5873,7 @@ class LexaAdmin extends Controller
                 $last_cash = DB::table('cash_log')->where('driver_id',$driver_id)->where('return','1')->orderBy('return_at','desc')->first();
                 $orders = DB::table('orders')->where('user_id',$driver_id)->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as driver', 'orders.driver_id', '=', 'driver.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.driver_id', 'orders.merchantOrder','orders.special_instructions', 'orders.rating','orders.fridge','orders.actual','orders.eta','orders.facility', 'driver.name as drivername', 'driver.last_name as driverlast_name', 'driver.pharmacy_id as driverpharmacy_id', 'orders.count_bags', 'orders.signature','orders.statuse_id', 'orders.pharmacy_id', 'orders.copay', 'users.name as username', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.os as useros', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'orders.tariff', 'statuses.name as statusename','statuses.color as statusecolor','statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->groupBy('orders.id', 'orders.statuse_id', 'orders.merchantOrder', 'orders.actual','orders.eta', 'orders.driver_id', 'orders.rating','orders.signature','orders.fridge','driver.name', 'driver.last_name', 'driver.pharmacy_id','orders.special_instructions', 'orders.count_bags', 'orders.created', 'orders.facility','orders.copay', 'orders.pharmacy_id', 'orders.tariff', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.phone', 'statuses.name','statuses.color','users.last_name', 'statuses_copay.name','statuses_copay.color', 'users.os')->orderBy('orders.id','desc')->limit(8)->get();
                 $res_view = view('drivers.profile',['user'=>$user,'pharmacys'=>$pharmacys,'duty'=>$duty,'last_cash'=>$last_cash,'user_actions'=>$user_actions,'orders_stat'=>$orders_stat,'orders'=>$orders,'alert'=>'','title'=>'Driver Profile','br1'=>'Drivers','br2'=>'Profile']);
-                if(request()->query->has('ajax')) {
-                    return $res_view->renderSections();
-                } else {
-                    return $res_view;
-                }
+                return self::renderPage($res_view);
             }
             return abort(404);
         } else {
@@ -6496,11 +5998,7 @@ class LexaAdmin extends Controller
         if((Auth::user()->can('admin'))) {
             $input['name']='';
             $res_view = view('wishes.category_add',['input'=>$input,'alert'=>'','title'=>'Print Text Category Add','br1'=>'Print Text','br2'=>'Category Add']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6529,31 +6027,11 @@ class LexaAdmin extends Controller
         if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('wishes')->where("category_id",$wish_id)->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $wishes = DB::table('wishes')->where("category_id",$wish_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('wishes.wishes',['wishes'=>$wishes,'wish_id'=>$wish_id,'pages'=>$pages,'title'=>'Print Text','br1'=>'Print Text','br2'=>'List']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6577,11 +6055,7 @@ class LexaAdmin extends Controller
         if((Auth::user()->can('admin'))) {
             $input['text']='';
             $res_view = view('wishes.add',['input'=>$input,'alert'=>'','title'=>'Print Text Add','br1'=>'Print Text','br2'=>'Add']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6605,31 +6079,11 @@ class LexaAdmin extends Controller
         if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('area')->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $areas = DB::table('area')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('area.list',['areas'=>$areas,'pages'=>$pages,'title'=>'Area Tariff List','br1'=>'Area','br2'=>'Tariff List']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6664,11 +6118,7 @@ class LexaAdmin extends Controller
                 }   
             }
             $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Add','br1'=>'Area','br2'=>'Tariff Add']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6715,11 +6165,7 @@ class LexaAdmin extends Controller
             $states = DB::table('area_zip')->where('area_id', $area_id)->get();
             $states_list = DB::table('states')->get();
             $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Edit','br1'=>'Area','br2'=>'Tariff Edit']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6830,31 +6276,11 @@ class LexaAdmin extends Controller
         if((Auth::user()->can('admin'))) {
             $countOnPage=20;
             $max_pages=ceil(DB::table('plans')->count()/$countOnPage);
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $page = self::currentPage();
+            $pages = PageLinks::around($page, $max_pages);
             $plans = DB::table('plans')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('plans.list',['plans'=>$plans,'pages'=>$pages,'title'=>'Tariff Plans List','br1'=>'Tariff','br2'=>'Tariff Plans']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6886,11 +6312,7 @@ class LexaAdmin extends Controller
             $plan->tariff_area3="";
             $plan->tariff_area_more="";
             $res_view = view('plans.form',['plan'=>$plan,'alert'=>'','title'=>'Tariff Plan Add','br1'=>'Tariff','br2'=>'Tariff Plan Add']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -6914,11 +6336,7 @@ class LexaAdmin extends Controller
         if((Auth::user()->can('admin'))) {
             $plan = DB::table('plans')->where('id', $plan_id)->first();
             $res_view = view('plans.form',['plan'=>$plan,'alert'=>'','title'=>'Tariff Plan Edit','br1'=>'Tariff','br2'=>'Tariff Plan Edit']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -7258,11 +6676,7 @@ class LexaAdmin extends Controller
                 $userInfo = $oauthLoginHelper->getUserInfo($accessToken->getAccessToken());
             }
             $res_view = view('quickbook.index',['alert'=>'','title'=>'Quickbook','br1'=>'Quickbook','br2'=>'Index','authUrl'=>$authUrl,'userInfo'=>$userInfo]);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -7297,35 +6711,15 @@ class LexaAdmin extends Controller
 
     public function reports() {
         $res_view = view('reports.index',['alert'=>'','title'=>'Reports','br1'=>'Reports','br2'=>'Index']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }    
 
     public function reportsBilling() {
         $payments = DB::table('pharmacy_payments')->join("pharmacys","pharmacy_payments.pharmacy_id","=","pharmacys.id")->leftJoin("invoices","pharmacy_payments.invoice_id","=","invoices.id")->select("pharmacy_payments.id","invoices.id as invoice_id","pharmacy_payments.type","pharmacy_payments.created","pharmacys.name","pharmacy_payments.pharmacy_id","pharmacy_payments.transaction_id","invoices.date_from","invoices.date_to","pharmacy_payments.amount","invoices.count");
         $countOnPage=30;
         $max_pages=ceil($payments->count()/$countOnPage);
-        $page=1;
-        if(!empty(request()->query('page'))) {
-            $page=intval(request()->query('page'));
-        }
-        $pages = array();
-        if($page>2){
-            array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-        }
-        if($page>1){
-            array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-        }
-        array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-        if($page+1<=$max_pages){
-            array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-        }
-        if($page+2<=$max_pages){
-            array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-        }
+        $page = self::currentPage();
+        $pages = PageLinks::around($page, $max_pages);
         $payments = $payments->orderBy('pharmacy_payments.id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $client = null;
         foreach($payments as $key=>$payment) {
@@ -7353,48 +6747,28 @@ class LexaAdmin extends Controller
             }
         }
         $res_view = view('reports.billing',['payments'=>$payments,'pages'=>$pages,'alert'=>'','title'=>'Reports Billing','br1'=>'Reports','br2'=>'Billing']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public function reportsApps() {
         $res_view = view('reports.apps',['alert'=>'','title'=>'Reports Apps','br1'=>'Reports','br2'=>'Apps']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public function reportsInvoices() {
         $chartData = DB::table('invoices')->select(DB::raw('CONCAT(date_from," ",date_to) as y'),DB::raw('ROUND(sum((amount+corrections)),2) as a'),DB::raw('count(id) as b'),DB::raw('ROUND(sum(count),2) as c'))->groupBy(DB::raw('CONCAT(date_from," ",date_to)'))->orderBy(DB::raw('CONCAT(date_from," ",date_to)'),'desc')->limit(46)->get();
         $res_view = view('reports.invoices',['chartData'=>$chartData,'alert'=>'','title'=>'Reports Invoices','br1'=>'Reports','br2'=>'Invoices']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public function reportsDrivers() {
         $res_view = view('reports.drivers',['alert'=>'','title'=>'Reports Drivers','br1'=>'Reports','br2'=>'Drivers']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public function reportsPharmacies() {
         $res_view = view('reports.pharmacies',['alert'=>'','title'=>'Reports Pharmacies','br1'=>'Reports','br2'=>'Pharmacies']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public function reportsMap() {
@@ -7469,20 +6843,12 @@ class LexaAdmin extends Controller
             } 
         }
         $res_view = view('reports.customers',['areas'=>$areas,'count_all'=>$count_all,'alert'=>'','title'=>'Reports Customers','br1'=>'Reports','br2'=>'Customers']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public function feedback() {
         $res_view = view('feedback.index',['alert'=>'','title'=>'Feedback','br1'=>'Feedback','br2'=>'Index']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public function deliveryCalendar() {
@@ -7566,28 +6932,16 @@ class LexaAdmin extends Controller
 
     public function happyHolidays() {
         $res_view = view('happyHolidays.index',['alert'=>'','title'=>'happyHolidays','br1'=>'happyHolidays','br2'=>'Index']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
     public function ads() {
         $res_view = view('ads.index',['alert'=>'','title'=>'ads','br1'=>'ads','br2'=>'Index']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
     public function payroll() {
         Gate::authorize('admin');
         $res_view = view('payroll.index',['alert'=>'','title'=>'payroll','br1'=>'payroll','br2'=>'Index']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
     public function supportChat() {
         return redirect('/chat');
@@ -7741,11 +7095,7 @@ class LexaAdmin extends Controller
             $show_ids = [];
             $show_priority = [];
             $res_view = view('dispatching.show',['orders'=>$orders,'locations'=>$locations,'driver'=>$driver,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Process Detail','br1'=>'Process','br2'=>'Process Detail']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -7771,31 +7121,11 @@ class LexaAdmin extends Controller
     public static function faq() {
         $countOnPage=20;
         $max_pages=ceil(DB::table('faqs')->count()/$countOnPage);
-        $page=1;
-        if(!empty(request()->query('page'))) {
-            $page=intval(request()->query('page'));
-        }
-        $pages = array();
-        if($page>2){
-            array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-        }
-        if($page>1){
-            array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-        }
-        array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-        if($page+1<=$max_pages){
-            array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-        }
-        if($page+2<=$max_pages){
-            array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-        }
+        $page = self::currentPage();
+        $pages = PageLinks::around($page, $max_pages);
         $faqs = DB::table('faqs')->orderBy('id','asc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('faq.index',['faqs'=>$faqs,'pages'=>$pages,'title'=>'Faqs','br1'=>'FAQ','br2'=>'List']);
-        if(request()->query->has('ajax')) {
-            return $res_view->renderSections();
-        } else {
-            return $res_view;
-        }
+        return self::renderPage($res_view);
     }
 
     public static function faqHandler(Request $request) {
@@ -7820,11 +7150,7 @@ class LexaAdmin extends Controller
             $input['title']='';
             $input['text']='';
             $res_view = view('faq.add',['title'=>'FAQ Add','br1'=>'FAQ','br2'=>'FAQS','br3'=>'FAQ Add','alert'=>'','input'=>$input]);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -8014,11 +7340,7 @@ class LexaAdmin extends Controller
                 $join->whereNull("users.pharmacy_id");
             })->select('locations.*',DB::raw("CONCAT(users.name, ' ', users.last_name) as name"), "users.phone")->whereIn('locations.id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->get();
             $res_view = view('drivers.map',['locations'=>$locations, 'title'=>'QuikMedix Drivers','br1'=>'QuikMedix Drivers','br2'=>'Drivers','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -8035,11 +7357,7 @@ class LexaAdmin extends Controller
             }
             $orders=$orders->get();
             $res_view = view('routes.pharmacys',['orders'=>$orders, 'title'=>'Ready Orders Pharmacys','br1'=>'Routes','br2'=>'Ready Orders Pharmacys','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -8074,33 +7392,13 @@ class LexaAdmin extends Controller
                 $search='';
             }
             $countOnPage=100;
-            $page=1;
-            if(!empty(request()->query('page'))) {
-                $page=intval(request()->query('page'));
-            }
+            $page = self::currentPage();
             $max_pages=ceil(1/$countOnPage);
             $users = $users->orderBy(DB::raw("count(distinct routes_priority.id)+count(distinct routes_priority_logs.id)"),"desc")->orderBy(DB::raw("count(distinct routes_priority.id)"),"asc");
-            $pages = array();
-            if($page>2){
-                array_push($pages,array("id"=>$page-2,"class"=>'btn-primary'));
-            }
-            if($page>1){
-                array_push($pages,array("id"=>$page-1,"class"=>'btn-primary'));
-            }
-            array_push($pages,array("id"=>$page,"class"=>'btn-outline-primary'));
-            if($page+1<=$max_pages){
-                array_push($pages,array("id"=>$page+1,"class"=>'btn-primary'));
-            }
-            if($page+2<=$max_pages){
-                array_push($pages,array("id"=>$page+2,"class"=>'btn-primary'));
-            }
+            $pages = PageLinks::around($page, $max_pages);
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_view = view('process.drivers',['users'=>$users,'pharmacy_id'=>$pharmacy_id,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Process','br1'=>'Drivers','br2'=>'Process','alert'=>'']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
@@ -8156,11 +7454,7 @@ class LexaAdmin extends Controller
             $show_ids = [];
             $show_priority = [];
             $res_view = view('process.show',['orders'=>$orders,'locations'=>$locations,'driver'=>$driver,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Process Detail','br1'=>'Process','br2'=>'Process Detail']);
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
+            return self::renderPage($res_view);
         } else {
             return abort(403, self::$err_perm);
         }
