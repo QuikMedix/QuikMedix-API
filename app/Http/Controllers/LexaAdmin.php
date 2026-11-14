@@ -7118,58 +7118,6 @@ class LexaAdmin extends Controller
         }
     }
 
-    public static function faq() {
-        $countOnPage=20;
-        $max_pages=ceil(DB::table('faqs')->count()/$countOnPage);
-        $page = self::currentPage();
-        $pages = PageLinks::around($page, $max_pages);
-        $faqs = DB::table('faqs')->orderBy('id','asc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-        $res_view = view('faq.index',['faqs'=>$faqs,'pages'=>$pages,'title'=>'Faqs','br1'=>'FAQ','br2'=>'List']);
-        return self::renderPage($res_view);
-    }
-
-    public static function faqHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->can('admin'))) {
-            if($request->input('remove')>0 && !empty($request->input('faq_id'))) {
-                DB::table('faqs')->where("id",$request->input('faq_id'))->delete();
-            }
-            return redirect("faq");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    public static function faqAdd() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->can('admin'))) {
-            $input['title']='';
-            $input['text']='';
-            $res_view = view('faq.add',['title'=>'FAQ Add','br1'=>'FAQ','br2'=>'FAQS','br3'=>'FAQ Add','alert'=>'','input'=>$input]);
-            return self::renderPage($res_view);
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
-    public static function faqAddHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
-        }
-        if((Auth::user()->can('admin'))) {
-            if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
-                DB::table('faqs')->insert(["user_id"=>Auth::user()->id,"title"=>$request->input('title'),"text"=>$request->input('text')]);
-            }
-            return redirect("faq");
-        } else {
-            return abort(403, self::$err_perm);
-        }
-    }
-
     /**
      * @param mixed $location
      */
