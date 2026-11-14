@@ -19,17 +19,11 @@ class LexaAdminApi extends Controller
 {
     public function __construct() {
         $this->middleware('auth:api');
+        // Every action here used to start with the same blocked/unapproved check and token extension.
+        $this->middleware('active.api');
     }
 
     public static function profile() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $user = DB::table('users')->where('id', Auth::user()->id)->first();
         unset($user->password);
         unset($user->remember_token);
@@ -40,14 +34,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function banner() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $banner = DB::table('banners')->first();
         if(!empty($banner)) {
             return response()->json([
@@ -64,14 +50,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function profileHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $validator = Validator::make($request->all(), [
             'image' => 'mimes:jpeg,jpg,png|max:5048',
             'password' => 'min:8',
@@ -221,14 +199,6 @@ class LexaAdminApi extends Controller
     }
     
     public static function patient_home() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->role == 'user') {
             $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();
             $head_text = $wishs ? $wishs[array_rand($wishs)] : '';
@@ -287,14 +257,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function ordersList() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('driver', 'user')) {
             if(Auth::user()->role == 'user') {
                 $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.driver_id', 'orders.statuse_id', 'orders.copay', 'orders.actual', 'orders.pharmacy_id', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'),'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.location as pharmacylocation','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.user_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.driver_id', 'orders.created', 'orders.signature_photo', 'orders.actual', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name','users.last_name')->orderBy('orders.id','desc');
@@ -353,14 +315,6 @@ class LexaAdminApi extends Controller
      * @param int|string $order_id
      */
     public static function ordersShow($order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->leftJoin('medicine', 'orders.id', '=', 'medicine.order_id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.user_id', 'orders.delivery_address','orders.delivery_location', 'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.actual','orders.drop_off_photo', 'orders.signature_photo', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', DB::raw('sum(medicine.count) as count'), 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge','orders.actual', 'orders.special_instructions', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.user_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name','orders.delivery_address','orders.delivery_location')->first();
         if(!empty($order)) {
             if((Auth::user()->role == 'driver' && Auth::user()->id==$order->driver_id) || (Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
@@ -418,14 +372,6 @@ class LexaAdminApi extends Controller
      * @param int|string $order_id
      */
     public static function ordersShowHandler($order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $order = DB::table('orders')->where('orders.id',$order_id)->first();
         if(!empty($order)) {
             if((Auth::user()->role == 'driver' && Auth::user()->id==$order->driver_id) || (Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
@@ -445,14 +391,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function routes() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $routes_priority1 = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
             $routes_priority0 = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', Auth::user()->id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
@@ -560,14 +498,6 @@ class LexaAdminApi extends Controller
      * @param int|string $route_id
      */
     public static function routesShow($route_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
             $route = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id")->havingRaw('min(id) = ?', [$route_id])->orderBy("priority","asc")->first();
             if(empty($route) || empty($route->id)) {
@@ -634,14 +564,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function cards() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
             $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
             if(!empty($payment_account)) {
@@ -662,14 +584,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function cardAddHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
             if(!empty($request->input('name')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
                 $card_token = $request->input('card');
@@ -815,14 +729,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function qr_scanedHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $code = explode("_",$request->input('order_id'));
             $order_id = $code[0];
@@ -856,14 +762,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function drop_offHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $validator = Validator::make($request->all(), [
                 'image' => 'mimes:jpeg,jpg,png|max:10048',       
@@ -1031,14 +929,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function signatureHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $validator = Validator::make($request->all(), [
                 'image' => 'mimes:jpeg,jpg,png|max:2048',  
@@ -1244,14 +1134,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function locationHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $location = $request->input('location');
             if(empty($location)) {
@@ -1273,14 +1155,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function driverQr() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->role == 'driver') {
             $token=bin2hex(random_bytes(24));
             DB::table('tokens_driver')->insert(['user_id'=>Auth::user()->id,'token'=>$token]);
@@ -1296,14 +1170,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function updateDevice(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $device_token = $request->input('device_token');
         if(empty($device_token)) {
             return response()->json([
@@ -1336,28 +1202,12 @@ class LexaAdminApi extends Controller
     }
 
     public static function driverStatus() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         return response()->json([
             'work_now' => Auth::user()->work_now
         ], 200);
     }
 
     public static function driverStatusStart() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         DB::table('users')->where('id',Auth::user()->id)->update(['work_now'=>1]);
         return response()->json([
             'message' => 'Driver Status was updated'
@@ -1365,14 +1215,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function driverStatusFinish() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         DB::table('users')->where('id',Auth::user()->id)->update(['work_now'=>0]);
         return response()->json([
             'message' => 'Driver Status was updated'
@@ -1383,14 +1225,6 @@ class LexaAdminApi extends Controller
      * @param int|string $user_id
      */
     public static function testNotification($user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $bing = Notifications::send_push($user_id,"QuikMedix","Test Notification");
         return response()->json([
             'message' => $bing
@@ -1398,14 +1232,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function userCountunread() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $count_noread=Auth::user()->get_unread_mess();
         return response()->json([
             'count_unread_message' => $count_noread
@@ -1413,14 +1239,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function chats() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $chats_db = DB::table('chats')->orWhere('user1',Auth::user()->id)->orWhere('user2',Auth::user()->id)->orderBy('last_message_date','desc')->get();
         $chats=array();
         foreach ($chats_db as $chat) {
@@ -1451,14 +1269,6 @@ class LexaAdminApi extends Controller
      * @param int|string $user_id
      */
     public function chatUser($user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $user = DB::table('users')->where('id', $user_id)->first();
         $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
         $user_pharmacy2 = DB::table('pharmacys')->where('id', Auth::user()->pharmacy_id)->first();
@@ -1527,14 +1337,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function routesLogs(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(empty($request->input('from')) && empty($request->input('to'))) {
                 $routes = DB::table('routes_priority_logs')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id")->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id")->orderBy("created","desc")->limit(10)->get();
@@ -1604,14 +1406,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function startRoute() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             DB::table('users')->where('id', Auth::user()->id)->update(['route_status'=>'started']);
             $routes = DB::table('routes_priority')->where('driver_id', Auth::user()->id)->orderBy("priority","asc")->get();
@@ -1627,14 +1421,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function update_status(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id')) && !empty($request->input('status_id'))) {
                 $validated = $request->validate([
@@ -1679,14 +1465,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function orderPatientQr(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id'))) {
                 $code = explode("_",$request->input('order_id'));
@@ -1746,14 +1524,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function orderPatientQr2(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             if(!empty($request->input('order_id')) && !empty($request->input('code'))) {
                 $code = explode("_",$request->input('code'));
@@ -1814,14 +1584,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function get_unread_mess() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $count_noread=Auth::user()->get_unread_mess();
         return response()->json([
             'count_noread' => $count_noread
@@ -1829,14 +1591,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function get_payouts_driver() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             $amount = round(DB::table('payouts_driver')->where('driver_id', Auth::user()->id)->where('withdraw',0)->sum('amount'),1);
             return response()->json([
@@ -1854,14 +1608,6 @@ class LexaAdminApi extends Controller
      * @param int|string $order_id
      */
     public static function payCopay($order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         // One attempt per order at a time, so a double tap cannot charge the card twice.
         $response = Cache::lock('pay-copay:'.$order_id, 120)->get(function () use ($order_id) {
             $order = DB::table('orders')->where('id',$order_id)->first();
@@ -1940,14 +1686,6 @@ class LexaAdminApi extends Controller
      * @param int|string $order_id
      */
     public static function PayedCashCopay($order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
             if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'driver') && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
@@ -2002,14 +1740,6 @@ class LexaAdminApi extends Controller
      * @param int|string $order_id
      */
     public static function notPayedCashCopay($order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
             if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'driver') && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
@@ -2032,14 +1762,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function profileFamily_members() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $family_members = DB::table('family_members')->where('user_id', Auth::user()->id)->get();
         return response()->json([
             'family_members' => $family_members
@@ -2047,14 +1769,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function profileFamily_membersAddHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $validator = Validator::make($request->all(), [
             'family_type' => 'required|max:155',
             'family_name' => 'required|max:155',
@@ -2082,14 +1796,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function profileFamily_membersRemoveHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $family_member = DB::table('family_members')->where('id',$request->input('family_member_id'))->first();
         if(!empty($family_member)) {
             if($family_member->user_id==Auth::user()->id) {
@@ -2115,14 +1821,6 @@ class LexaAdminApi extends Controller
      * @param int|string $order_id
      */
     public static function customer_notesAddHandler($order_id, Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $order = DB::table('orders')->where('orders.id',$order_id)->first();
         if((Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
             $validator = Validator::make($request->all(), [
@@ -2150,14 +1848,6 @@ class LexaAdminApi extends Controller
      * @param int|string $order_id
      */
     public static function ratingHandler($order_id, Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $order = DB::table('orders')->where('orders.id',$order_id)->first();
         if((Auth::user()->role == 'user' && Auth::user()->id==$order->user_id) && $order->statuse_id==4 && empty($order->rating)) {
             $validator = Validator::make($request->all(), [
@@ -2189,14 +1879,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function ordersDelivery_times() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         $delivery_times = DB::table('delivery_times')->get();
         return response()->json([
             'delivery_times' => $delivery_times
@@ -2204,14 +1886,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function ordersDelivery_timesHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         if(Auth::user()->hasAnyRole('admin', 'user')) {
             if(!empty($request->input('order_id')) && !empty($request->input('time_id'))) {
                 $order = DB::table('orders')->where('id',$request->input('order_id'))->first();
@@ -2241,14 +1915,6 @@ class LexaAdminApi extends Controller
     }
 
     public static function news() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        } else {
-            Auth::user()->extendTokenExpiry();
-        }
         //$news = [["created"=>"2022-01-07 11:00:05","type"=>"news","link"=>"","title"=>"News from QuikMedix","text"=>"Welcome to our updated app"]];
         if(!empty(Auth::user()->pharmacy_id)) {
             $news = DB::table('news_patient')->where("pharmacy_id",Auth::user()->pharmacy_id)->orderBy('id','desc')->get();
