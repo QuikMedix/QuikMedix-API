@@ -9,14 +9,16 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * The mobile profile used to log "from X to " for fields it had not received. The command removes
- * only rows that provably never happened and keeps every real change, including real blankings.
+ * The mobile profile used to log "from X to " for fields it had not received and a pharmacy change
+ * it never saved. The command removes only rows that provably never happened and keeps every real change.
  */
-class PruneBlankProfileLogTest extends TestCase
+class PruneFalseProfileLogTest extends TestCase
 {
     private const CASEY = 1;
 
     private const JORDAN = 2;
+
+    private const RILEY = 3;
 
     private const ADMIN = 9;
 
@@ -28,6 +30,7 @@ class PruneBlankProfileLogTest extends TestCase
             foreach (['name', 'last_name', 'email', 'phone', 'zip', 'apartment'] as $column) {
                 $table->string($column)->nullable();
             }
+            $table->integer('pharmacy_id')->nullable();
         });
         Schema::create('action_log', function (Blueprint $table): void {
             $table->increments('id');
@@ -38,8 +41,9 @@ class PruneBlankProfileLogTest extends TestCase
             $table->timestamp('created')->nullable();
         });
         DB::table('users')->insert([
-            ['id' => self::CASEY, 'name' => 'Casey', 'last_name' => 'Rider', 'email' => 'casey@example.test', 'phone' => '555-0101', 'zip' => '10001', 'apartment' => '2 to 3'],
-            ['id' => self::JORDAN, 'name' => 'Jordan', 'last_name' => 'Lee', 'email' => 'jordan@example.test', 'phone' => '555-0202', 'zip' => null, 'apartment' => '7B'],
+            ['id' => self::CASEY, 'name' => 'Casey', 'last_name' => 'Rider', 'email' => 'casey@example.test', 'phone' => '555-0101', 'zip' => '10001', 'apartment' => '2 to 3', 'pharmacy_id' => 4],
+            ['id' => self::JORDAN, 'name' => 'Jordan', 'last_name' => 'Lee', 'email' => 'jordan@example.test', 'phone' => '555-0202', 'zip' => null, 'apartment' => '7B', 'pharmacy_id' => 6],
+            ['id' => self::RILEY, 'name' => 'Riley', 'last_name' => 'Park', 'email' => 'riley@example.test', 'phone' => '555-0303', 'zip' => '10003', 'apartment' => null, 'pharmacy_id' => null],
         ]);
         Storage::fake('local');
     }
@@ -65,6 +69,11 @@ class PruneBlankProfileLogTest extends TestCase
                 // Logged as blanked, yet the next real change still starts from the same value; and twice in a row.
                 $this->log(self::CASEY, 'change last_name', 'from Courier to '),
                 $this->log(self::CASEY, 'change last_name', 'from Courier to '),
+                // The app logged a pharmacy change it never saved: twice from 4, and Casey is still at pharmacy 4.
+                $this->log(self::CASEY, 'change pharmacy_id', 'from 4 to 9'),
+                $this->log(self::CASEY, 'change pharmacy_id', 'from 4 to 12'),
+                // Riley has no pharmacy and still has none.
+                $this->log(self::RILEY, 'change pharmacy_id', 'from  to 9'),
             ],
             'real' => [
                 $this->log(self::CASEY, 'change last_name', 'from Courier to Rider'),
@@ -81,8 +90,11 @@ class PruneBlankProfileLogTest extends TestCase
                 // Other kinds of rows and accounts that no longer exist are left alone.
                 $this->log(self::CASEY, 'change address', 'from 1 Old St to '),
                 $this->log(self::CASEY, 'change password', null),
-                $this->log(self::CASEY, 'change pharmacy_id', 'from 4 to 9'),
+                // An administrator moved Jordan from pharmacy 3 to 5, then Jordan really moved to 6.
+                $this->log(self::JORDAN, 'change pharmacy_id', 'from 3 to 5', self::ADMIN),
+                $this->log(self::JORDAN, 'change pharmacy_id', 'from 5 to 6'),
                 $this->log(77, 'change name', 'from Ghost to '),
+                $this->log(77, 'change pharmacy_id', 'from 1 to 2'),
             ],
         ];
     }
@@ -92,15 +104,16 @@ class PruneBlankProfileLogTest extends TestCase
         $this->history();
 
         $this->artisan('quikmedix:prune-profile-log')
-            ->expectsOutputToContain('6 profile log rows on 1 accounts')
+            ->expectsOutputToContain('9 profile log rows on 2 accounts')
             ->expectsOutputToContain('change last_name: 2')
             ->expectsOutputToContain('change name: 1')
+            ->expectsOutputToContain('change pharmacy_id: 3')
             ->expectsOutputToContain('Nothing was changed.')
             ->doesntExpectOutputToContain('Casey')
             ->doesntExpectOutputToContain('casey@example.test')
             ->assertExitCode(0);
 
-        $this->assertDatabaseCount('action_log', 17);
+        $this->assertDatabaseCount('action_log', 22);
         $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
@@ -109,7 +122,7 @@ class PruneBlankProfileLogTest extends TestCase
         $history = $this->history();
 
         $this->artisan('quikmedix:prune-profile-log', ['--delete' => true])
-            ->expectsOutputToContain('Removed 6 rows. A copy of them is in ')
+            ->expectsOutputToContain('Removed 9 rows. A copy of them is in ')
             ->assertExitCode(0);
 
         $this->assertSame($history['real'], DB::table('action_log')->orderBy('id')->pluck('id')->all());
@@ -125,7 +138,7 @@ class PruneBlankProfileLogTest extends TestCase
 
         // A second run finds nothing more.
         $this->artisan('quikmedix:prune-profile-log', ['--delete' => true])
-            ->expectsOutputToContain('No profile log rows claim a blanking that did not happen.')->assertExitCode(0);
+            ->expectsOutputToContain('No profile log rows record a change that did not happen.')->assertExitCode(0);
         $this->assertCount(1, Storage::disk('local')->allFiles());
     }
 
@@ -137,10 +150,10 @@ class PruneBlankProfileLogTest extends TestCase
         $this->artisan('quikmedix:prune-profile-log', ['--delete' => true])
             ->expectsConfirmation('Are you sure you want to run this command?', 'no')
             ->assertExitCode(1);
-        $this->assertDatabaseCount('action_log', 17);
+        $this->assertDatabaseCount('action_log', 22);
 
         $this->artisan('quikmedix:prune-profile-log', ['--delete' => true, '--force' => true])->assertExitCode(0);
-        $this->assertDatabaseCount('action_log', 11);
+        $this->assertDatabaseCount('action_log', 13);
     }
 
     public function test_a_log_table_without_the_expected_columns_is_not_touched(): void

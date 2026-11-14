@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Until November 2026 the mobile profile logged "change name from Casey to " style rows for
- * fields a request did not send. This finds the rows that provably never happened and, when
- * asked, removes them after saving a copy.
+ * Until November 2026 the mobile profile logged changes it did not make: "change name from Casey to "
+ * for fields a request did not send, and "change pharmacy_id from 4 to 9" for a pharmacy it never
+ * saves. This finds the rows that provably never happened and, when asked, removes them after
+ * saving a copy.
  */
-class PruneBlankProfileLog extends Command
+class PruneFalseProfileLog extends Command
 {
     use ConfirmableTrait;
 
@@ -21,7 +22,7 @@ class PruneBlankProfileLog extends Command
         {--delete : Remove the rows after saving a copy; without it nothing changes}
         {--force : Do not ask for confirmation in production}';
 
-    protected $description = 'Find profile log rows that claim a field was blanked although it never was, and optionally remove them';
+    protected $description = 'Find profile log rows that record a change that never happened, and optionally remove them';
 
     /** Log type => users column, for the fields the mobile profile compared without having received them. */
     private const FIELDS = [
@@ -32,6 +33,9 @@ class PruneBlankProfileLog extends Command
         'change zip' => 'zip',
         'change apartment' => 'apartment',
     ];
+
+    /** The mobile profile also logged a submitted pharmacy as a change, although it does not save one. */
+    private const PHARMACY = 'change pharmacy_id';
 
     public function handle(): int
     {
@@ -45,12 +49,12 @@ class PruneBlankProfileLog extends Command
 
         $false = $this->falseRows();
         if ($false === []) {
-            $this->info('No profile log rows claim a blanking that did not happen.');
+            $this->info('No profile log rows record a change that did not happen.');
 
             return self::SUCCESS;
         }
 
-        $this->info(count($false).' profile log rows on '.count(array_unique(array_column($false, 'user_id'))).' accounts claim a field was blanked although it kept its value (values are not printed):');
+        $this->info(count($false).' profile log rows on '.count(array_unique(array_column($false, 'user_id'))).' accounts record a change although the field kept its value (values are not printed):');
         foreach (array_count_values(array_column($false, 'type')) as $type => $count) {
             $this->line("  $type: $count");
         }
@@ -89,35 +93,40 @@ class PruneBlankProfileLog extends Command
     }
 
     /**
-     * Rows a user wrote about their own profile saying "from X to " (blank) where the field
-     * demonstrably stayed X: the next change of that field still starts from X, or, when there
-     * is no later change, the account still holds X. A field that really was blanked is kept.
+     * Rows a user wrote about their own profile, saying a field went from X to blank (or the
+     * pharmacy from X to another), where the field demonstrably stayed X: the next change of that
+     * field still starts from X, or, when there is no later change, the account still holds X.
+     * A change that really happened is kept.
      *
      * @return list<array{id: int, type: string, user_id: int}>
      */
     private function falseRows(): array
     {
-        $userIds = DB::table('action_log')->whereIn('type', array_keys(self::FIELDS))->whereColumn('user_id', 'action_user_id')
-            ->where('comment', 'like', 'from % to ')->distinct()->orderBy('user_id')->pluck('user_id');
+        $columns = self::FIELDS + [self::PHARMACY => 'pharmacy_id'];
+        $userIds = DB::table('action_log')->whereColumn('user_id', 'action_user_id')
+            ->where(function ($query): void {
+                $query->where(fn ($blank) => $blank->whereIn('type', array_keys(self::FIELDS))->where('comment', 'like', 'from % to '))
+                    ->orWhere('type', self::PHARMACY);
+            })->distinct()->orderBy('user_id')->pluck('user_id');
 
         $false = [];
         foreach ($userIds->chunk(200) as $chunk) {
-            $users = DB::table('users')->whereIn('id', $chunk)->get(['id', ...array_values(self::FIELDS)])->keyBy('id');
-            $history = DB::table('action_log')->whereIn('user_id', $chunk)->whereIn('type', array_keys(self::FIELDS))
+            $users = DB::table('users')->whereIn('id', $chunk)->get(['id', ...array_values($columns)])->keyBy('id');
+            $history = DB::table('action_log')->whereIn('user_id', $chunk)->whereIn('type', array_keys($columns))
                 ->orderBy('id')->get(['id', 'type', 'comment', 'user_id', 'action_user_id'])->groupBy(fn ($row) => $row->user_id.'|'.$row->type);
 
             foreach ($history as $rows) {
-                foreach ($rows->values() as $position => $row) {
-                    $comment = (string) $row->comment;
-                    if ($row->user_id != $row->action_user_id || ! str_starts_with($comment, 'from ') || ! str_ends_with($comment, ' to ') || strlen($comment) <= 9) {
+                $rows = $rows->values();
+                foreach ($rows as $position => $row) {
+                    $claimedOld = $row->user_id == $row->action_user_id ? $this->claimedOldValue($row) : null;
+                    if ($claimedOld === null) {
                         continue;
                     }
-                    $claimedOld = substr($comment, 5, -4);
-                    $next = $rows->values()->get($position + 1);
+                    $next = $rows->get($position + 1);
                     $user = $users->get($row->user_id);
                     $stayed = $next !== null
                         ? str_starts_with((string) $next->comment, 'from '.$claimedOld.' to ')
-                        : $user !== null && (string) $user->{self::FIELDS[$row->type]} === $claimedOld;
+                        : $user !== null && (string) $user->{$columns[$row->type]} === $claimedOld;
                     if ($stayed) {
                         $false[] = ['id' => (int) $row->id, 'type' => $row->type, 'user_id' => (int) $row->user_id];
                     }
@@ -126,5 +135,19 @@ class PruneBlankProfileLog extends Command
         }
 
         return $false;
+    }
+
+    /**
+     * The value a row says the field had before, when the row has the shape the mobile profile wrote
+     * for a change it did not make; null for any other row.
+     */
+    private function claimedOldValue(object $row): ?string
+    {
+        $comment = (string) $row->comment;
+        if ($row->type === self::PHARMACY) {
+            return preg_match('/^from (\d*) to (\d+)$/', $comment, $match) === 1 && $match[1] !== $match[2] ? $match[1] : null;
+        }
+
+        return str_starts_with($comment, 'from ') && str_ends_with($comment, ' to ') && strlen($comment) > 9 ? substr($comment, 5, -4) : null;
     }
 }
