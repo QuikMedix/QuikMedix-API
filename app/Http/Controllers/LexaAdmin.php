@@ -22,6 +22,7 @@ use URL;
 use Smalot\PdfParser\Parser;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
+use App\Actions\NotifyNextPatient;
 use App\Actions\RecalculateDriverEta;
 use App\Actions\RotateSignature;
 use Illuminate\Support\Facades\Log;
@@ -7270,45 +7271,7 @@ class LexaAdmin extends Controller
      * @param \stdClass $next_route
      */
     static function next_patient_push($driver_id,$next_route){
-        $distance=0;
-        $duration=0;
-        $driver_loc = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver_id)->value('location');
-        $driver = DB::table('users')->where('id',$driver_id)->first();
-        $patient0 = DB::table('users')->where('id',$next_route->type_id)->first();
-        if(empty($driver_loc) || empty($driver) || empty($patient0) || empty($patient0->location)) {
-            return false;
-        }
-        if($driver->transport=='2') {
-            $transport = "bicycle";
-        } else {
-            $transport = "car";
-        }
-        $last_loc=str_replace(' ','',$patient0->location);
-        $access_token = HereMaps::accessToken();
-        $options = array(
-            'http' => array(
-                'method'  => 'GET',
-                'ignore_errors' => true,
-                'header' => 'Authorization: Bearer '.$access_token
-            )
-        );
-        $context  = stream_context_create($options);
-        $directions = json_decode(file_get_contents("https://router.hereapi.com/v8/routes?transportMode=$transport&origin=$driver_loc&destination=$last_loc&return=summary", false, $context));
-        if(!empty($directions->routes)) {
-            foreach($directions->routes[0]->sections as $legs) {
-                $distance=$distance+$legs->summary->length;
-                $duration=$duration+$legs->summary->duration;
-            }
-        }
-        $duration = ceil($duration / 60);
-        $distance=round($distance*0.000621371192,1);
-        DB::table('orders')->where('id',$next_route->order_id)->update(["eta"=>ceil($duration / 60)]);
-        $min = $duration % 60;
-        $duration = floor($duration / 60);
-        $duration= $duration." hours ".$min." minutes";
-        $distance= $distance.' miles';
-        Notifications::send_push($next_route->type_id,"QuikMedix","Your delivery is next. \nPlease track your order #".$next_route->order_id." via our app. ETA: $duration \nThank you for using our service.");
-        return true;
+        return app(NotifyNextPatient::class)->handle($driver_id, $next_route);
     }
 
 

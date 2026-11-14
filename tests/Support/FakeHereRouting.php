@@ -19,6 +19,9 @@ class FakeHereRouting
     /** Requests starting from this "lat,lng" fail, as when HERE cannot be reached. */
     public static ?string $unreachableOrigin = null;
 
+    /** HERE answers without any route, as it does for stops it cannot connect. */
+    public static bool $withoutRoutes = false;
+
     /** @var resource|null */
     public $context;
 
@@ -32,6 +35,7 @@ class FakeHereRouting
         self::$legLength = 1609;
         self::$legDuration = 360;
         self::$unreachableOrigin = null;
+        self::$withoutRoutes = false;
         stream_wrapper_unregister('https');
         stream_wrapper_register('https', self::class, STREAM_IS_URL);
     }
@@ -72,7 +76,7 @@ class FakeHereRouting
         // HERE answers with one section per leg: origin to the first stop, then stop to stop.
         $legs = substr_count($path, '&via=') + 1;
         $section = ['summary' => ['length' => self::$legLength, 'duration' => self::$legDuration]];
-        $this->body = json_encode(['routes' => [['sections' => array_fill(0, $legs, $section)]]]);
+        $this->body = json_encode(['routes' => self::$withoutRoutes ? [] : [['sections' => array_fill(0, $legs, $section)]]]);
 
         return true;
     }
