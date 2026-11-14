@@ -262,7 +262,7 @@
                                                             <span class="confirmation" style="border: solid 1px;max-width: 100px;margin: 5px auto;padding: 2px;background: #214848;color: #f6f4ff;"><i class="mdi mdi-alert"></i> Special Info</span>
                                                             @endif
                                                             @if(!empty($order->merchantOrder))
-                                                            <x-partner-logo image="images/mms-logo-v2.png" name="Micro Merchant Systems" height="28" class="mt-2 text-center" />
+                                                            <x-partner-logo image="images/mms-logo-v2.png" name="PrimeRx" height="40" class="mt-2 text-center" />
                                                             @endif
 														</td>
                                                         <td class="date-column time" style="vertical-align: middle;">Created:<br>{{date('m/d/Y g:i A', strtotime($order->created ?? ''))}}

@@ -10,18 +10,7 @@ use Tests\TestCase;
  */
 class StaticImagesTest extends TestCase
 {
-    /**
-     * Other companies' logos. They must come from those companies and are not in the repository;
-     * until a file is added, <x-partner-logo> shows the partner's name instead.
-     */
-    private const THIRD_PARTY_LOGOS = [
-        'images/PioneerRx-0.png',
-        'images/bestrx-0.png',
-        'images/micromerchantsystem.png',
-        'images/mms-logo-v2.png',
-    ];
-
-    public function test_every_named_image_exists_except_third_party_logos(): void
+    public function test_every_named_image_exists(): void
     {
         $files = Finder::create()->files()->name(['*.php', '*.css', '*.js'])
             ->in([resource_path('views'), public_path('css'), public_path('js'), app_path()]);
@@ -37,6 +26,6 @@ class StaticImagesTest extends TestCase
         $missing = array_values(array_filter(array_keys($named), fn (string $image): bool => ! is_file(public_path($image))));
         sort($missing);
 
-        $this->assertSame(self::THIRD_PARTY_LOGOS, $missing);
+        $this->assertSame([], $missing);
     }
 }

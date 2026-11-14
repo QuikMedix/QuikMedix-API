@@ -6,8 +6,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Partner products are shown with the partner's own logo file when one has been added to
- * public/images, and by name until then, so the page never shows a broken image.
+ * Partner products are shown with the partner's own logo file when it is in public/images,
+ * and by name if a file is ever missing, so the page never shows a broken image.
  */
 class PartnerLogoComponentTest extends TestCase
 {
@@ -47,7 +47,7 @@ class PartnerLogoComponentTest extends TestCase
             'dashboard' => ['dashboard/index', [
                 ['images/micromerchantsystem.png', 'Micro Merchant Systems'], ['images/PioneerRx-0.png', 'PioneerRx'], ['images/bestrx-0.png', 'BestRx'],
             ]],
-            'orders list' => ['orders/list', [['images/mms-logo-v2.png', 'Micro Merchant Systems']]],
+            'orders list' => ['orders/list', [['images/mms-logo-v2.png', 'PrimeRx']]],
         ];
     }
 
@@ -60,6 +60,11 @@ class PartnerLogoComponentTest extends TestCase
         $source = file_get_contents(resource_path("views/$view.blade.php"));
 
         foreach ($partners as [$image, $name]) {
+            // The supplied logo files are stored at three times the height they are shown at.
+            [$width, $height, $type] = getimagesize(public_path($image));
+            $this->assertSame(IMAGETYPE_PNG, $type);
+            $this->assertGreaterThanOrEqual(120, $height);
+            $this->assertGreaterThan($height, $width);
             $this->assertStringContainsString('<x-partner-logo image="'.$image.'" name="'.$name.'"', $source);
             $this->assertStringNotContainsString("URL::asset('/$image')", $source);
         }
