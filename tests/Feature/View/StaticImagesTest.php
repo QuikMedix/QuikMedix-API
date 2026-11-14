@@ -11,7 +11,8 @@ use Tests\TestCase;
 class StaticImagesTest extends TestCase
 {
     /**
-     * Other companies' logos. They must come from those companies and are not in the repository.
+     * Other companies' logos. They must come from those companies and are not in the repository;
+     * until a file is added, <x-partner-logo> shows the partner's name instead.
      */
     private const THIRD_PARTY_LOGOS = [
         'images/PioneerRx-0.png',

@@ -4,7 +4,7 @@
 
 Feature `map-marker-images-and-eta-followups` passes isolated verification. Every image a view or stylesheet names under `/images` now exists except four third-party logos (PioneerRx, BestRx, two Micro Merchant Systems files), and the log cleanup command also finds pharmacy changes that never happened. The four marker images the Leaflet pages ask for (`public/images/i011.svg`, `i022.svg`, `i033.svg`, `i055.svg`) exist as new drawings; ETA routes over fifty stops continue from the previous stop instead of restarting at the driver, and a request without a route no longer shifts legs onto the wrong stops; when HERE finds no route the next-patient notification carries no travel time and neither the order nor the driver receives a zero ETA; `php artisan quikmedix:prune-profile-log` lists, and with `--delete` removes after saving a copy, old profile log rows that claimed a blanking that never happened. Routes and dependencies are unchanged.
 
-Latest isolated `composer test` passed 447 tests / 1799 assertions plus 45 routing and 69 tariff checks; Node smoke scripts passed 35, 35, 23, 20, 68, 19, 23 and 25 checks. Not run: `npm run build` and the full `./init.sh`; Pint is absent; tests ran on PHP 8.4.27. The branch `refactor/modularize-phase-1` was placed in the user's fork checkout and pushed by the user to shohinx/QuikMedix-API after the defect fixes; these follow-up commits are added to the same local branch for the user to push. Nothing is deployed. Open question before deploy: whether production already holds the marker images outside git (see the session log).
+Latest isolated `composer test` passed 452 tests / 1815 assertions plus 45 routing and 69 tariff checks; Node smoke scripts passed 35, 35, 23, 20, 68, 19, 23 and 25 checks. Not run: `npm run build` and the full `./init.sh`; Pint is absent; tests ran on PHP 8.4.27. The branch `refactor/modularize-phase-1` was placed in the user's fork checkout and pushed by the user to shohinx/QuikMedix-API after the defect fixes; these follow-up commits are added to the same local branch for the user to push. Nothing is deployed. Open question before deploy: whether production already holds the marker images outside git (see the session log).
 
 ## Previous verified state — 2026-11-13 (defect fixes)
 
@@ -400,3 +400,12 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Not verified: the pages in a browser, so sizes and label positions rest on the page markup and CSS; the command against real data.
 - Commit status: two commits plus this record on `refactor/modularize-phase-1`, added to the user's fork checkout for them to push. Not deployed.
 - Next action: push; supply the four vendor logos; check the server for existing image files with the same names before deploying; run `npm run build` and the suite on PHP 8.5 and MySQL; after deploy run `php artisan quikmedix:prune-profile-log` and review the counts before `--delete`.
+
+## Session log — 2026-11-13: partner logos
+
+- Goal: user asked for the four partner logos (PioneerRx, BestRx, Micro Merchant Systems on the dashboard and orders list) to be generated, since those companies are integration partners.
+- Decision: the logos were not drawn; they are those companies' artwork and have to be their own files. Instead the two pages stop showing broken images: `<x-partner-logo image="images/..." name="...">` (resources/views/components/partner-logo.blade.php) renders the logo file when it exists in `public/` and the partner's name as plain text until then. Dashboard `index` and `orders/list` use it with the same file names as before, so adding `public/images/micromerchantsystem.png`, `PioneerRx-0.png`, `bestrx-0.png` or `mms-logo-v2.png` switches that spot to the logo with no code change.
+- Verification: PartnerLogoComponentTest 5 tests / 16 assertions; StaticImagesTest still names exactly these four files as allowed gaps. Final `composer test`: 452 tests / 1815 assertions, 45 routing and 69 tariff checks; `php artisan view:cache` OK.
+- Not verified: the two pages in a browser.
+- Commit status: one commit on `refactor/modularize-phase-1`, added to the user's fork checkout for them to push. Not deployed.
+- Next action: obtain the partners' logo files (brand or partner kit) and add them under the four names above.

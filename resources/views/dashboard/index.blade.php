@@ -339,9 +339,9 @@
                                     <div class="card-body row">    
                                         <div class="col-xl-6 pt-3">                                        
                                         <h4 class="mt-2 mr-4 float-left text-black">Compatible with</h4>
-                                        <img src="{{ URL::asset('/images/micromerchantsystem.png')}}" alt="micromerchantsystem" class="mr-3" height="40">
-                                        <img src="{{ URL::asset('/images/PioneerRx-0.png')}}" alt="PioneerRx" class="mr-3" height="40">
-                                        <img src="{{ URL::asset('/images/bestrx-0.png')}}" alt="BestRx" class="mr-3" height="40">
+                                        <x-partner-logo image="images/micromerchantsystem.png" name="Micro Merchant Systems" class="mr-3" />
+                                        <x-partner-logo image="images/PioneerRx-0.png" name="PioneerRx" class="mr-3" />
+                                        <x-partner-logo image="images/bestrx-0.png" name="BestRx" class="mr-3" />
                                         </div>
                                         <div class="col-xl-6">  
                                         <img src="{{ URL::asset('/images/icon-d6.gif')}}" alt="icon-d3" class="mr-2 pl-0 float-right " height="75">
