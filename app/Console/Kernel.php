@@ -5,6 +5,7 @@ namespace App\Console;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Facades\DB;
+use App\Actions\RecalculateDriverEta;
 use App\Notifications;
 use App\Support\HereMaps;
 use App\User;
@@ -52,104 +53,7 @@ class Kernel extends ConsoleKernel
             $drivers = User::where('role','driver')->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->whereNotNull('routes_priority.id')->select('users.id')->groupBy('users.id')->get();
             foreach($drivers as $driver){
                 try {
-                    $driver_location = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$driver->id)->value('location');
-                    if(empty($driver_location)) {
-                        continue;
-                    }
-                    $driver_loc = HereMaps::roundLocation($driver_location);
-                    $eta = DB::table('drivers_eta')->where('driver_id',$driver->id)->first();
-                    $access=TRUE;
-                    if(!empty($eta)) {
-                        if($eta->last_location==$driver_loc) {
-                            $access=FALSE;
-                        }
-                    }
-                    if($access){
-                        $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver->id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
-                        $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver->id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
-                        $routes = array();
-                        foreach ($routes_priority1 as $key => $value) {
-                            array_push($routes,$value);
-                        }
-                        foreach ($routes_priority0 as $key => $value) {
-                            array_push($routes,$value);
-                        }
-                        usort($routes, function($a, $b){
-                            return ($a->priority - $b->priority);
-                        });
-                        $distance=0;
-                        $duration=0;
-                        if(count($routes)>0) {
-                            if($driver->transport=='2') {
-                                $transport = "bicycle";
-                            } else {
-                                $transport = "car";
-                            }
-                            $loc_arr = [];
-                            $orders_arr = [];
-                            foreach ($routes as $key => $value) {
-                                $location = null;
-                                if($value->type=='pharmacy') {
-                                    $location = DB::table('pharmacys')->where('id',$value->type_id)->value('location');
-                                }
-                                if($value->type=='patient') {
-                                    $location = DB::table('users')->where('id',$value->type_id)->value('location');
-                                }
-                                if($value->type=='office') {
-                                    $location = DB::table('offices')->where('id',$value->type_id)->value('location');
-                                }
-                                if(empty($location)) {
-                                    continue;
-                                }
-                                array_push($loc_arr,HereMaps::roundLocation(str_replace(' ','',$location)));
-                                array_push($orders_arr,["order_id"=>$value->order_id,"type"=>$value->type,"type_id"=>$value->type_id,"priority"=>$value->priority]);
-                            }
-                            $access_token = HereMaps::accessToken();
-                            $options = array(
-                                'http' => array(
-                                    'method'  => 'GET',
-                                    'ignore_errors' => true,
-                                    'header' => 'Authorization: Bearer '.$access_token
-                                )
-                            );
-                            $context  = stream_context_create($options);
-                            $legs_arr = [];
-                            for($i=0; $i < count($loc_arr); $i+=50) {
-                                $location_arr = array_slice($loc_arr,$i,50);
-                                $last_loc = $location_arr[count($location_arr)-1];
-                                unset($location_arr[count($location_arr)-1]);
-                                if(empty($location_arr)) {
-                                    $directions = json_decode(file_get_contents("https://router.hereapi.com/v8/routes?transportMode=$transport&origin=$driver_loc&destination=$last_loc&return=summary",false,$context));
-                                } else {
-                                    $directions = json_decode(file_get_contents("https://router.hereapi.com/v8/routes?transportMode=$transport&origin=$driver_loc&destination=$last_loc&return=summary&via=".implode('&via=',$location_arr),false,$context));
-                                }
-                                if(!empty($directions->routes)) {
-                                    foreach($directions->routes[0]->sections as $key => $legs) {
-                                        array_push($legs_arr,$legs);
-                                    }
-                                }
-                            }
-                            if(!empty($legs_arr)) {
-                                foreach($legs_arr as $key => $legs) {
-                                    $distance=$distance+$legs->summary->length;
-                                    $duration=$duration+$legs->summary->duration+240;
-                                    if(isset($orders_arr[$key])) {
-                                        DB::table('routes_priority')->where('driver_id', $driver->id)->where('type',$orders_arr[$key]["type"])->where('type_id',$orders_arr[$key]["type_id"])->where('priority',$orders_arr[$key]["priority"])->update(["eta"=>ceil($duration / 60)]);
-                                        if($orders_arr[$key]["type"]=='patient') {
-                                            DB::table('orders')->whereIn('id',explode(",",$orders_arr[$key]["order_id"]))->update(["eta"=>ceil($duration / 60)]);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        $min = ceil($duration / 60);
-                        $distance=round($distance*0.000621371192,1);
-                        if(!empty($eta)) {
-                            DB::table('drivers_eta')->where('driver_id',$driver->id)->update(["distance"=>$distance,"eta"=>$min,"last_location"=>$driver_loc]);
-                        } else {
-                            DB::table('drivers_eta')->insert(["driver_id"=>$driver->id,"distance"=>$distance,"eta"=>$min,"last_location"=>$driver_loc]);
-                        }
-                    }
+                    app(RecalculateDriverEta::class)->handle($driver->id);
                 } catch (\Throwable) {
                     //throw $th;
                 }
