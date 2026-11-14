@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesAuthenticationSchema;
-use Tests\Support\FakeHereRouting;
+use Tests\Support\FakeHttpsStream;
 use Tests\TestCase;
 
 /**
@@ -78,13 +78,13 @@ class NotifyNextPatientTest extends TestCase
             'fcm.googleapis.com/*' => Http::response(['name' => 'projects/quikmedix/messages/1']),
         ]);
         Redis::shouldReceive('get')->with('here_access_token')->andReturn('here-token');
-        FakeHereRouting::install();
-        FakeHereRouting::$legDuration = 1500;
+        FakeHttpsStream::install();
+        FakeHttpsStream::$legDuration = 1500;
     }
 
     protected function tearDown(): void
     {
-        FakeHereRouting::uninstall();
+        FakeHttpsStream::uninstall();
         parent::tearDown();
     }
 
@@ -117,11 +117,11 @@ class NotifyNextPatientTest extends TestCase
     {
         $this->assertTrue($controller::next_patient_push($this->driver->id, $this->nextStop()));
 
-        $this->assertCount(1, FakeHereRouting::$requests);
-        $this->assertSame('Authorization: Bearer here-token', FakeHereRouting::$requests[0]['header']);
+        $this->assertCount(1, FakeHttpsStream::$requests);
+        $this->assertSame('Authorization: Bearer here-token', FakeHttpsStream::$requests[0]['header']);
         $this->assertSame(
             ['via' => [], 'transportMode' => 'car', 'origin' => '40.70,-74.00', 'destination' => '40.71,-74.01', 'return' => 'summary'],
-            FakeHereRouting::query(0),
+            FakeHttpsStream::query(0),
         );
         $this->assertSame(
             ["patient-device: Your delivery is next. \nPlease track your order #{$this->orderId} via our app. ETA: 0 hours 25 minutes \nThank you for using our service."],
@@ -135,11 +135,11 @@ class NotifyNextPatientTest extends TestCase
     public function test_long_trips_are_reported_in_hours_and_minutes_by_bicycle_for_a_bicycle_driver(string $controller): void
     {
         User::whereKey($this->driver->id)->update(['transport' => '2']);
-        FakeHereRouting::$legDuration = 4500;
+        FakeHttpsStream::$legDuration = 4500;
 
         $this->assertTrue($controller::next_patient_push($this->driver->id, $this->nextStop()));
 
-        $this->assertSame('bicycle', FakeHereRouting::query(0)['transportMode']);
+        $this->assertSame('bicycle', FakeHttpsStream::query(0)['transportMode']);
         $this->assertStringContainsString('ETA: 1 hours 15 minutes', $this->pushes()[0]);
         $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 75]);
     }
@@ -164,7 +164,7 @@ class NotifyNextPatientTest extends TestCase
 
         $this->assertTrue($controller::next_patient_push($this->driver->id, $this->nextStop()));
 
-        $this->assertSame($destination, FakeHereRouting::query(0)['destination']);
+        $this->assertSame($destination, FakeHttpsStream::query(0)['destination']);
     }
 
     #[DataProvider('entryPoints')]
@@ -194,7 +194,7 @@ class NotifyNextPatientTest extends TestCase
         DB::table('locations')->delete();
         $this->assertFalse($controller::next_patient_push($this->driver->id, $this->nextStop()));
 
-        $this->assertSame([], FakeHereRouting::$requests);
+        $this->assertSame([], FakeHttpsStream::$requests);
         $this->assertSame([], $this->pushes());
         $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => null]);
     }
@@ -202,7 +202,7 @@ class NotifyNextPatientTest extends TestCase
     #[DataProvider('entryPoints')]
     public function test_patient_is_still_notified_when_no_route_is_found(string $controller): void
     {
-        FakeHereRouting::$withoutRoutes = true;
+        FakeHttpsStream::$withoutRoutes = true;
 
         $this->assertTrue($controller::next_patient_push($this->driver->id, $this->nextStop()));
 

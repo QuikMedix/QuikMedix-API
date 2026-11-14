@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Gate;
 use Twilio\Rest\Client;
 use App\User;
 use App\Notifications;
-use App\Support\HereMaps;
 use App\Support\PageLinks;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

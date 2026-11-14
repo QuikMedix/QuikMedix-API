@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Actions\LogUserChanges;
 use App\Actions\NotifyNextPatient;
 use App\Actions\RequestDispatchApproval;
 use App\Notifications;
-use App\Support\HereMaps;
 use App\Support\OrderStatus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -150,7 +150,7 @@ class LexaAdminApi extends Controller
             if($request->input('payment_card')!='') {
                 $user->payment_card = $request->input('payment_card');
             }
-            self::action_log_user_check($request,$address,$user_id);
+            app(LogUserChanges::class)->handleSubmitted($request, $address, $user_id);
             $user->save();
             return response()->json([
                 'message' => 'Profile successfully updated'
@@ -163,42 +163,6 @@ class LexaAdminApi extends Controller
         }
     }
 
-    /**
-     * @param string|null $address
-     * @param int|string $user_id
-     */
-    private static function action_log_user_check(Request $request,$address,$user_id) {
-        $user = DB::table('users')->where('id', $user_id)->first();
-        if($request->input('name')!=$user->name) {
-            DB::table('action_log')->insert(['type'=>'change name','comment'=>'from '.$user->name.' to '.$request->input('name'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('last_name')!=$user->last_name) {
-            DB::table('action_log')->insert(['type'=>'change last_name','comment'=>'from '.$user->last_name.' to '.$request->input('last_name'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('email')!=$user->email) {
-            DB::table('action_log')->insert(['type'=>'change email','comment'=>'from '.$user->email.' to '.$request->input('email'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('phone')!=$user->phone) {
-            DB::table('action_log')->insert(['type'=>'change phone','comment'=>'from '.$user->phone.' to '.$request->input('phone'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if(!empty($address) && $address!=$user->address) {
-            DB::table('action_log')->insert(['type'=>'change address','comment'=>'from '.$user->address.' to '.$request->input('address'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('zip')!=$user->zip) {
-            DB::table('action_log')->insert(['type'=>'change zip','comment'=>'from '.$user->zip.' to '.$request->input('zip'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if($request->input('apartment')!=$user->apartment) {
-            DB::table('action_log')->insert(['type'=>'change apartment','comment'=>'from '.$user->apartment.' to '.$request->input('apartment'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if(!empty($request->input('car_info')) && $request->input('car_info')!=$user->car_info) {
-            DB::table('action_log')->insert(['type'=>'change car_info','comment'=>'from '.$user->car_info.' to '.$request->input('car_info'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        if(!empty($request->input('pharmacy_id')) && $request->input('pharmacy_id')!=$user->pharmacy_id) {
-            DB::table('action_log')->insert(['type'=>'change pharmacy_id','comment'=>'from '.$user->pharmacy_id.' to '.$request->input('pharmacy_id'),'user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        }
-        return true;
-    }
-    
     public static function patient_home() {
         if(Auth::user()->role == 'user') {
             $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();

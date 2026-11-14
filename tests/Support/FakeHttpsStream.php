@@ -3,10 +3,11 @@
 namespace Tests\Support;
 
 /**
- * Stands in for https:// while a test runs, so the ETA code's file_get_contents() routing
- * requests are recorded and answered locally instead of reaching HERE.
+ * Stands in for https:// while a test runs, so legacy file_get_contents() calls are recorded and
+ * answered locally instead of reaching the network. Unless told otherwise it answers like the
+ * HERE routing API, with one leg per stop.
  */
-class FakeHereRouting
+class FakeHttpsStream
 {
     /** @var list<array{url: string, header: string|null}> */
     public static array $requests = [];
@@ -22,6 +23,9 @@ class FakeHereRouting
     /** HERE answers without any route, as it does for stops it cannot connect. */
     public static bool $withoutRoutes = false;
 
+    /** @var array<string, array<mixed>> JSON answers for URLs containing the key, set with respondWith() */
+    private static array $answers = [];
+
     /** @var resource|null */
     public $context;
 
@@ -36,6 +40,7 @@ class FakeHereRouting
         self::$legDuration = 360;
         self::$unreachableOrigin = null;
         self::$withoutRoutes = false;
+        self::$answers = [];
         stream_wrapper_unregister('https');
         stream_wrapper_register('https', self::class, STREAM_IS_URL);
     }
@@ -43,6 +48,16 @@ class FakeHereRouting
     public static function uninstall(): void
     {
         stream_wrapper_restore('https');
+    }
+
+    /**
+     * Answers requests whose URL contains $urlPart with this JSON instead of a HERE route.
+     *
+     * @param array<mixed> $json
+     */
+    public static function respondWith(string $urlPart, array $json): void
+    {
+        self::$answers[$urlPart] = $json;
     }
 
     /**
@@ -71,6 +86,14 @@ class FakeHereRouting
         self::$requests[] = ['url' => $path, 'header' => $options['http']['header'] ?? null];
         if (self::$unreachableOrigin !== null && str_contains($path, '&origin='.self::$unreachableOrigin.'&')) {
             return false;
+        }
+
+        foreach (self::$answers as $urlPart => $json) {
+            if (str_contains($path, $urlPart)) {
+                $this->body = json_encode($json);
+
+                return true;
+            }
         }
 
         // HERE answers with one section per leg: origin to the first stop, then stop to stop.
