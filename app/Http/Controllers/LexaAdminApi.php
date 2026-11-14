@@ -1133,42 +1133,6 @@ class LexaAdminApi extends Controller
         }
     }
 
-    public static function locationHandler(Request $request) {
-        if(Auth::user()->hasAnyRole('admin', 'driver')) {
-            $location = $request->input('location');
-            if(empty($location)) {
-                return response()->json([
-                    'message' => 'Something is wrong with this field!',
-                    'errors' => 'Bad Request'
-                ], 400);
-            }
-            DB::table('locations')->insert(['user_id'=>Auth::user()->id,'location'=>$location]);
-            return response()->json([
-                'message' => 'Location was added'
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        }
-    }
-
-    public static function driverQr() {
-        if(Auth::user()->role == 'driver') {
-            $token=bin2hex(random_bytes(24));
-            DB::table('tokens_driver')->insert(['user_id'=>Auth::user()->id,'token'=>$token]);
-            return response()->json([
-                'qr-code' => "https://quickchart.io/qr?text=$token"
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        }
-    }
-
     public static function updateDevice(Request $request) {
         $device_token = $request->input('device_token');
         if(empty($device_token)) {
@@ -1198,26 +1162,6 @@ class LexaAdminApi extends Controller
         }
         return response()->json([
             'message' => 'Device Token was updated'
-        ], 200);
-    }
-
-    public static function driverStatus() {
-        return response()->json([
-            'work_now' => Auth::user()->work_now
-        ], 200);
-    }
-
-    public static function driverStatusStart() {
-        DB::table('users')->where('id',Auth::user()->id)->update(['work_now'=>1]);
-        return response()->json([
-            'message' => 'Driver Status was updated'
-        ], 200);
-    }
-
-    public static function driverStatusFinish() {
-        DB::table('users')->where('id',Auth::user()->id)->update(['work_now'=>0]);
-        return response()->json([
-            'message' => 'Driver Status was updated'
         ], 200);
     }
 
@@ -1590,20 +1534,6 @@ class LexaAdminApi extends Controller
         ], 200);
     }
 
-    public static function get_payouts_driver() {
-        if(Auth::user()->hasAnyRole('admin', 'driver')) {
-            $amount = round(DB::table('payouts_driver')->where('driver_id', Auth::user()->id)->where('withdraw',0)->sum('amount'),1);
-            return response()->json([
-                'amount' => $amount
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        }
-    }
-
     /**
      * @param int|string $order_id
      */
@@ -1814,103 +1744,6 @@ class LexaAdminApi extends Controller
                 'message' => 'Family member not found',
                 'errors' => 'Not Found'
             ], 404);
-        }
-    }
-
-    /**
-     * @param int|string $order_id
-     */
-    public static function customer_notesAddHandler($order_id, Request $request) {
-        $order = DB::table('orders')->where('orders.id',$order_id)->first();
-        if((Auth::user()->role == 'user' && Auth::user()->id==$order->user_id)) {
-            $validator = Validator::make($request->all(), [
-                'note' => 'required',
-            ]);
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => 'Something is wrong with this field!',
-                    'errors' => 'Bad Request'
-                ], 400);
-            }
-            DB::table('notes')->insert(["order_id"=>$order_id,"user_id"=>Auth::user()->id,"type"=>"2",'note'=>addslashes($request->input('note'))]);
-            return response()->json([
-                'message' => 'OK'
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        }   
-    }
-
-    /**
-     * @param int|string $order_id
-     */
-    public static function ratingHandler($order_id, Request $request) {
-        $order = DB::table('orders')->where('orders.id',$order_id)->first();
-        if((Auth::user()->role == 'user' && Auth::user()->id==$order->user_id) && $order->statuse_id==4 && empty($order->rating)) {
-            $validator = Validator::make($request->all(), [
-                'rating' => 'required',
-            ]);
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => 'Something is wrong with this field!',
-                    'errors' => 'Bad Request'
-                ], 400);
-            }
-            $rating = intval($request->input('rating'));
-            if($rating<0) {
-                $rating = 1;
-            }
-            if($rating>5) {
-                $rating = 5;
-            }
-            DB::table('orders')->where('id',$order_id)->update(['rating'=>$rating]);
-            return response()->json([
-                'message' => 'OK'
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
-        }   
-    }
-
-    public static function ordersDelivery_times() {
-        $delivery_times = DB::table('delivery_times')->get();
-        return response()->json([
-            'delivery_times' => $delivery_times
-        ], 200);
-    }
-
-    public static function ordersDelivery_timesHandler(Request $request) {
-        if(Auth::user()->hasAnyRole('admin', 'user')) {
-            if(!empty($request->input('order_id')) && !empty($request->input('time_id'))) {
-                $order = DB::table('orders')->where('id',$request->input('order_id'))->first();
-                if(!empty($order) && ($order->user_id==Auth::user()->id)) {
-                    DB::table('orders')->where('id',$request->input('order_id'))->update(["delivery_time_id"=>intval($request->input('time_id'))]);
-                    return response()->json([
-                        'message' => 'OK'
-                    ], 200);
-                } else {
-                    return response()->json([
-                        'message' => 'Order not found',
-                        'errors' => 'Not Found'
-                    ], 404);
-                }
-            } else {
-                return response()->json([
-                    'message' => 'Fields is not be empty.',
-                    'errors' => 'Forbidden'
-                ], 403);
-            }
-        } else {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
         }
     }
 
