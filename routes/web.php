@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\LexaAdmin;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\QuickbookController;
@@ -66,7 +65,6 @@ Route::get('2fa/reset', [TwoFAController::class, 'resend'])->name('2fa.resend');
 // when render first time project redirect
 Route::get('/home', [DashboardController::class, 'home']);
 
-Route::get('/keep-live', [LexaAdmin::class, 'live']);
 
 // when render first time project redirect
 Route::get('/', [DashboardController::class, 'root'])->name('home');
@@ -316,7 +314,6 @@ Route::get('/ads', [PageController::class, 'ads']);
 
 Route::get('/payroll', [PageController::class, 'payroll']);
 
-Route::get('test', [LexaAdmin::class, 'test']);
 
 
 
@@ -342,7 +339,6 @@ Route::post('/faq', [FaqController::class, 'destroy']);
 Route::get('/faq/add', [FaqController::class, 'create']);
 Route::post('/faq/add', [FaqController::class, 'store']);
 
-Route::get('/drivers', [LexaAdmin::class, 'drivers']);
 
 Route::post('/ready_call', [DashboardController::class, 'ready_call']);
 
