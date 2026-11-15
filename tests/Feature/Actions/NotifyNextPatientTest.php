@@ -3,7 +3,6 @@
 namespace Tests\Feature\Actions;
 
 use App\Actions\NotifyNextPatient;
-use App\Http\Controllers\LexaAdminApi;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request as HttpRequest;
@@ -89,7 +88,7 @@ class NotifyNextPatientTest extends TestCase
      */
     public static function entryPoints(): array
     {
-        return ['dispatch pages' => [DispatchPagesEntry::class], 'driver app' => [LexaAdminApi::class]];
+        return ['dispatch and driver pages' => [DispatchPagesEntry::class]];
     }
 
     private function nextStop(): object
@@ -144,8 +143,6 @@ class NotifyNextPatientTest extends TestCase
     public static function primaryAddresses(): array
     {
         return [
-            'driver app, second address' => [LexaAdminApi::class, 2, '40.82,-74.02'],
-            'driver app, third address' => [LexaAdminApi::class, 3, '40.93,-74.03'],
             'dispatch pages, second address' => [DispatchPagesEntry::class, 2, '40.82,-74.02'],
             'dispatch pages, third address' => [DispatchPagesEntry::class, 3, '40.93,-74.03'],
         ];
@@ -210,7 +207,7 @@ class NotifyNextPatientTest extends TestCase
 }
 
 /**
- * How the dispatch and driver pages send the notification: straight through the action.
+ * How the dispatch pages and the driver app send the notification: straight through the action.
  */
 class DispatchPagesEntry
 {
