@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Actions\GeocodeAddress;
 use App\Http\Controllers\Controller;
-use App\Providers\RouteServiceProvider;
+use App\Providers\AppServiceProvider;
 use App\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
@@ -31,7 +31,7 @@ class RegisterController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = RouteServiceProvider::HOME;
+    protected $redirectTo = AppServiceProvider::HOME;
 
     /**
      * Create a new controller instance.
