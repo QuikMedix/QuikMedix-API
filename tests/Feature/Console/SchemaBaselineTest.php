@@ -200,6 +200,13 @@ class SchemaBaselineTest extends TestCase
             'explicit null, MariaDB' => [$column('varchar(20)', ['nullable' => true, 'default' => 'NULL']), ['c', 'string', [20], 'nullable']],
             'money' => [$column('decimal(8,2)', ['default' => '0.00']), ['c', 'decimal', [8, 2], '', '0.00']],
             'double' => [$column('double', ['nullable' => true]), ['c', 'double', [], 'nullable']],
+            // Blueprint::float() makes a double unless told the precision of a single-precision FLOAT.
+            'float' => [$column('float', ['default' => '1']), ['c', 'float', [24], '', '1']],
+            'float with precision' => [$column('float(53)'), ['c', 'float', [53], '']],
+            // The delivery areas are stored as geometry and searched with ST_CONTAINS.
+            'geometry' => [$column('geometry'), ['c', 'geometry', [], '']],
+            'polygon' => [$column('polygon', ['nullable' => true]), ['c', 'geometry', ['polygon'], 'nullable']],
+            'point' => [$column('point'), ['c', 'geometry', ['point'], '']],
             'long text' => [$column('longtext', ['nullable' => true]), ['c', 'longText', [], 'nullable']],
             'timestamp now, MySQL' => [$column('timestamp', ['default' => 'CURRENT_TIMESTAMP']), ['c', 'timestamp', [], 'useCurrent']],
             'timestamp now, MariaDB' => [$column('timestamp', ['default' => 'current_timestamp()']), ['c', 'timestamp', [], 'useCurrent']],
@@ -222,9 +229,9 @@ class SchemaBaselineTest extends TestCase
 
     public function test_what_cannot_be_reproduced_is_reported(): void
     {
-        [$definition, $warning] = SchemaBaseline::column(['name' => 'area', 'type_name' => 'polygon', 'type' => 'polygon', 'nullable' => true, 'default' => null, 'auto_increment' => false, 'generation' => null]);
-        $this->assertSame(['area', 'text', [], 'nullable'], $definition);
-        $this->assertSame('type polygon is not known and is written as text', $warning);
+        [$definition, $warning] = SchemaBaseline::column(['name' => 'flags', 'type_name' => 'bit', 'type' => 'bit(8)', 'nullable' => true, 'default' => null, 'auto_increment' => false, 'generation' => null]);
+        $this->assertSame(['flags', 'text', [], 'nullable'], $definition);
+        $this->assertSame('type bit(8) is not known and is written as text', $warning);
 
         Schema::create('notes', function (Blueprint $table): void {
             $table->increments('id');
@@ -236,11 +243,69 @@ class SchemaBaselineTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_index_names_shared_by_several_tables_do_not_collide_on_sqlite(): void
+    {
+        // MySQL names indexes per table, so hand-made tables often each have an index called "id" or "user_id".
+        $table = fn (string $unique): array => [
+            'columns' => [['id', 'integer', [], 'autoIncrement'], ['user_id', 'integer', [], ''], ['code', 'string', [20], '']],
+            'indexes' => [['index', ['id'], 'id'], ['index', ['user_id'], 'user_id'], ['unique', ['code'], $unique]],
+            'foreign' => [],
+        ];
+        File::ensureDirectoryExists(base_path(self::FOLDER));
+        File::put($file = base_path(self::FOLDER).'/2026_01_01_000000_create_legacy_schema.php', SchemaBaseline::render(
+            ['locations' => $table('code'), 'notes' => $table('notes_code_unique')], 'a test',
+        ));
+
+        (require $file)->apply(Schema::connection('fresh'));
+
+        $names = fn (string $table): array => array_values(array_diff(array_column(Schema::connection('fresh')->getIndexes($table), 'name'), ['primary']));
+        $this->assertEqualsCanonicalizing(['locations_id', 'locations_user_id', 'locations_code'], $names('locations'));
+        // A name that already starts with its table is kept.
+        $this->assertEqualsCanonicalizing(['notes_id', 'notes_user_id', 'notes_code_unique'], $names('notes'));
+    }
+
+    public function test_geometry_columns_are_rebuilt_as_geometry(): void
+    {
+        Schema::create('area', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->float('tariff')->default(1);
+            $table->geometry('polygon');
+        });
+
+        $this->artisan('quikmedix:schema-baseline', ['--path' => self::FOLDER])
+            ->doesntExpectOutputToContain('is not known')->assertExitCode(0);
+
+        $source = File::get($this->writtenMigration());
+        $this->assertStringContainsString("['polygon', 'geometry', [], '']", $source);
+        $this->assertStringContainsString("['tariff', 'float', [24], '', '1']", $source);
+        (require $this->writtenMigration())->apply(Schema::connection('fresh'));
+        $this->assertSame($this->shape(Schema::connection(null)), $this->shape(Schema::connection('fresh')));
+    }
+
+    public function test_tables_of_other_applications_can_be_left_out(): void
+    {
+        $this->legacyDatabase();
+        foreach (['ai_agent_settings', 'ai_agent_messages', 'stripe_webhook_events'] as $foreign) {
+            Schema::create($foreign, function (Blueprint $table): void {
+                $table->increments('id');
+            });
+        }
+
+        $this->artisan('quikmedix:schema-baseline', ['--path' => self::FOLDER, '--except' => 'ai_agent_*, stripe_webhook_events'])
+            ->expectsOutputToContain('Wrote 3 tables and 14 columns to ')->assertExitCode(0);
+
+        $source = File::get($this->writtenMigration());
+        $this->assertStringNotContainsString("'ai_agent_settings' => [", $source);
+        $this->assertStringNotContainsString("'stripe_webhook_events' => [", $source);
+        $this->assertStringContainsString("'orders' => [", $source);
+        $this->assertStringContainsString('leaving out ai_agent_*, stripe_webhook_events, when', $source);
+    }
+
     public function test_mysql_only_features_do_not_stop_the_migration_on_sqlite(): void
     {
         $tables = ['articles' => [
-            'columns' => [['id', 'integer', [], 'unsigned autoIncrement'], ['kind', 'enum', [['news', 'faq']], '', 'news'], ['body', 'longText', [], 'nullable']],
-            'indexes' => [['fullText', ['body'], 'articles_body_fulltext'], ['index', ['kind'], 'articles_kind_index']],
+            'columns' => [['id', 'integer', [], 'unsigned autoIncrement'], ['kind', 'enum', [['news', 'faq']], '', 'news'], ['body', 'longText', [], 'nullable'], ['zone', 'geometry', ['polygon'], '']],
+            'indexes' => [['fullText', ['body'], 'articles_body_fulltext'], ['spatialIndex', ['zone'], 'articles_zone_spatialindex'], ['index', ['kind'], 'articles_kind_index']],
             'foreign' => [],
         ]];
         File::ensureDirectoryExists(base_path(self::FOLDER));
@@ -248,7 +313,7 @@ class SchemaBaselineTest extends TestCase
 
         (require $file)->apply(Schema::connection('fresh'));
 
-        $this->assertSame(['id', 'kind', 'body'], Schema::connection('fresh')->getColumnListing('articles'));
+        $this->assertSame(['id', 'kind', 'body', 'zone'], Schema::connection('fresh')->getColumnListing('articles'));
         $this->assertSame(['articles_kind_index'], array_values(array_filter(array_column(Schema::connection('fresh')->getIndexes('articles'), 'name'), fn (string $name): bool => $name !== 'primary')));
     }
 }

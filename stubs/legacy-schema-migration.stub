@@ -35,14 +35,19 @@ return new class extends Migration
 
         foreach (self::TABLES as $name => $definition) {
             if (! $schema->hasTable($name)) {
-                $schema->create($name, function (Blueprint $table) use ($definition, $sqlite): void {
+                $schema->create($name, function (Blueprint $table) use ($name, $definition, $sqlite): void {
                     foreach ($definition['columns'] as $column) {
                         $this->column($table, $column);
                     }
                     foreach ($definition['indexes'] as [$kind, $columns, $indexName]) {
-                        if ($kind !== 'fullText' || ! $sqlite) {
-                            $table->{$kind}($columns, $indexName);
+                        if ($sqlite && in_array($kind, ['fullText', 'spatialIndex'], true)) {
+                            continue;
                         }
+                        // MySQL index names belong to their table; SQLite needs them unique in the database.
+                        if ($sqlite && $indexName !== null && ! str_starts_with($indexName, $name.'_')) {
+                            $indexName = $name.'_'.$indexName;
+                        }
+                        $table->{$kind}($columns, $indexName);
                     }
                     foreach ($definition['foreign'] as [$columns, $on, $references, $onDelete, $onUpdate, $keyName]) {
                         $table->foreign($columns, $keyName)->references($references)->on($on)->onDelete($onDelete)->onUpdate($onUpdate);

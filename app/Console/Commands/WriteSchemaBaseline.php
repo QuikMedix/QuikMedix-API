@@ -19,6 +19,7 @@ class WriteSchemaBaseline extends Command
 
     protected $signature = 'quikmedix:schema-baseline
         {--path=database/migrations : Folder the migration is written to}
+        {--except= : Tables to leave out, comma separated; * stands for any characters}
         {--force : Replace a baseline migration that already exists}';
 
     protected $description = 'Write a migration that recreates the tables of the connected database when they are missing';
@@ -34,7 +35,8 @@ class WriteSchemaBaseline extends Command
         }
 
         $connection = DB::connection();
-        $baseline = SchemaBaseline::describe(Schema::connection($connection->getName()), [config('database.migrations.table', 'migrations')]);
+        $except = array_values(array_filter(array_map('trim', explode(',', (string) $this->option('except')))));
+        $baseline = SchemaBaseline::describe(Schema::connection($connection->getName()), [config('database.migrations.table', 'migrations'), ...$except]);
         if ($baseline['tables'] === []) {
             $this->error('The connected database has no tables, so there is nothing to describe.');
 
@@ -43,7 +45,8 @@ class WriteSchemaBaseline extends Command
 
         $file = $existing[0] ?? $folder.'/'.now()->format('Y_m_d_His').self::SUFFIX;
         File::ensureDirectoryExists($folder);
-        File::put($file, SchemaBaseline::render($baseline['tables'], 'the '.$connection->getDriverName().' database "'.$connection->getDatabaseName().'" on '.now()->toDateString()));
+        $source = 'the '.$connection->getDriverName().' database "'.$connection->getDatabaseName().'" on '.now()->toDateString();
+        File::put($file, SchemaBaseline::render($baseline['tables'], $source, $except));
 
         $columns = array_sum(array_map(fn (array $table): int => count($table['columns']), $baseline['tables']));
         $this->info('Wrote '.count($baseline['tables'])." tables and $columns columns to ".str_replace(base_path().'/', '', $file));

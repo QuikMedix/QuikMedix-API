@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Database\Schema\Builder;
+use Illuminate\Support\Str;
 
 /**
  * Describes the tables of a live database as data a migration can replay, so the tables that
@@ -24,14 +25,22 @@ class SchemaBaseline
         'date' => 'date', 'datetime' => 'dateTime', 'timestamp' => 'timestamp', 'time' => 'time', 'year' => 'year',
         'enum' => 'enum', 'set' => 'set', 'json' => 'json', 'boolean' => 'boolean',
         'tinyblob' => 'binary', 'blob' => 'binary', 'mediumblob' => 'binary', 'longblob' => 'binary', 'binary' => 'binary', 'varbinary' => 'binary',
+        'geometry' => 'geometry', 'point' => 'geometry', 'linestring' => 'geometry', 'polygon' => 'geometry', 'geometrycollection' => 'geometry',
+        'multipoint' => 'geometry', 'multilinestring' => 'geometry', 'multipolygon' => 'geometry',
     ];
+
+    /** A single-precision MySQL FLOAT; Blueprint::float() would otherwise make a double. */
+    private const SINGLE_PRECISION = 24;
 
     private const INTEGERS = ['tinyInteger', 'smallInteger', 'mediumInteger', 'integer', 'bigInteger', 'boolean'];
 
     private const UNINDEXABLE = ['tinyText', 'text', 'mediumText', 'longText', 'binary', 'json'];
 
+    /** Index types with their own Blueprint method; SQLite has neither, so the migration skips them there. */
+    private const SPECIAL_INDEXES = ['fulltext' => 'fullText', 'spatial' => 'spatialIndex'];
+
     /**
-     * @param  list<string>  $except  tables to leave out, such as the migrations table
+     * @param  list<string>  $except  tables to leave out, such as the migrations table; * stands for any characters
      * @return array{tables: array<string, array{columns: list<array<int, mixed>>, indexes: list<array<int, mixed>>, foreign: list<array<int, mixed>>}>, warnings: list<string>}
      */
     public static function describe(Builder $schema, array $except = []): array
@@ -40,7 +49,7 @@ class SchemaBaseline
         $warnings = [];
         $references = [];
         foreach ($schema->getTableListing(schemaQualified: false) as $name) {
-            if (in_array($name, $except, true) || str_starts_with($name, 'sqlite_')) {
+            if (Str::is($except, $name) || str_starts_with($name, 'sqlite_')) {
                 continue;
             }
 
@@ -65,14 +74,15 @@ class SchemaBaseline
                     continue; // an auto-increment column is created as the primary key
                 }
                 $unindexable = array_values(array_filter($index['columns'], fn (string $column): bool => in_array($types[$column] ?? null, self::UNINDEXABLE, true)));
-                if (($index['type'] ?? '') !== 'fulltext' && $unindexable !== []) {
+                $special = self::SPECIAL_INDEXES[strtolower((string) ($index['type'] ?? ''))] ?? null;
+                if ($special === null && $unindexable !== []) {
                     $warnings[] = "$name: index {$index['name']} is left out because it covers a text or binary column (".implode(', ', $unindexable).') and its prefix length is not known';
 
                     continue;
                 }
                 $kind = match (true) {
                     $index['primary'] => 'primary',
-                    ($index['type'] ?? '') === 'fulltext' => 'fullText',
+                    $special !== null => $special,
                     $index['unique'] => 'unique',
                     default => 'index',
                 };
@@ -115,10 +125,15 @@ class SchemaBaseline
         if (! empty($column['generation'])) {
             $warning = 'generated column is written as a plain column';
         }
+        if ($method === 'float' && count($parameters) > 1) {
+            $warning = "type {$column['type']} is written as a plain float";
+        }
 
         $arguments = match ($method) {
             'string', 'char' => isset($parameters[0]) ? [(int) $parameters[0]] : [],
             'decimal' => count($parameters) === 2 ? [(int) $parameters[0], (int) $parameters[1]] : [],
+            'float' => [count($parameters) === 1 ? (int) $parameters[0] : self::SINGLE_PRECISION],
+            'geometry' => $base === 'geometry' ? [] : [$base],
             'dateTime', 'timestamp', 'time' => isset($parameters[0]) && (int) $parameters[0] > 0 ? [(int) $parameters[0]] : [],
             'enum', 'set' => [self::quotedList((string) preg_replace('/^\s*\w+\s*\((.*)\)[^)]*$/s', '$1', (string) $column['type']))],
             default => [],
@@ -159,9 +174,13 @@ class SchemaBaseline
      * The migration file's source for these tables.
      *
      * @param  array<string, array{columns: list<array<int, mixed>>, indexes: list<array<int, mixed>>, foreign: list<array<int, mixed>>}>  $tables
+     * @param  list<string>  $except  the tables that were left out, named in the file's description
      */
-    public static function render(array $tables, string $source): string
+    public static function render(array $tables, string $source, array $except = []): string
     {
+        if ($except !== []) {
+            $source .= ', leaving out '.implode(', ', $except).',';
+        }
         $body = '';
         foreach ($tables as $name => $definition) {
             $body .= '        '.var_export($name, true)." => [\n";
