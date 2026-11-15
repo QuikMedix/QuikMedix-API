@@ -54,8 +54,9 @@ class Kernel extends ConsoleKernel
             foreach($drivers as $driver){
                 try {
                     app(RecalculateDriverEta::class)->handle($driver->id);
-                } catch (\Throwable) {
-                    //throw $th;
+                } catch (\Throwable $exception) {
+                    // The work around it continues, but the failure is no longer lost.
+                    report($exception);
                 }
             }
         })->everyFifteenMinutes();
@@ -82,8 +83,9 @@ class Kernel extends ConsoleKernel
                         DB::table('drivers_eta')->where('driver_id',$driver->id)->whereNotNull('eta')->where('eta','>','0')->update(['eta'=>DB::raw('eta - 1')]);
                         DB::table('routes_priority')->where('driver_id',$driver->id)->whereNotNull('eta')->where('eta','>','0')->update(['eta'=>DB::raw('eta - 1')]);
                     }
-                } catch (\Throwable) {
-                    //throw $th;
+                } catch (\Throwable $exception) {
+                    // The work around it continues, but the failure is no longer lost.
+                    report($exception);
                 }
             }
         })->everyMinute();
@@ -131,8 +133,9 @@ class Kernel extends ConsoleKernel
                         $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice_id)->pluck('order_id')->toArray();
                         DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $date_from)->whereDate('finish', '<=', $date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                     }
-                } catch (\Throwable) {
-                    //throw $th;
+                } catch (\Throwable $exception) {
+                    // The work around it continues, but the failure is no longer lost.
+                    report($exception);
                 }
             }
         })->weeklyOn(1, '0:00');

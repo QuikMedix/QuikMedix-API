@@ -120,7 +120,7 @@ class LexaAdminApi extends Controller
                 } else {
                     $address = $request->input('address');
                 }
-                $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                 $address = $data->results[0]->formatted_address;
                 $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                 $user->address = $address;
@@ -1676,7 +1676,7 @@ class LexaAdminApi extends Controller
                 'errors' => 'Bad Request'
             ], 400);
         }
-        $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('family_address'))."&key=".config('app.googlemaps_apikey')));
+        $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('family_address'));
         if(empty($data->results)) {
             return response()->json([
                 'message' => 'Something is wrong with this field!',

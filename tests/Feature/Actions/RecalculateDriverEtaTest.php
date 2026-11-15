@@ -6,11 +6,13 @@ use App\Http\Controllers\LexaAdmin;
 use App\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\CreatesAuthenticationSchema;
-use Tests\Support\FakeHttpsStream;
+use Tests\Support\FakeMapServices;
 use Tests\TestCase;
 
 /**
@@ -76,13 +78,7 @@ class RecalculateDriverEtaTest extends TestCase
         });
 
         Redis::shouldReceive('get')->with('here_access_token')->andReturn('here-token');
-        FakeHttpsStream::install();
-    }
-
-    protected function tearDown(): void
-    {
-        FakeHttpsStream::uninstall();
-        parent::tearDown();
+        FakeMapServices::install();
     }
 
     /**
@@ -125,16 +121,16 @@ class RecalculateDriverEtaTest extends TestCase
 
         $distance = LexaAdmin::eta_calculate($driver->id);
 
-        $this->assertCount(1, FakeHttpsStream::$requests);
-        $this->assertStringStartsWith('https://router.hereapi.com/v8/routes?', FakeHttpsStream::$requests[0]['url']);
-        $this->assertSame('Authorization: Bearer here-token', FakeHttpsStream::$requests[0]['header']);
+        $this->assertCount(1, FakeMapServices::$requests);
+        $this->assertStringStartsWith('https://router.hereapi.com/v8/routes?', FakeMapServices::$requests[0]['url']);
+        $this->assertSame('Authorization: Bearer here-token', FakeMapServices::$requests[0]['header']);
         $this->assertSame([
             'via' => [self::PHARMACY, self::PATIENT],
             'transportMode' => 'car',
             'origin' => '40.7,-74',
             'destination' => self::OFFICE,
             'return' => 'summary',
-        ], FakeHttpsStream::query(0));
+        ], FakeMapServices::query(0));
 
         // Three legs of 1609 m and 6 minutes each, plus 4 minutes at every stop.
         $this->assertSame(3.0, $distance);
@@ -149,7 +145,7 @@ class RecalculateDriverEtaTest extends TestCase
 
         LexaAdmin::eta_calculate($driver->id);
 
-        $this->assertSame('bicycle', FakeHttpsStream::query(0)['transportMode']);
+        $this->assertSame('bicycle', FakeMapServices::query(0)['transportMode']);
     }
 
     public function test_nothing_is_recalculated_until_the_driver_moves_unless_forced(): void
@@ -158,17 +154,17 @@ class RecalculateDriverEtaTest extends TestCase
         DB::table('drivers_eta')->insert(['driver_id' => $driver->id, 'distance' => 9.9, 'eta' => 99, 'last_location' => '40.7,-74']);
 
         $this->assertFalse(LexaAdmin::eta_calculate($driver->id));
-        $this->assertSame([], FakeHttpsStream::$requests);
+        $this->assertSame([], FakeMapServices::$requests);
         $this->assertDatabaseHas('drivers_eta', ['driver_id' => $driver->id, 'eta' => 99]);
 
         $this->assertSame(3.0, LexaAdmin::eta_calculate($driver->id, true));
-        $this->assertCount(1, FakeHttpsStream::$requests);
+        $this->assertCount(1, FakeMapServices::$requests);
         $this->assertSame(1, DB::table('drivers_eta')->count());
         $this->assertDatabaseHas('drivers_eta', ['driver_id' => $driver->id, 'eta' => 30, 'distance' => 3.0]);
 
         DB::table('locations')->insert(['user_id' => $driver->id, 'location' => '40.75,-74.05']);
         $this->assertSame(3.0, LexaAdmin::eta_calculate($driver->id));
-        $this->assertSame('40.75,-74.05', FakeHttpsStream::query(1)['origin']);
+        $this->assertSame('40.75,-74.05', FakeMapServices::query(1)['origin']);
         $this->assertDatabaseHas('drivers_eta', ['driver_id' => $driver->id, 'last_location' => '40.75,-74.05']);
     }
 
@@ -179,7 +175,7 @@ class RecalculateDriverEtaTest extends TestCase
 
         LexaAdmin::eta_calculate($driver->id);
 
-        $this->assertSame([self::PATIENT], FakeHttpsStream::query(0)['via']);
+        $this->assertSame([self::PATIENT], FakeMapServices::query(0)['via']);
         $this->assertSame([null, null, 10, 10, 20], $this->stopEtas($driver));
         $this->assertDatabaseHas('drivers_eta', ['driver_id' => $driver->id, 'eta' => 20, 'distance' => 2.0]);
     }
@@ -191,17 +187,17 @@ class RecalculateDriverEtaTest extends TestCase
         $patient->forceFill(['primary_address' => 2, 'location2' => '40.82, -74.02', 'location3' => '40.93,-74.03'])->save();
 
         LexaAdmin::eta_calculate($driver->id);
-        $this->assertSame([self::PHARMACY, '40.82,-74.02'], FakeHttpsStream::query(0)['via']);
+        $this->assertSame([self::PHARMACY, '40.82,-74.02'], FakeMapServices::query(0)['via']);
 
         $patient->forceFill(['primary_address' => 3])->save();
         LexaAdmin::eta_calculate($driver->id, true);
-        $this->assertSame([self::PHARMACY, '40.93,-74.03'], FakeHttpsStream::query(1)['via']);
+        $this->assertSame([self::PHARMACY, '40.93,-74.03'], FakeMapServices::query(1)['via']);
 
         // A primary address without a location leaves the stop out, as any stop without a location is.
         $patient->forceFill(['location3' => null])->save();
         LexaAdmin::eta_calculate($driver->id, true);
-        $this->assertSame([self::PHARMACY], FakeHttpsStream::query(2)['via']);
-        $this->assertSame(self::OFFICE, FakeHttpsStream::query(2)['destination']);
+        $this->assertSame([self::PHARMACY], FakeMapServices::query(2)['via']);
+        $this->assertSame(self::OFFICE, FakeMapServices::query(2)['destination']);
     }
 
     /**
@@ -225,9 +221,9 @@ class RecalculateDriverEtaTest extends TestCase
 
         $distance = LexaAdmin::eta_calculate($driver->id);
 
-        $this->assertCount(2, FakeHttpsStream::$requests);
-        $first = FakeHttpsStream::query(0);
-        $second = FakeHttpsStream::query(1);
+        $this->assertCount(2, FakeMapServices::$requests);
+        $first = FakeMapServices::query(0);
+        $second = FakeMapServices::query(1);
         $this->assertSame(['40.7,-74', 49, '41.01,-74.5', '41.49,-74.5', '41.5,-74.5'], [$first['origin'], count($first['via']), $first['via'][0], $first['via'][48], $first['destination']]);
         // The second request starts where the first ended, not back at the driver.
         $this->assertSame(['41.5,-74.5', ['41.51,-74.5'], '41.52,-74.5'], [$second['origin'], $second['via'], $second['destination']]);
@@ -239,7 +235,7 @@ class RecalculateDriverEtaTest extends TestCase
     {
         $driver = $this->driverWithLongRoute();
         DB::table('routes_priority')->where('priority', '>', 50)->update(['eta' => 777]);
-        FakeHttpsStream::respondWith('origin=41.5,-74.5&', ['routes' => []]);
+        FakeMapServices::respondWith('origin=41.5,-74.5&', ['routes' => []]);
 
         $distance = LexaAdmin::eta_calculate($driver->id);
 
@@ -253,16 +249,16 @@ class RecalculateDriverEtaTest extends TestCase
         $driver = $this->driverWithRoute();
         DB::table('drivers_eta')->insert(['driver_id' => $driver->id, 'distance' => 4.2, 'eta' => 42, 'last_location' => '40.6,-74.6']);
         DB::table('routes_priority')->update(['eta' => 15]);
-        FakeHttpsStream::$withoutRoutes = true;
+        FakeMapServices::$withoutRoutes = true;
 
         $this->assertFalse(LexaAdmin::eta_calculate($driver->id));
 
         // The last good values stay, and because the location is not marked as calculated the next run tries again.
-        $this->assertCount(1, FakeHttpsStream::$requests);
+        $this->assertCount(1, FakeMapServices::$requests);
         $this->assertDatabaseHas('drivers_eta', ['driver_id' => $driver->id, 'distance' => 4.2, 'eta' => 42, 'last_location' => '40.6,-74.6']);
         $this->assertSame([15, 15, 15, 15, 15], $this->stopEtas($driver));
         $this->assertFalse(LexaAdmin::eta_calculate($driver->id));
-        $this->assertCount(2, FakeHttpsStream::$requests);
+        $this->assertCount(2, FakeMapServices::$requests);
     }
 
     public function test_unknown_driver_or_driver_without_a_location_or_route(): void
@@ -277,7 +273,7 @@ class RecalculateDriverEtaTest extends TestCase
         // A located driver with no stops is recorded with a zero ETA and no routing request.
         DB::table('locations')->insert(['user_id' => $driver->id, 'location' => '40.70,-74.00']);
         $this->assertSame(0.0, LexaAdmin::eta_calculate($driver->id));
-        $this->assertSame([], FakeHttpsStream::$requests);
+        $this->assertSame([], FakeMapServices::$requests);
         $this->assertDatabaseHas('drivers_eta', ['driver_id' => $driver->id, 'eta' => 0, 'last_location' => '40.7,-74']);
     }
 
@@ -309,8 +305,8 @@ class RecalculateDriverEtaTest extends TestCase
 
         $this->runScheduledEtaTask();
 
-        $this->assertCount(2, FakeHttpsStream::$requests);
-        $this->assertSame(['bicycle', 'car'], [FakeHttpsStream::query(0)['transportMode'], FakeHttpsStream::query(1)['transportMode']]);
+        $this->assertCount(2, FakeMapServices::$requests);
+        $this->assertSame(['bicycle', 'car'], [FakeMapServices::query(0)['transportMode'], FakeMapServices::query(1)['transportMode']]);
         $this->assertSame([10, 10, 20, 20, 30], $this->stopEtas($cyclist));
         $this->assertSame([10, 10, 20, 20, 30], $this->stopEtas($motorist));
         $this->assertSame([null, null, null, null, null], $this->stopEtas($offShift));
@@ -324,11 +320,15 @@ class RecalculateDriverEtaTest extends TestCase
         $working = $this->driverWithRoute('2');
         DB::table('locations')->where('user_id', $unlocated->id)->delete();
         DB::table('locations')->insert(['user_id' => $unreachable->id, 'location' => '41.00,-75.00']);
-        FakeHttpsStream::$unreachableOrigin = '41,-75';
+        FakeMapServices::$unreachableOrigin = '41,-75';
+        Exceptions::fake();
 
         $this->runScheduledEtaTask();
 
-        $this->assertSame(['41,-75', '40.7,-74'], [FakeHttpsStream::query(0)['origin'], FakeHttpsStream::query(1)['origin']]);
+        // The failed driver is skipped, and the failure is reported instead of discarded.
+        Exceptions::assertReported(ConnectionException::class);
+
+        $this->assertSame(['41,-75', '40.7,-74'], [FakeMapServices::query(0)['origin'], FakeMapServices::query(1)['origin']]);
         $this->assertSame([10, 10, 20, 20, 30], $this->stopEtas($working));
         $this->assertSame([null, null, null, null, null], $this->stopEtas($unreachable));
         $this->assertSame([null, null, null, null, null], $this->stopEtas($unlocated));

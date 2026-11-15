@@ -8,12 +8,29 @@ use Illuminate\Validation\ValidationException;
 
 class GeocodeAddress
 {
+    private const URL = 'https://maps.googleapis.com/maps/api/geocode/json';
+
     /**
      * Resolves an address to "lat,lng", reporting failures as a validation error on $field.
      */
     public function handle(string $address, string $field = 'address'): string
     {
         return $this->lookup($address, $field)['location'];
+    }
+
+    /**
+     * Google's answer as it is, for the older pages that read results[0] themselves. When Google
+     * cannot be reached or answers with something unreadable, the answer has no results.
+     */
+    public function response(?string $address): object
+    {
+        try {
+            $answer = json_decode(Http::timeout(10)->get(self::URL, ['address' => $address, 'key' => config('app.googlemaps_apikey')])->body());
+        } catch (ConnectionException) {
+            $answer = null;
+        }
+
+        return is_object($answer) ? $answer : (object) ['status' => 'UNAVAILABLE', 'results' => []];
     }
 
     /**
@@ -34,7 +51,7 @@ class GeocodeAddress
         }
 
         try {
-            $response = Http::timeout(10)->get('https://maps.googleapis.com/maps/api/geocode/json', [
+            $response = Http::timeout(10)->get(self::URL, [
                 'address' => $address,
                 'key' => config('app.googlemaps_apikey'),
             ]);

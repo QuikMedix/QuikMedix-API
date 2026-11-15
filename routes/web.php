@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\RoutePlanningController;
+use App\Http\Controllers\DispatchingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FacilityOrderController;
 use App\Http\Controllers\OrderPrintController;
@@ -40,7 +42,6 @@ Route::post('2fa', [TwoFAController::class, 'store'])->name('2fa.post');
 Route::get('2fa/reset', [TwoFAController::class, 'resend'])->name('2fa.resend');
 
 // Render perticular view file by foldername and filename and all passed in only one controller at a time
-//Route::get('{folder}/{file}', [LexaAdmin::class, 'index']);
 
 // when render first time project redirect
 Route::get('/home', [LexaAdmin::class, 'home']);
@@ -120,22 +121,22 @@ Route::get('/patients/{pharmacy_id}/removed', [PatientController::class, 'remove
 Route::get('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'edit']);
 Route::post('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'update']);
 
-Route::get('/routes-list', [LexaAdmin::class, 'routes']);
+Route::get('/routes-list', [RoutePlanningController::class, 'orders']);
 
-Route::get('/routes-drivers', [LexaAdmin::class, 'routesDrivers']);
+Route::get('/routes-drivers', [RoutePlanningController::class, 'drivers']);
 
-Route::get('/routes-pharmacys', [LexaAdmin::class, 'routesPharmacys']);
+Route::get('/routes-pharmacys', [RoutePlanningController::class, 'pharmacies']);
 
 Route::post('/orders/{pharmacy_id}/ready', [OrderController::class, 'markReady']);
 
 Route::get('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopay']);
 Route::post('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopayHandler']);
 
-Route::get('/routes-list/show/{order_id}', [LexaAdmin::class, 'routesShow']);
-Route::post('/routes-list/show/{order_id}', [LexaAdmin::class, 'routesShowHandler']);
+Route::get('/routes-list/show/{order_id}', [RoutePlanningController::class, 'showOrder']);
+Route::post('/routes-list/show/{order_id}', [RoutePlanningController::class, 'assignOrder']);
 
-Route::get('/routes-list/driver/{driver_id}', [LexaAdmin::class, 'routesDriver']);
-Route::post('/routes-list/driver/{driver_id}', [LexaAdmin::class, 'routesDriverHandler']);
+Route::get('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'showDriver']);
+Route::post('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'updateDriver']);
 
 // Global creation links need a pharmacy before opening the scoped form.
 Route::get('/orders/add', [OrderCreationController::class, 'create'])->name('orders.create');
@@ -312,10 +313,10 @@ Route::get('/reports/invoices', [LexaAdmin::class, 'reportsInvoices']);
 Route::get('/reports/map', [LexaAdmin::class, 'reportsMap']);
 Route::post('/reports/map', [LexaAdmin::class, 'reportsMapHandler']);
 Route::get('/reports/customers', [LexaAdmin::class, 'reportsCustomers']);
-Route::get('/dispatching', [LexaAdmin::class, 'dispatching']);
-Route::post('/dispatching', [LexaAdmin::class, 'dispatchingHandler']);
-Route::get('/dispatching/show/{driver_id}', [LexaAdmin::class, 'dispatchingShow']);
-Route::post('/dispatching/show/{driver_id}', [LexaAdmin::class, 'dispatchingShowHandler']);
+Route::get('/dispatching', [DispatchingController::class, 'index']);
+Route::post('/dispatching', [DispatchingController::class, 'update']);
+Route::get('/dispatching/show/{driver_id}', [DispatchingController::class, 'show']);
+Route::post('/dispatching/show/{driver_id}', [DispatchingController::class, 'recalculateEta']);
 Route::get('/faq', [FaqController::class, 'index']);
 Route::post('/faq', [FaqController::class, 'destroy']);
 Route::get('/faq/add', [FaqController::class, 'create']);

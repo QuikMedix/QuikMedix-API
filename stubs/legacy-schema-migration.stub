@@ -1,0 +1,98 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Builder;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * The tables that were created by hand before this project used migrations, as they were in
+ * {{ source }} when `php artisan quikmedix:schema-baseline` wrote this file.
+ *
+ * A table that is missing is created, columns that are missing from an existing table are
+ * added, and nothing else is touched: on a database that already has these tables this
+ * migration changes nothing. Each column is [name, Blueprint method, arguments, flags, default].
+ */
+return new class extends Migration
+{
+    private const TABLES = [
+{{ tables }}
+    ];
+
+    public function up(): void
+    {
+        $this->apply(Schema::connection($this->getConnection()));
+    }
+
+    public function down(): void
+    {
+        // These tables hold the application's data and were there before this migration. Nothing is dropped.
+    }
+
+    public function apply(Builder $schema): void
+    {
+        $sqlite = $schema->getConnection()->getDriverName() === 'sqlite';
+
+        foreach (self::TABLES as $name => $definition) {
+            if (! $schema->hasTable($name)) {
+                $schema->create($name, function (Blueprint $table) use ($name, $definition, $sqlite): void {
+                    foreach ($definition['columns'] as $column) {
+                        $this->column($table, $column);
+                    }
+                    foreach ($definition['indexes'] as [$kind, $columns, $indexName]) {
+                        if ($sqlite && in_array($kind, ['fullText', 'spatialIndex'], true)) {
+                            continue;
+                        }
+                        // MySQL index names belong to their table; SQLite needs them unique in the database.
+                        if ($sqlite && $indexName !== null && ! str_starts_with($indexName, $name.'_')) {
+                            $indexName = $name.'_'.$indexName;
+                        }
+                        $table->{$kind}($columns, $indexName);
+                    }
+                    foreach ($definition['foreign'] as [$columns, $on, $references, $onDelete, $onUpdate, $keyName]) {
+                        $table->foreign($columns, $keyName)->references($references)->on($on)->onDelete($onDelete)->onUpdate($onUpdate);
+                    }
+                });
+
+                continue;
+            }
+
+            $missing = array_values(array_filter($definition['columns'], fn (array $column): bool => ! $schema->hasColumn($name, $column[0])));
+            if ($missing !== []) {
+                $schema->table($name, function (Blueprint $table) use ($missing, $sqlite): void {
+                    foreach ($missing as $column) {
+                        $this->column($table, $column, added: true, sqlite: $sqlite);
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * @param  array<int, mixed>  $column
+     * @param  bool  $added  the column joins a table that already exists, so it cannot become its key
+     */
+    private function column(Blueprint $table, array $column, bool $added = false, bool $sqlite = false): void
+    {
+        [$name, $method, $arguments, $flags] = $column;
+        $flags = explode(' ', $flags);
+        $hasDefault = array_key_exists(4, $column) || in_array('useCurrent', $flags, true);
+
+        $definition = $table->{$method}($name, ...$arguments);
+        if (in_array('unsigned', $flags, true)) {
+            $definition->unsigned();
+        }
+        if (in_array('autoIncrement', $flags, true) && ! $added) {
+            $definition->autoIncrement();
+        }
+        // SQLite cannot add a required column without a default to an existing table.
+        if (in_array('nullable', $flags, true) || ($added && $sqlite && ! $hasDefault)) {
+            $definition->nullable();
+        }
+        if (in_array('useCurrent', $flags, true)) {
+            $definition->useCurrent();
+        } elseif (array_key_exists(4, $column)) {
+            $definition->default($column[4]);
+        }
+    }
+};

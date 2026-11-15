@@ -37,17 +37,11 @@ class NotifyNextPatient
         }
 
         $transport = $driver->transport == self::BICYCLE ? 'bicycle' : 'car';
-        $destination = str_replace(' ', '', $location);
-        $context = stream_context_create(['http' => [
-            'method' => 'GET',
-            'ignore_errors' => true,
-            'header' => 'Authorization: Bearer '.HereMaps::accessToken(),
-        ]]);
-        $directions = json_decode(file_get_contents("https://router.hereapi.com/v8/routes?transportMode=$transport&origin=$origin&destination=$destination&return=summary", false, $context));
+        $legs = HereMaps::route($transport, $origin, str_replace(' ', '', $location));
         $message = "Your delivery is next. \nPlease track your order #".$nextRoute->order_id.' via our app.';
-        if (! empty($directions->routes)) {
+        if ($legs !== null) {
             $duration = 0;
-            foreach ($directions->routes[0]->sections as $leg) {
+            foreach ($legs as $leg) {
                 $duration += $leg->summary->duration;
             }
             // Order ETAs are kept in minutes, as the route recalculation stores them and the order pages read them.

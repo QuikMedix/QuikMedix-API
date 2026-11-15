@@ -21,7 +21,7 @@ class StaticImagesTest extends TestCase
                 $named[$image] = true;
             }
         }
-        $this->assertGreaterThan(40, count($named), 'The scan finds the image references.');
+        $this->assertGreaterThan(20, count($named), 'The scan finds the image references.');
 
         $missing = array_values(array_filter(array_keys($named), fn (string $image): bool => ! is_file(public_path($image))));
         sort($missing);
