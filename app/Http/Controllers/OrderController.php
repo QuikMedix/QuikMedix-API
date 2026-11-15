@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Zadarma_API\Api as Zadarma_API;
+use App\Support\AccessMessages;
+use App\Actions\RecalculateDriverEta;
 
 /**
  * A pharmacy's orders: the list, create, show, edit, preview, statistics and call recordings.
@@ -174,7 +176,7 @@ class OrderController extends Controller
                 $res_arr = ['pages'=>$pages,'page0'=>$page,'filter'=>$filter,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'statuses_copay'=>$statuses_copay,'delivery_methods'=>$delivery_methods,'delivery_times'=>$delivery_times,'pharmacys'=>$pharmacys,'patients'=>$patients,'drivers'=>$drivers,'pharmacy_id'=>$pharmacy_id,'title'=>'Orders','br1'=>'Orders','br2'=>'List'];
                 return view('orders.list',$res_arr);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -224,7 +226,7 @@ class OrderController extends Controller
             }
             return redirect("orders/$pharmacy_id");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -252,7 +254,7 @@ class OrderController extends Controller
                 return $res_view;
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -398,7 +400,7 @@ class OrderController extends Controller
             }
             return redirect("orders/$pharmacy_id".(isset($id_max) ? "?added=$id_max" : ""));
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -443,7 +445,7 @@ class OrderController extends Controller
                 return $res_view;
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -500,7 +502,7 @@ class OrderController extends Controller
             }
             if($request->input('eta_calculate')>0) {
                 if($order->driver_id>0) {
-                    LexaAdmin::eta_calculate($order->driver_id,true);
+                    app(RecalculateDriverEta::class)->handle($order->driver_id,true);
                 }
                 return redirect()->back()->with('success', "Successfully the route ETA was updated.");
             }
@@ -522,7 +524,7 @@ class OrderController extends Controller
             }
             return redirect("orders/$pharmacy_id/show/$order_id");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -555,7 +557,7 @@ class OrderController extends Controller
             $additional_recipients=DB::table('additional_recipients')->where('user_id',$order->user_id)->whereIn('id',$rxs_id)->get()->keyBy('id');;
             return view('orders.preview',['order'=>$order,'rxs'=>$rxs,'dispatcher_notes'=>$dispatcher_notes,'customer_notes'=>$customer_notes,'additional_recipients'=>$additional_recipients,'orders_transitions'=>$orders_transitions,'medicines'=>$medicines,'driver'=>$driver,'locations'=>$locations,'locationDrivers'=>$locationDrivers,'title'=>'Order Preview','br1'=>'Orders','br2'=>'Order Preview']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -591,7 +593,7 @@ class OrderController extends Controller
                 return $res_view;
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -702,7 +704,7 @@ class OrderController extends Controller
             }
             return redirect("orders/$pharmacy_id");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -740,7 +742,7 @@ class OrderController extends Controller
                 }
                 return view('orders.statistic',['date'=>$date,'polygons'=>$polygons,'pharmacy'=>$pharmacy,'statuses'=>$statuses,'statuse_id'=>$statuse_id,'alert'=>'','title'=>'Orders Map Statistic','br1'=>'Orders','br2'=>'Map Statistic']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -781,7 +783,7 @@ class OrderController extends Controller
                 }
                 return view('orders.statistic',['date'=>$date,'polygons'=>$polygons,'pharmacy'=>$pharmacy,'statuses'=>$statuses,'statuse_id'=>$statuse_id,'alert'=>'','title'=>'Orders Map Statistic','br1'=>'Orders','br2'=>'Map Statistic']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -798,7 +800,7 @@ class OrderController extends Controller
                 'message' => 'OK'
             ]);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -806,7 +808,7 @@ class OrderController extends Controller
      * @param int|string $order_id
      */
     public function callRecordings($order_id) {
-        abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, LexaAdmin::$err_perm);
+        abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
         Gate::authorize('access-order', $order_id);
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id', 'orders.created', 'users.phone as userphone')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.created','users.phone')->first();
         if(!empty($order)) {

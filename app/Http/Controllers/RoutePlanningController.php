@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use App\Support\AccessMessages;
+use App\Actions\RecalculateDriverEta;
 
 /**
  * Route planning: the lists of orders ready for a route, by order, driver and pharmacy, the
@@ -30,149 +32,128 @@ class RoutePlanningController extends Controller
     }
 
     public function orders() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+        $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.statuse_id', 'orders.pharmacy_id', 'orders.driver_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.pharmacy_id', 'orders.driver_id', 'delivery_methods.name', 'delivery_times.name', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc');
+        $max_page=DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id');
+        if(!empty(request()->query('tariff'))) {
+            if(request()->query('tariff')=='0.50') {
+                $orders = $orders->where('pharmacys.tariff','0.5');
+                $max_page = $max_page->where('pharmacys.tariff','0.5');
+            }
+            if(request()->query('tariff')=='1.00') {
+                $orders = $orders->where('pharmacys.tariff','1');
+                $max_page = $max_page->where('pharmacys.tariff','1');
+            }
+            if(request()->query('tariff')=='5.00-7.00') {
+                $orders = $orders->where('pharmacys.tariff','>=','5')->where('pharmacys.tariff','<=','7');
+                $max_page = $max_page->where('pharmacys.tariff','>=','5')->where('pharmacys.tariff','<=','7');
+            }
+            if(request()->query('tariff')=='10.00-12.00') {
+                $orders = $orders->where('pharmacys.tariff','>=','10')->where('pharmacys.tariff','<=','12');
+                $max_page = $max_page->where('pharmacys.tariff','>=','10')->where('pharmacys.tariff','<=','12');
+            }
         }
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
-            $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.statuse_id', 'orders.pharmacy_id', 'orders.driver_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.pharmacy_id', 'orders.driver_id', 'delivery_methods.name', 'delivery_times.name', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc');
-            $max_page=DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id');
-            if(!empty(request()->query('tariff'))) {
-                if(request()->query('tariff')=='0.50') {
-                    $orders = $orders->where('pharmacys.tariff','0.5');
-                    $max_page = $max_page->where('pharmacys.tariff','0.5');
-                }
-                if(request()->query('tariff')=='1.00') {
-                    $orders = $orders->where('pharmacys.tariff','1');
-                    $max_page = $max_page->where('pharmacys.tariff','1');
-                }
-                if(request()->query('tariff')=='5.00-7.00') {
-                    $orders = $orders->where('pharmacys.tariff','>=','5')->where('pharmacys.tariff','<=','7');
-                    $max_page = $max_page->where('pharmacys.tariff','>=','5')->where('pharmacys.tariff','<=','7');
-                }
-                if(request()->query('tariff')=='10.00-12.00') {
-                    $orders = $orders->where('pharmacys.tariff','>=','10')->where('pharmacys.tariff','<=','12');
-                    $max_page = $max_page->where('pharmacys.tariff','>=','10')->where('pharmacys.tariff','<=','12');
-                }
-            }
-            if(!empty(request()->query('statuse'))) {
-                $orders = $orders->whereIn('orders.statuse_id',request()->query('statuse'));
-                $max_page = $max_page->whereIn('orders.statuse_id',request()->query('statuse'));
-            } else {
-                request()->query->set('statuse', [1,2,3,6]);
-                $orders = $orders->whereIn('orders.statuse_id',request()->query('statuse'));
-                $max_page = $max_page->whereIn('orders.statuse_id',request()->query('statuse'));
-            }
-            if(!empty(request()->query('pharmacy'))) {
-                $orders = $orders->where('orders.pharmacy_id',request()->query('pharmacy'));
-                $max_page = $max_page->where('orders.pharmacy_id',request()->query('pharmacy'));
-            }
-            if(!empty(request()->query('search'))) {
-                $search = request()->query('search');
-                $orders = $orders->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
-                        ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('pharmacys.name','LIKE','%'.$search.'%')
-                          ->orWhere('orders.id','LIKE','%'.$search.'%');
-                    });
-                $max_page = $max_page->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
-                        ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
-                            ->orWhere('pharmacys.name','LIKE','%'.$search.'%')
-                            ->orWhere('orders.id','LIKE','%'.$search.'%');
-                    });
-            } else {
-                $search='';
-            }
-            $countOnPage=30;
-            $max_pages=ceil($max_page->count()/$countOnPage);
-            $page = $this->currentPage(request());
-            $pages = PageLinks::around($page, $max_pages);
-            $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $statuses = DB::table('statuses')->get();
-            $pharmacys = DB::table('pharmacys')->get();
-            $res_view = view('routes.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'pharmacys'=>$pharmacys,'title'=>'Routes','br1'=>'Routes','br2'=>'List']);
-            return $this->page(request(), $res_view);
+        if(!empty(request()->query('statuse'))) {
+            $orders = $orders->whereIn('orders.statuse_id',request()->query('statuse'));
+            $max_page = $max_page->whereIn('orders.statuse_id',request()->query('statuse'));
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            request()->query->set('statuse', [1,2,3,6]);
+            $orders = $orders->whereIn('orders.statuse_id',request()->query('statuse'));
+            $max_page = $max_page->whereIn('orders.statuse_id',request()->query('statuse'));
         }
+        if(!empty(request()->query('pharmacy'))) {
+            $orders = $orders->where('orders.pharmacy_id',request()->query('pharmacy'));
+            $max_page = $max_page->where('orders.pharmacy_id',request()->query('pharmacy'));
+        }
+        if(!empty(request()->query('search'))) {
+            $search = request()->query('search');
+            $orders = $orders->where(function($query) use ($search) {
+                $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
+                    ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
+                      ->orWhere('pharmacys.name','LIKE','%'.$search.'%')
+                      ->orWhere('orders.id','LIKE','%'.$search.'%');
+                });
+            $max_page = $max_page->where(function($query) use ($search) {
+                $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
+                    ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
+                        ->orWhere('pharmacys.name','LIKE','%'.$search.'%')
+                        ->orWhere('orders.id','LIKE','%'.$search.'%');
+                });
+        } else {
+            $search='';
+        }
+        $countOnPage=30;
+        $max_pages=ceil($max_page->count()/$countOnPage);
+        $page = $this->currentPage(request());
+        $pages = PageLinks::around($page, $max_pages);
+        $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $statuses = DB::table('statuses')->get();
+        $pharmacys = DB::table('pharmacys')->get();
+        $res_view = view('routes.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'pharmacys'=>$pharmacys,'title'=>'Routes','br1'=>'Routes','br2'=>'List']);
+        return $this->page(request(), $res_view);
     }
 
     public function drivers() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+        $routes_logs = DB::table('routes_priority_logs')->whereRaw('Date(routes_priority_logs.created) = CURDATE()')->select(DB::raw('count(distinct routes_priority_logs.type,routes_priority_logs.type_id) as count_delivered'),'driver_id')->groupBy('driver_id');
+        $routes_priority = DB::table('routes_priority')->select(DB::raw('count(distinct routes_priority.type,routes_priority.type_id) as count_delivery'),'driver_id')->groupBy('driver_id');
+        $users = User::where('role','driver')->where('isactive',1)->where('isblocked',0)->leftJoinSub($routes_priority,'routes_priority',function ($join) {
+            $join->on('routes_priority.driver_id', '=' , 'users.id') ;
+        })->leftJoinSub($routes_logs,'routes_priority_logs',function ($join) {
+            $join->on('routes_priority_logs.driver_id', '=' , 'users.id') ;
+        })->leftJoin('drivers_eta', function($query) {
+           $query->on('users.id','=','drivers_eta.driver_id');
+        })->where(function ($query) {
+            $query->where('users.work_now', '1')
+                ->orWhereRaw('case when routes_priority.count_delivery is null then 0 else routes_priority.count_delivery end > 0');
+        })->select("users.id","users.image","users.work_now", "users.car_img", "users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os", DB::raw("case when routes_priority.count_delivery is null then 0 else routes_priority.count_delivery end as count_delivery"), DB::raw("case when routes_priority_logs.count_delivered is null then 0 else routes_priority_logs.count_delivered end as count_delivered"), "drivers_eta.eta")->groupBy("users.id","users.image","users.work_now", "users.car_img", "users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os","drivers_eta.eta");
+        if(!empty(Auth::user()->zone_id)){
+            $users=$users->where(function ($query) {
+                $query->where('users.zone_id',Auth::user()->zone_id)
+                    ->orWhereNull('users.zone_id');
+            });
         }
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
-            $routes_logs = DB::table('routes_priority_logs')->whereRaw('Date(routes_priority_logs.created) = CURDATE()')->select(DB::raw('count(distinct routes_priority_logs.type,routes_priority_logs.type_id) as count_delivered'),'driver_id')->groupBy('driver_id');
-            $routes_priority = DB::table('routes_priority')->select(DB::raw('count(distinct routes_priority.type,routes_priority.type_id) as count_delivery'),'driver_id')->groupBy('driver_id');
-            $users = User::where('role','driver')->where('isactive',1)->where('isblocked',0)->leftJoinSub($routes_priority,'routes_priority',function ($join) {
-                $join->on('routes_priority.driver_id', '=' , 'users.id') ;
-            })->leftJoinSub($routes_logs,'routes_priority_logs',function ($join) {
-                $join->on('routes_priority_logs.driver_id', '=' , 'users.id') ;
-            })->leftJoin('drivers_eta', function($query) {
-               $query->on('users.id','=','drivers_eta.driver_id');
-            })->where(function ($query) {
-                $query->where('users.work_now', '1')
-                    ->orWhereRaw('case when routes_priority.count_delivery is null then 0 else routes_priority.count_delivery end > 0');
-            })->select("users.id","users.image","users.work_now", "users.car_img", "users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os", DB::raw("case when routes_priority.count_delivery is null then 0 else routes_priority.count_delivery end as count_delivery"), DB::raw("case when routes_priority_logs.count_delivered is null then 0 else routes_priority_logs.count_delivered end as count_delivered"), "drivers_eta.eta")->groupBy("users.id","users.image","users.work_now", "users.car_img", "users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os","drivers_eta.eta");
-            if(!empty(Auth::user()->zone_id)){
-                $users=$users->where(function ($query) {
-                    $query->where('users.zone_id',Auth::user()->zone_id)
-                        ->orWhereNull('users.zone_id');
+        if(!empty(Auth::user()->pharmacy_id)){
+            $users=$users->where(function ($query) {
+                $query->where('users.pharmacy_id',Auth::user()->pharmacy_id);
+            });
+        }
+        $users0 = clone $users;
+        $users0=$users0->select(DB::raw('count(distinct users.id) as count'));
+        if(!empty(request()->query('search'))) {
+            $search = request()->query('search');
+            $users = $users->where(function($query) use ($search) {
+                $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
+                      ->orWhere('email','LIKE','%'.$search.'%')
+                      ->orWhere('phone','LIKE','%'.$search.'%')
+                      ->orWhere('users.id','=',$search);
                 });
-            }
-            if(!empty(Auth::user()->pharmacy_id)){
-                $users=$users->where(function ($query) {
-                    $query->where('users.pharmacy_id',Auth::user()->pharmacy_id);
+            $users0 = $users0->where(function($query) use ($search) {
+                $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
+                        ->orWhere('email','LIKE','%'.$search.'%')
+                        ->orWhere('phone','LIKE','%'.$search.'%')
+                        ->orWhere('users.id','=',$search);
                 });
-            }
-            $users0 = clone $users;
-            $users0=$users0->select(DB::raw('count(distinct users.id) as count'));
-            if(!empty(request()->query('search'))) {
-                $search = request()->query('search');
-                $users = $users->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('email','LIKE','%'.$search.'%')
-                          ->orWhere('phone','LIKE','%'.$search.'%')
-                          ->orWhere('users.id','=',$search);
-                    });
-                $users0 = $users0->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
-                            ->orWhere('email','LIKE','%'.$search.'%')
-                            ->orWhere('phone','LIKE','%'.$search.'%')
-                            ->orWhere('users.id','=',$search);
-                    });
-            } else {
-                $search='';
-            }
-            $countOnPage=20;
-            $page = $this->currentPage(request());
-            $total_users = DB::query()->fromSub($users0, 'drivers')->count();
-            $max_pages=ceil($total_users/$countOnPage);
-            $users = $users->orderBy(DB::raw("(case when routes_priority.count_delivery is null then 0 else routes_priority.count_delivery end)+(case when routes_priority_logs.count_delivered is null then 0 else routes_priority_logs.count_delivered end)"),"desc")->orderBy("routes_priority.count_delivery","asc");
-            $pages = PageLinks::around($page, $max_pages);
-            $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $res_arr = ['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Active Drivers','br1'=>'Routes','br2'=>'Drivers','alert'=>''];
-            return view('routes.drivers',$res_arr);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            $search='';
         }
+        $countOnPage=20;
+        $page = $this->currentPage(request());
+        $total_users = DB::query()->fromSub($users0, 'drivers')->count();
+        $max_pages=ceil($total_users/$countOnPage);
+        $users = $users->orderBy(DB::raw("(case when routes_priority.count_delivery is null then 0 else routes_priority.count_delivery end)+(case when routes_priority_logs.count_delivered is null then 0 else routes_priority_logs.count_delivered end)"),"desc")->orderBy("routes_priority.count_delivery","asc");
+        $pages = PageLinks::around($page, $max_pages);
+        $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $res_arr = ['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Active Drivers','br1'=>'Routes','br2'=>'Drivers','alert'=>''];
+        return view('routes.drivers',$res_arr);
     }
 
     public function pharmacies() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+        $orders = DB::table("orders")->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->where("orders.ready",'1')->where("orders.statuse_id",1)->select(DB::raw("max(orders.created) as created"), "pharmacys.name as pharmacyname", 'orders.pharmacy_id', DB::raw("count(orders.id) as count"))->groupBy("orders.pharmacy_id","pharmacys.name");
+        if(!empty(Auth::user()->zone_id)){
+            $orders=$orders->where('pharmacys.zone_id',Auth::user()->zone_id);
         }
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
-            $orders = DB::table("orders")->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->where("orders.ready",'1')->where("orders.statuse_id",1)->select(DB::raw("max(orders.created) as created"), "pharmacys.name as pharmacyname", 'orders.pharmacy_id', DB::raw("count(orders.id) as count"))->groupBy("orders.pharmacy_id","pharmacys.name");
-            if(!empty(Auth::user()->zone_id)){
-                $orders=$orders->where('pharmacys.zone_id',Auth::user()->zone_id);
-            }
-            $orders=$orders->get();
-            $res_view = view('routes.pharmacys',['orders'=>$orders, 'title'=>'Ready Orders Pharmacys','br1'=>'Routes','br2'=>'Ready Orders Pharmacys','alert'=>'']);
-            return $this->page(request(), $res_view);
-        } else {
-            return abort(403, LexaAdmin::$err_perm);
-        }
+        $orders=$orders->get();
+        $res_view = view('routes.pharmacys',['orders'=>$orders, 'title'=>'Ready Orders Pharmacys','br1'=>'Routes','br2'=>'Ready Orders Pharmacys','alert'=>'']);
+        return $this->page(request(), $res_view);
     }
 
     /**
@@ -181,7 +162,7 @@ class RoutePlanningController extends Controller
     public function showOrder($order_id) {
         Gate::authorize('access-order', $order_id);
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.driver_id', 'orders.statuse_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress', 'pharmacys.location as pharmacylocation', 'pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.driver_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.address', 'pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color')->first();
@@ -194,7 +175,7 @@ class RoutePlanningController extends Controller
             $res_view = view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -204,7 +185,7 @@ class RoutePlanningController extends Controller
     public function assignOrder(Request $request,$order_id) {
         Gate::authorize('access-order', $order_id);
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             if($request->input('driver_id')>1) {
@@ -220,7 +201,7 @@ class RoutePlanningController extends Controller
             $res_view= view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -232,7 +213,7 @@ class RoutePlanningController extends Controller
             Gate::authorize('manage-pharmacy-driver', [Auth::user()->pharmacy_id, $driver_id]);
         }
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $filter = [];
@@ -367,7 +348,7 @@ class RoutePlanningController extends Controller
             $res_view = view('routes.driver',['orders'=>$orders,'pharmacys'=>$pharmacys,'pharmacys_list'=>$pharmacys_list,'locations'=>$locations,'driver'=>$driver,'delivery_times'=>$delivery_times,'filter'=>$filter,'offices'=>$offices,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'pay_value'=>$pay_value,'type_pay'=>$type_pay,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'order_statuses'=>$order_statuses,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'orders_id'=>$orders_id,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Driver Detail','br1'=>'Routes','br2'=>'Driver Detail']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -384,7 +365,7 @@ class RoutePlanningController extends Controller
             }
         }
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             if($request->input('confirm_order_id')>1) {
@@ -550,12 +531,12 @@ class RoutePlanningController extends Controller
                         foreach($routes_res as $key => $routes_priorit){
                             DB::table('routes_priority')->where('driver_id', $driver_id)->where("type",$routes_priorit->type)->where("type_id",$routes_priorit->type_id)->where("priority",$routes_priorit->priority)->update(["priority"=>$key]);
                         }
-                        LexaAdmin::eta_calculate($driver_id,TRUE);
+                        app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
                         return redirect()->back()->with('success', "Successfully the route is automatically built.");
                     }
                 }
             } else if($request->input('eta_calculate')>0) {
-                LexaAdmin::eta_calculate($driver_id,TRUE);
+                app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
                 return redirect()->back()->with('success', "Successfully the route ETA was updated.");
             } else if($request->input('region')>0) {
                 $filter = [];
@@ -711,12 +692,12 @@ class RoutePlanningController extends Controller
                     };
                     DB::table('routes_priority')->where('driver_id', $driver_id)->update(['type_pay' => $typePay, 'pay_value' => $payValue]);
                 });
-                LexaAdmin::eta_calculate($driver_id);
+                app(RecalculateDriverEta::class)->handle($driver_id);
                 Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
             }
             return redirect("/routes-list/driver/$driver_id");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 

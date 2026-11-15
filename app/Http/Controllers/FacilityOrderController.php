@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Smalot\PdfParser\Parser;
+use App\Support\AccessMessages;
 
 /**
  * Orders placed for a facility (several recipients per order). Formerly the ordersFacilitys* actions of LexaAdmin.
@@ -43,7 +44,7 @@ class FacilityOrderController extends Controller
                 return $res_view;
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -209,7 +210,7 @@ class FacilityOrderController extends Controller
             }
             return redirect("orders/$pharmacy_id/facilitys_edit/$id_max");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -242,7 +243,7 @@ class FacilityOrderController extends Controller
                 return $res_view;
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -398,7 +399,7 @@ class FacilityOrderController extends Controller
             }
             return redirect("orders/$pharmacy_id");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

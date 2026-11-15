@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Support\AccessMessages;
 
 /**
  * The help page every signed-in user can read, and its management by admin staff.
@@ -79,6 +80,6 @@ class FaqController extends Controller
 
     private function authorizeAdmin(Request $request): void
     {
-        abort_unless($request->user()->can('admin'), 403, LexaAdmin::$err_perm);
+        abort_unless($request->user()->can('admin'), 403, AccessMessages::NO_PERMISSION);
     }
 }

@@ -1,6 +1,12 @@
 # Progress
 
-## Current verified state — 2026-11-14 (modularization phase 2)
+## Current verified state — 2026-11-14 (modularization phase 3)
+
+Feature `codebase-modularization-phase-3` passes isolated verification. `LexaAdmin` no longer exists: its 124 routed actions live in 20 new domain controllers with the same URLs and method names, its two refusal messages are `App\Support\AccessMessages`, and its ETA and notification entry points are the actions they delegated to. 105 actions take their blocked-account and role checks from `active`, `role:` and `allowed:` middleware named on the routes. The application is configured in `bootstrap/app.php`, `bootstrap/providers.php` and `routes/console.php`; the HTTP and console kernels, the exception handler, RouteServiceProvider and EventServiceProvider are gone. Every step was checked against a recording of what each web route answers for each role (2,497 answers, 0 differences) and against the route table. Three dead routes (`/keep-live`, `/drivers`, `/test`) now answer 404. Dependencies are unchanged.
+
+Latest isolated `composer test` passed 542 tests / 2334 assertions plus 45 routing and 69 tariff checks; Node smoke scripts passed 35, 35, 23, 20, 68, 19, 23 and 25 checks. Not run: `npm run build`, the full `./init.sh`, Pint; tests ran on PHP 8.4.27. Work is on branch `refactor/modularize-phase-3` from `main` a1b833f, placed in the user's fork checkout for them to push. Nothing is deployed. After pulling: `composer dump-autoload` and `php artisan optimize:clear`.
+
+## Previous verified state — 2026-11-14 (modularization phase 2)
 
 Feature `codebase-modularization-phase-2` passes isolated verification. Removed: the admin template's sample pages (116 files, 37,482 lines), three unlinked pages, and a never-rendered script block in the dashboard layout. Extracted from `LexaAdmin`, each with tests written against the old handlers: `DispatchingController` with `App\Actions\ReturnOrderToOffice`, and `RoutePlanningController`. Google geocoding and HERE routing are each reached from one place with a time limit (`GeocodeAddress::response()`, `HereMaps::route()`); no `file_get_contents` over http remains. Seven discarded exceptions are now reported. `LexaAdmin.php` is 6,361 lines. Routes and dependencies are unchanged. Feature `schema-baseline-migration` passes isolated verification: `database/migrations/2026_11_15_004603_create_legacy_schema.php`, written from the production schema by `php artisan quikmedix:schema-baseline`, lets `php artisan migrate` build all 70 tables the application uses on an empty database and changes nothing where they exist.
 
@@ -468,3 +474,19 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Caution recorded for the owner: the local `.env` points at production, so `php artisan migrate` from that checkout migrates production.
 - Commit status: two commits plus this record on `refactor/modularize-phase-2`, added to the user's fork checkout in place of the file their run wrote. Not pushed by the session, not deployed.
 - Next action: browser check of the dispatch board, a driver route page, an order page and the dashboard; then switch feature tests to the migrated schema; then the next LexaAdmin domain (pharmacies).
+
+## Session log — 2026-11-14: modularization phase 3
+
+- Goal: the user approved the six-step plan: pharmacies; drivers and billing; users and settings; shared pieces out of LexaAdmin; role checks into middleware; the Laravel 11+ layout. Target stack confirmed: Laravel 13.33, PHP ^8.4.
+- Starting point: `main` a1b833f (PR #26, phase 2 and the schema baseline, merged by the user).
+- Safety net first: with the baseline migration the whole schema exists on SQLite, so an untracked harness (tests/Feature/RouteSnapshotHarnessTest.php, excluded through .git/info/exclude) could ask every web route as a guest, each role and a blocked account and record status, redirect, error text or a content hash of the page. A few MySQL functions are registered on SQLite and Redis is a spy so that fewer pages stop at the first query. Every step below was compared with that recording.
+- Steps 1 to 3: scripted, verbatim moves in four batches (tools kept in the session, not the repository). Method names and URLs unchanged; `self::renderPage`/`currentPage` became the RendersLegacyPages helpers; formerly static actions are instance methods. Two one-line wrappers were inlined first (`encodePolygon2`, `action_log_user_check`).
+- Step 4: `AccessMessages`, direct action calls, then `LexaAdmin.php` deleted. Removed with it: `driversInquiries`, `cardPharmacyAddHandlerOld`, `chatUser`, `new_message`, `chats`, `getUserInfo`, `decodePolygon`, and the routes `/keep-live`, `/drivers` and `/test`.
+- Step 5: `role:` and `allowed:` middleware; conversion only of exact patterns, verified by token comparison. Because route middleware runs before controller middleware, converted routes name `auth` and `2fa` too, so the order stays auth, 2fa, active, role.
+- Step 6: new bootstrap configuration reproducing the kernel's stacks class for class; schedule in routes/console.php; login limiter and HOME in AppServiceProvider.
+- Mistake caught: I added `use PDF;` to BestRxApi and MerchantApi after a new check flagged them, which made both files unparsable, because they already import `Barryvdh\DomPDF\Facade\Pdf` and PHP matches imports without regard to case. Reverted in the same step; the check now ignores case. Nothing left the workspace in that state.
+- Findings for the owner: 68 signed-in routes let a blocked account through; `/drivers` is linked only from a commented-out menu entry; `resources/js/pages/session-timeout.init.js` (unbuilt template source) is the only caller of `/keep-live`.
+- Verification: see FEATURE_LIST.json `codebase-modularization-phase-3`. Final `composer test`: 542 tests / 2334 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; view, config and route caching OK; git diff --check clean.
+- Not verified: browser behavior; MySQL; PHP 8.5; Vite build. The browser check of phases 2 and 3 is still outstanding (the Claude extension in the user's Chrome was not connected).
+- Commit status: eleven commits plus this record on `refactor/modularize-phase-3`, added to the user's fork checkout. Not pushed by the session, not deployed.
+- Next action: browser check; decide whether blocked accounts should be refused on the 68 routes (one `active` per route, then regenerate web-access.json); convert the remaining 26 actions and the older controllers' constructor middleware to route middleware; move validation into form requests per controller; switch feature tests to the migrated schema; LexaAdminApi (1,737 lines) is now the largest controller.

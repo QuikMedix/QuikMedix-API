@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Support\AccessMessages;
 
 /**
  * Dispatching: the live board of drivers on shift, the dispatcher's decisions about an order's
@@ -171,7 +172,7 @@ class DispatchingController extends Controller
 
     private function authorizeDispatchStaff(Request $request): void
     {
-        abort_unless($request->user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist'), 403, LexaAdmin::$err_perm);
+        abort_unless($request->user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist'), 403, AccessMessages::NO_PERMISSION);
     }
 
     private function note(Request $request, string $orderId, string $text): void

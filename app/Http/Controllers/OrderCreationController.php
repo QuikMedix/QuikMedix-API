@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Support\AccessMessages;
 
 class OrderCreationController extends Controller
 {
@@ -25,8 +26,8 @@ class OrderCreationController extends Controller
     private function selectPharmacy(Request $request, bool $facility)
     {
         $user = $request->user();
-        abort_if($user->isblocked_or_isactive(), 403, LexaAdmin::$err_act_ban);
-        abort_unless(in_array($user->role, ['medic', 'superadmin', 'admin', 'dispadmin'], true), 403, LexaAdmin::$err_perm);
+        abort_if($user->isblocked_or_isactive(), 403, AccessMessages::ACCOUNT_INACTIVE);
+        abort_unless(in_array($user->role, ['medic', 'superadmin', 'admin', 'dispadmin'], true), 403, AccessMessages::NO_PERMISSION);
 
         $formRoute = $facility ? 'orders.pharmacy.facility.create' : 'orders.pharmacy.create';
         $pharmacies = DB::table('pharmacys')->select('id', 'name', 'address');

@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
-use App\Http\Controllers\LexaAdmin;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use App\Support\AccessMessages;
 
 class EnsureUserIsActive
 {
@@ -15,7 +15,7 @@ class EnsureUserIsActive
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->user()?->isblocked_or_isactive()) {
-            abort(403, LexaAdmin::$err_act_ban);
+            abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
 
         return $next($request);

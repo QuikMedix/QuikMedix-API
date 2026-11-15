@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Http\Controllers\LexaAdmin;
 use App\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesAuthenticationSchema;
 use Tests\TestCase;
+use App\Support\AccessMessages;
 
 /**
  * Who may open the route planning pages: the ready-order lists and a driver's route.
@@ -88,7 +88,7 @@ class RoutePlanningAccessTest extends TestCase
     {
         foreach ($roles as $role) {
             $this->signIn($role);
-            $this->{$method}($uri)->assertForbidden()->assertSee(LexaAdmin::$err_perm);
+            $this->{$method}($uri)->assertForbidden()->assertSee(AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -100,6 +100,6 @@ class RoutePlanningAccessTest extends TestCase
     {
         $this->signIn('admin', ['isblocked' => 1]);
 
-        $this->{$method}($uri)->assertForbidden()->assertSee(LexaAdmin::$err_act_ban);
+        $this->{$method}($uri)->assertForbidden()->assertSee(AccessMessages::ACCOUNT_INACTIVE);
     }
 }
