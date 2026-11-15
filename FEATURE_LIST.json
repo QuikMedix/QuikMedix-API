@@ -412,6 +412,30 @@
         "2026-11-15 composer test: 569 tests / 2663 assertions, 45 routing and 69 tariff checks."
       ],
       "notes": "The browser comparison is for the superadmin and the test data only; other roles are covered by the SQLite route answers. Not done: form requests (the web handlers do not validate; rules would have to come from each form and be tested by submitting it); the remaining inline scripts and the Vite build; a shared filter for the two order lists (about 115 shared lines, with different extra filters); the account actions repeated across the users, medics, drivers and logists handlers, where role changes other than to admin are guarded only by manage-account; reads outside the 58 actions (about 850 DB::table calls remain). Deploy: ZADARMA_SECRET must be set or the call webhook answers 503."
+    },
+    {
+      "id": "codebase-modularization-phase-6",
+      "priority": 16,
+      "area": "maintainability and input checking",
+      "title": "Shared account actions, more reads through models, one order-list filter, server-side validation for the user, pharmacy and office forms, the order page script in a file",
+      "user_visible_behavior": "Pages are unchanged. The user, pharmacy and office forms now refuse on the server what they already marked as required in the browser, return to the form and list what was refused; the add-user form keeps what was typed. Changing someone's role from the staff lists needs the right to hand out that role.",
+      "status": "passing",
+      "verification_steps": [
+        "Compare the 2,497 recorded route answers before and after each step.",
+        "Tests for the form requests, OrderListFilter, and that permission is decided before validation.",
+        "Browser, owner's local app on MySQL as the test superadmin: compare 82 pages before and after; compare 15 order-list pages with filters before and after the filter change; load the order page and compare every value its script used to take from Blade; submit refused forms and read the messages.",
+        "composer test, Node smoke checks, caches."
+      ],
+      "evidence": [
+        "2026-11-15 account handlers: four handlers of 55 lines were identical apart from the list query, the view and the drivers' welcome text; 0 of 2,497 route answers changed.",
+        "2026-11-15 reads: 104 more row-returning chains converted in 28 files; a first attempt broke two tests where a converted row reached a stdClass-typed helper, so every file with such hints was reverted; 0 route answers changed. About 670 DB::table calls remain, 182 of them on users.",
+        "2026-11-15 order lists: both lists' parsing and filtering replaced by App\\Support\\OrderListFilter; 0 route answers changed; in the browser 15 of 15 list pages with filters, search and paging identical before and after.",
+        "2026-11-15 forms: FormValidationTest 6 tests / 79 assertions; access matrix unchanged. Browser: an empty office form and a short-password user form came back to their own page with a message per field and the typed name kept; a pharmacy edit with a blank name was refused and the name stayed 'test', but showed no message, which led to adding the message block to that form.",
+        "2026-11-15 order page: 16 of 16 values the script used to take from Blade equal the new window.orderPage values on order 4; the map drew with three markers; no script errors.",
+        "2026-11-15 browser page comparison: 82 of 82 pages identical for the account, reads and form steps.",
+        "2026-11-15 final: composer test 578 tests / 2749 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; caches OK."
+      ],
+      "notes": "Not verified: a successful save through any of the validated forms in a browser. The session's attempt to re-submit an office with its own values was blocked by the session's safety check, so the passing case rests on the rule tests. Vite build: npm run build fails in the session's Linux helper because node_modules holds macOS binaries; it has to run on the owner's Mac. Not done: the remaining inline scripts (driver page third block, dashboard); the other forms (plans, areas, wishes, news, FAQ, admin areas); reads on the users table and in files that type-hint plain rows. The settings admins handler has no manage-account check of its own and relies on its route."
     }
   ]
 }

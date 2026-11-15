@@ -92,4 +92,15 @@ class FormValidationTest extends TestCase
         // A person with the plain user role may register a pharmacy, so they get the form back instead.
         $this->from('/pharmacys/add')->post('/pharmacys/add', ['save' => 1])->assertRedirect('/pharmacys/add');
     }
+
+    public function test_the_pharmacy_edit_form_shows_what_was_refused(): void
+    {
+        $this->row('pharmacys', ['id' => 1, 'name' => 'Corner Pharmacy', 'plan_id' => 1]);
+        $this->row('plans', ['id' => 1]);
+
+        $this->from('/pharmacys/edit/1')->post('/pharmacys/edit/1', ['save' => 1, 'name' => '', 'email' => 'not-an-email'] + self::PHARMACY)->assertRedirect('/pharmacys/edit/1');
+
+        $this->get('/pharmacys/edit/1')->assertOk()->assertSee('The name field is required.')->assertSee('The email must be a valid email address.');
+        $this->assertSame('Corner Pharmacy', DB::table('pharmacys')->where('id', 1)->value('name'));
+    }
 }

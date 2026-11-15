@@ -530,3 +530,12 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Commit status: six commits plus this record on `refactor/modularize-phase-5`, added to the owner's fork checkout. Not pushed by the session.
 - Next action: owner to say whether test records may be created through the forms, which form validation needs; then the order-list filter and the account actions.
 
+## Session log — 2026-11-15: modularization phase 6
+
+- Goal: the owner asked to complete the list left after phase 5: form validation, inline scripts and the Vite build, the two order lists, the account actions, the remaining reads. The owner allowed form submissions on the local test database.
+- Done: `applyAccountAction` and `accountList` for the four staff lists, with the assign-role right on every role change; 104 more reads through models; `App\Support\OrderListFilter`; `StoreUserRequest`, `UpdateUserRequest`, `SavePharmacyRequest`, `SaveOfficeRequest` and the `x-form-errors` block; `public/js/order-page.js`.
+- Browser: 82 pages identical before and after; 15 filtered order lists identical; order page values identical; refused submissions show their messages.
+- Not done and not verified: see FEATURE_LIST.json `codebase-modularization-phase-6` notes.
+- Commit status: seven commits, this record included, on `refactor/modularize-phase-6`, added to the owner's fork checkout. Not pushed by the session.
+- Next action: owner to save one office, one user and one pharmacy through the forms and run `npm run build`; then the remaining forms and scripts.
+
