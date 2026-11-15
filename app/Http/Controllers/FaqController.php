@@ -8,7 +8,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use App\Support\AccessMessages;
 
 /**
  * The help page every signed-in user can read, and its management by admin staff.
@@ -35,7 +34,6 @@ class FaqController extends Controller
 
     public function create(Request $request): View|array
     {
-        $this->authorizeAdmin($request);
 
         return $this->page($request, view('faq.add', [
             'title' => 'FAQ Add', 'br1' => 'FAQ', 'br2' => 'FAQS', 'br3' => 'FAQ Add',
@@ -49,7 +47,6 @@ class FaqController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $this->authorizeAdmin($request);
 
         if ($request->input('save') > 0 && ! empty($request->input('title')) && ! empty($request->input('text'))) {
             DB::table('faqs')->insert([
@@ -64,17 +61,11 @@ class FaqController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        $this->authorizeAdmin($request);
 
         if ($request->input('remove') > 0 && ! empty($request->input('faq_id'))) {
             DB::table('faqs')->where('id', $request->input('faq_id'))->delete();
         }
 
         return redirect('faq');
-    }
-
-    private function authorizeAdmin(Request $request): void
-    {
-        abort_unless($request->user()->can('admin'), 403, AccessMessages::NO_PERMISSION);
     }
 }

@@ -6,7 +6,6 @@ use App\Http\Controllers\Concerns\RendersLegacyPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Support\AccessMessages;
 
 /**
  * Administrator areas in settings: list, add and edit. Formerly actions of LexaAdmin, moved as

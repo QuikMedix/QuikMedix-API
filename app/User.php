@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Enums\Role;
 use Laravel\Passport\AccessToken;
 use Laravel\Passport\HasApiTokens;
 use Laravel\Passport\Passport;
@@ -93,21 +94,11 @@ class User extends Authenticatable implements OAuthenticatable
     }
 
     /**
-     * Every role an account can have.
-     */
-    public const ROLES = ['superadmin', 'admin', 'dispadmin', 'logist', 'sale', 'medic', 'driver', 'user', 'facility'];
-
-    /**
-     * QuikMedix administration staff.
-     */
-    public const ADMIN_ROLES = ['superadmin', 'admin', 'dispadmin'];
-
-    /**
      * QuikMedix administration staff: superadmin, admin and dispatch admin.
      */
     public function isAdmin(): bool
     {
-        return $this->hasAnyRole(...self::ADMIN_ROLES);
+        return Role::tryFrom((string) $this->role)?->isAdmin() ?? false;
     }
 
     /**

@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Twilio\Rest\Client;
-use App\Support\AccessMessages;
 
 /**
  * Accounts in settings: the lists of administrators, patients, pharmacy staff, drivers and

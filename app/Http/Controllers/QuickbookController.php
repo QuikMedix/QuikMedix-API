@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 use QuickBooksOnline\API\DataService\DataService;
 use URL;
-use App\Support\AccessMessages;
 
 /**
  * The QuickBooks connection page and its OAuth callback. Formerly actions of LexaAdmin, moved as

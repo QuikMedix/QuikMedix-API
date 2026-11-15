@@ -27,7 +27,7 @@ Route::post('/pharmacys/edit/{pharmacy_id}', [PharmacyController::class, 'pharma
 
 Route::get('/pharmacys/tariff_map/{pharmacy_id}', [PharmacyController::class, 'pharmacysTariffMap'])->middleware('allowed:admin');
 
-Route::get('/pharmacys/add', [PharmacyController::class, 'pharmacysListAdd']);
+Route::get('/pharmacys/add', [PharmacyController::class, 'pharmacysListAdd'])->middleware('role:superadmin,admin,dispadmin,user');
 Route::post('/pharmacys/add', [PharmacyController::class, 'pharmacysListAddHandler']);
 
 Route::get('/offices', [OfficeController::class, 'officesList'])->middleware('role:superadmin');

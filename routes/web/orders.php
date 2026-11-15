@@ -21,11 +21,11 @@ Route::get('/orders/add', [OrderCreationController::class, 'create'])->name('ord
 Route::get('/orders/facilitys_add', [OrderCreationController::class, 'createFacility'])->name('orders.facility.create');
 Route::get('/orders/{pharmacy_id}', [OrderController::class, 'index'])->whereNumber('pharmacy_id');
 Route::post('/orders/{pharmacy_id}', [OrderController::class, 'updateStatus'])->whereNumber('pharmacy_id');
-Route::get('/orders', [AllOrdersController::class, 'index']);
-Route::post('/orders', [AllOrdersController::class, 'updateStatus']);
+Route::get('/orders', [AllOrdersController::class, 'index'])->middleware('role:superadmin,admin,dispadmin,driver,logist');
+Route::post('/orders', [AllOrdersController::class, 'updateStatus'])->middleware('allowed:admin');
 Route::get('/orders/day/print', [OrderPrintController::class, 'day']);
-Route::get('/orders/ticket/print', [OrderPrintController::class, 'ticket'])->name('orders.ticket');
-Route::get('/orders/tickets/print', [OrderPrintController::class, 'tickets']);
+Route::get('/orders/ticket/print', [OrderPrintController::class, 'ticket'])->name('orders.ticket')->middleware('role:medic,superadmin,admin,dispadmin,driver,logist');
+Route::get('/orders/tickets/print', [OrderPrintController::class, 'tickets'])->middleware('role:medic,superadmin,admin,dispadmin,driver,logist');
 Route::get('/orders/{pharmacy_id}/edit/{order_id}', [OrderController::class, 'edit']);
 Route::post('/orders/{pharmacy_id}/edit/{order_id}', [OrderController::class, 'update']);
 Route::get('/orders/preview/{order_id}', [OrderController::class, 'preview']);
@@ -42,4 +42,4 @@ Route::get('/orders/{pharmacy_id}/facilitys_add', [FacilityOrderController::clas
 Route::post('/orders/{pharmacy_id}/facilitys_add', [FacilityOrderController::class, 'store'])->whereNumber('pharmacy_id')->name('orders.pharmacy.facility.store');
 Route::get('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statistic']);
 Route::post('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statisticForDate']);
-Route::get('/orders/get_records/{order_id}', [OrderController::class, 'callRecordings']);
+Route::get('/orders/get_records/{order_id}', [OrderController::class, 'callRecordings'])->middleware('role:superadmin,admin,dispadmin,logist,medic');

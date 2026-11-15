@@ -69,25 +69,19 @@ class NewsController extends Controller
     }
 
     public function news_patientAdd() {
-        if(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) {
-            $input['link']='';
-            $input['title']='';
-            $input['text']='';
-            $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
-            return $this->page(request(), $res_view);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
-        }
+        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        $input['link']='';
+        $input['title']='';
+        $input['text']='';
+        $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
+        return $this->page(request(), $res_view);
     }
 
     public function news_patientAddHandler(Request $request) {
-        if(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) {
-            if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
-                DB::table('news_patient')->insert(["user_id"=>Auth::user()->id,"pharmacy_id"=>Auth::user()->pharmacy_id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
-            }
-            return redirect("news_patient");
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
+            DB::table('news_patient')->insert(["user_id"=>Auth::user()->id,"pharmacy_id"=>Auth::user()->pharmacy_id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }
+        return redirect("news_patient");
     }
 }

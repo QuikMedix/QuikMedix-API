@@ -22,7 +22,6 @@ class OrderCreationController extends Controller
     private function selectPharmacy(Request $request, bool $facility)
     {
         $user = $request->user();
-        abort_if($user->isblocked_or_isactive(), 403, AccessMessages::ACCOUNT_INACTIVE);
         abort_unless(in_array($user->role, ['medic', 'superadmin', 'admin', 'dispadmin'], true), 403, AccessMessages::NO_PERMISSION);
 
         $formRoute = $facility ? 'orders.pharmacy.facility.create' : 'orders.pharmacy.create';

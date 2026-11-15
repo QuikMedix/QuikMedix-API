@@ -34,9 +34,9 @@ Route::get('/payroll', [PageController::class, 'payroll']);
 
 Route::get('/support-chat', [PageController::class, 'supportChat']);
 
-Route::post('/faq', [FaqController::class, 'destroy']);
-Route::get('/faq/add', [FaqController::class, 'create']);
-Route::post('/faq/add', [FaqController::class, 'store']);
+Route::post('/faq', [FaqController::class, 'destroy'])->middleware('allowed:admin');
+Route::get('/faq/add', [FaqController::class, 'create'])->middleware('allowed:admin');
+Route::post('/faq/add', [FaqController::class, 'store'])->middleware('allowed:admin');
 
 Route::post('/ready_call', [DashboardController::class, 'ready_call'])->middleware('role:superadmin,admin,dispadmin,logist');
 

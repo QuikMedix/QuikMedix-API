@@ -19,11 +19,15 @@ Route::post('/routes-list/show/{order_id}', [RoutePlanningController::class, 'as
 Route::get('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'showDriver']);
 Route::post('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'updateDriver']);
 
-Route::get('/dispatching', [DispatchingController::class, 'index']);
-Route::post('/dispatching', [DispatchingController::class, 'update']);
-Route::get('/dispatching/show/{driver_id}', [DispatchingController::class, 'show']);
-Route::post('/dispatching/show/{driver_id}', [DispatchingController::class, 'recalculateEta']);
+Route::middleware('role:superadmin,admin,dispadmin,logist')->group(function () {
+    Route::get('/dispatching', [DispatchingController::class, 'index']);
+    Route::post('/dispatching', [DispatchingController::class, 'update']);
+    Route::get('/dispatching/show/{driver_id}', [DispatchingController::class, 'show']);
+    Route::post('/dispatching/show/{driver_id}', [DispatchingController::class, 'recalculateEta']);
+});
 
-Route::resource('route-templates', RouteTemplatesController::class)->only(['index', 'store', 'show', 'destroy']);
-Route::post('route-templates/{id}/items', [RouteTemplatesController::class, 'updateItems']);
-Route::post('route-templates/{id}/assign', [RouteTemplatesController::class, 'assignToDriver']);
+Route::middleware('role:superadmin,admin,dispadmin,logist,medic')->group(function () {
+    Route::resource('route-templates', RouteTemplatesController::class)->only(['index', 'store', 'show', 'destroy']);
+    Route::post('route-templates/{id}/items', [RouteTemplatesController::class, 'updateItems']);
+    Route::post('route-templates/{id}/assign', [RouteTemplatesController::class, 'assignToDriver']);
+});

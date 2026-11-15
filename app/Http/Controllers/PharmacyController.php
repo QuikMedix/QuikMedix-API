@@ -301,34 +301,27 @@ class PharmacyController extends Controller
     }
 
     public function pharmacysListAdd() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'user')) {
-            $plans = DB::table('plans')->orderBy('id','desc')->get();
-            $areas = DB::table('area')->get();
-            $input['name']='';
-            $input['email']='';
-            $input['phone']='';
-            $input['image']='';
-            $input['image_front']='';
-            $input['site']='';
-            $input['zone_id']='';
-            $input['address']='';
-            $input['tariff']='';
-            $input['tariff_next_day']='';
-            $input['tariff_same_day']='';
-            $input['tariff_asap']='';
-            $input['tariff_after_hours']='';
-            $input['tariff_fridge']='';
-            $input['plan_id']='';
-            $input['tariff_areas']=[];
-            $admin_areas = DB::table('admin_areas')->get();
-            $res_view = view('pharmacy.pharmacy_add',['plans'=>$plans,'areas'=>$areas,'admin_areas'=>$admin_areas,'title'=>'Pharmacy Add','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Add','alert'=>'','input'=>$input]);
-            return $this->page(request(), $res_view);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
-        }
+        $plans = DB::table('plans')->orderBy('id','desc')->get();
+        $areas = DB::table('area')->get();
+        $input['name']='';
+        $input['email']='';
+        $input['phone']='';
+        $input['image']='';
+        $input['image_front']='';
+        $input['site']='';
+        $input['zone_id']='';
+        $input['address']='';
+        $input['tariff']='';
+        $input['tariff_next_day']='';
+        $input['tariff_same_day']='';
+        $input['tariff_asap']='';
+        $input['tariff_after_hours']='';
+        $input['tariff_fridge']='';
+        $input['plan_id']='';
+        $input['tariff_areas']=[];
+        $admin_areas = DB::table('admin_areas')->get();
+        $res_view = view('pharmacy.pharmacy_add',['plans'=>$plans,'areas'=>$areas,'admin_areas'=>$admin_areas,'title'=>'Pharmacy Add','br1'=>'Pharmacies','br2'=>'Pharmacy','br3'=>'Pharmacy Add','alert'=>'','input'=>$input]);
+        return $this->page(request(), $res_view);
     }
 
     public function pharmacysListAddHandler(Request $request) {

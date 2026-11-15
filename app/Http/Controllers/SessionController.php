@@ -40,48 +40,29 @@ class SessionController extends Controller
      */
     public function reSendAuthMessage($user_id) {
         $user = DB::table('users')->where('id',$user_id)->first();
-        if(!empty($user)) {
-            if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
-                $password = bin2hex(openssl_random_pseudo_bytes(4));
-                DB::table('users')->where('id',$user_id)->update(['password'=>Hash::make($password)]);
-                DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-                if(!empty($user->pharmacy_id)) {
-                    $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
-                    if(!empty($pharmacy) && !empty($pharmacy->name)) {
-                        $pharmacy_name = $pharmacy->name;
-                    } else {
-                        $pharmacy_name = "";
-                    }
-                } else {
-                    $pharmacy_name = "";
-                }
+        abort_unless(!empty($user), 403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
+        $password = bin2hex(openssl_random_pseudo_bytes(4));
+        DB::table('users')->where('id',$user_id)->update(['password'=>Hash::make($password)]);
+        DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
+        if(!empty($user->pharmacy_id)) {
+            $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
+            if(!empty($pharmacy) && !empty($pharmacy->name)) {
+                $pharmacy_name = $pharmacy->name;
+            } else {
+                $pharmacy_name = "";
+            }
+        } else {
+            $pharmacy_name = "";
+        }
+        try {
+            $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
+            if(!empty($pharmacy_name)) {
                 try {
-                    $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                    if(!empty($pharmacy_name)) {
-                        try {
-                            $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            return json_encode([
-                                'message' => 'OK'
-                            ]);
-                        } catch (\Throwable) {
-                            return json_encode([
-                                'message' => 'An error occurred while sending',
-                                'errors' => 'Error'
-                            ]);
-                        }
-                    } else {
-                        try {
-                            $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                            return json_encode([
-                                'message' => 'OK'
-                            ]);
-                        } catch (\Throwable) {
-                            return json_encode([
-                                'message' => 'An error occurred while sending',
-                                'errors' => 'Error'
-                            ]);
-                        }
-                    }
+                    $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
+                    return json_encode([
+                        'message' => 'OK'
+                    ]);
                 } catch (\Throwable) {
                     return json_encode([
                         'message' => 'An error occurred while sending',
@@ -89,10 +70,23 @@ class SessionController extends Controller
                     ]);
                 }
             } else {
-                return abort(403, AccessMessages::NO_PERMISSION);
+                try {
+                    $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
+                    return json_encode([
+                        'message' => 'OK'
+                    ]);
+                } catch (\Throwable) {
+                    return json_encode([
+                        'message' => 'An error occurred while sending',
+                        'errors' => 'Error'
+                    ]);
+                }
             }
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+        } catch (\Throwable) {
+            return json_encode([
+                'message' => 'An error occurred while sending',
+                'errors' => 'Error'
+            ]);
         }
     }
 }

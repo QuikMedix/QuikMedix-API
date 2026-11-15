@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
-use App\Support\AccessMessages;
 use App\Notifications; // Assuming this is used in LexaAdmin
 
 class RouteTemplatesController extends Controller
@@ -17,25 +16,18 @@ class RouteTemplatesController extends Controller
      */
     public function index()
     {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
-            
-            $templates = DB::table('route_templates')
-                ->select('route_templates.*', DB::raw('(select count(*) from route_template_items where route_template_items.route_template_id = route_templates.id) as items_count'))
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
+        
+        $templates = DB::table('route_templates')
+            ->select('route_templates.*', DB::raw('(select count(*) from route_template_items where route_template_items.route_template_id = route_templates.id) as items_count'))
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
-            return view('routes.templates.index', [
-                'templates' => $templates,
-                'title' => 'Route Templates',
-                'br1' => 'Routes',
-                'br2' => 'Templates'
-            ]);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
-        }
+        return view('routes.templates.index', [
+            'templates' => $templates,
+            'title' => 'Route Templates',
+            'br1' => 'Routes',
+            'br2' => 'Templates'
+        ]);
     }
 
     /**
@@ -62,9 +54,6 @@ class RouteTemplatesController extends Controller
      */
     public function destroy($id)
     {
-         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         DB::table('route_templates')->where('id', $id)->delete();
         return redirect('/route-templates')->with('success', 'Template deleted successfully');
     }
@@ -75,85 +64,77 @@ class RouteTemplatesController extends Controller
      */
     public function show($id)
     {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         // Similar permissions as routesDriver
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
-            
-            $template = DB::table('route_templates')->where('id', $id)->first();
-            if(!$template) {
-                return abort(404);
+        
+        $template = DB::table('route_templates')->where('id', $id)->first();
+        if(!$template) {
+            return abort(404);
+        }
+
+        // Get items for this template
+        $template_items = DB::table('route_template_items')
+            ->where('route_template_id', $id)
+            ->orderBy('priority', 'asc')
+            ->get();
+
+        // Prepare data for the view
+        // We need lists of Pharmacies and Offices to show on the map/list
+        
+        $pharmacys = DB::table('pharmacys')->where("isactive",1)->where("isblocked",0)->get();
+        $offices = DB::table('offices')->get();
+        
+        // For the map, we need locations of all potential points? 
+        // Or just the points in the template + all pharmacies?
+        // The user said "add points ... right click on map or drag".
+        // If they can drag, we need a list.
+        // If they can right click map, we need to know what is on the map.
+        // Let's assume we show markers for all Pharmacies and Offices on the map.
+        
+        $pharmacy_locations = [];
+        foreach($pharmacys as $pharmacy) {
+            if(!empty($pharmacy->location)) {
+                 $pharmacy_locations[] = [
+                     'id' => $pharmacy->id, 
+                     'location' => $pharmacy->location,
+                     'name' => $pharmacy->name,
+                     'address' => $pharmacy->address,
+                     'type' => 'pharmacy'
+                 ];
             }
+        }
 
-            // Get items for this template
-            $template_items = DB::table('route_template_items')
-                ->where('route_template_id', $id)
-                ->orderBy('priority', 'asc')
-                ->get();
+        // Also add offices to this map array if desired
+         foreach($offices as $office) {
+             if(!empty($office->location)) {
+                 $pharmacy_locations[] = [
+                     'id' => $office->id, 
+                     'location' => $office->location,
+                     'name' => $office->name,
+                     'address' => $office->location, // Office usually just has location geo
+                     'type' => 'office'
+                 ];
+             }
+        }
 
-            // Prepare data for the view
-            // We need lists of Pharmacies and Offices to show on the map/list
-            
-            $pharmacys = DB::table('pharmacys')->where("isactive",1)->where("isblocked",0)->get();
-            $offices = DB::table('offices')->get();
-            
-            // For the map, we need locations of all potential points? 
-            // Or just the points in the template + all pharmacies?
-            // The user said "add points ... right click on map or drag".
-            // If they can drag, we need a list.
-            // If they can right click map, we need to know what is on the map.
-            // Let's assume we show markers for all Pharmacies and Offices on the map.
-            
-            $pharmacy_locations = [];
-            foreach($pharmacys as $pharmacy) {
-                if(!empty($pharmacy->location)) {
-                     $pharmacy_locations[] = [
-                         'id' => $pharmacy->id, 
-                         'location' => $pharmacy->location,
-                         'name' => $pharmacy->name,
-                         'address' => $pharmacy->address,
-                         'type' => 'pharmacy'
-                     ];
-                }
-            }
+        // Active Drivers for assignment popup
+        $drivers = DB::table('users')->where('role', 'driver')->where('isactive', 1)->where('isblocked', 0)->select('id', 'name', 'last_name')->get();
 
-            // Also add offices to this map array if desired
-             foreach($offices as $office) {
-                 if(!empty($office->location)) {
-                     $pharmacy_locations[] = [
-                         'id' => $office->id, 
-                         'location' => $office->location,
-                         'name' => $office->name,
-                         'address' => $office->location, // Office usually just has location geo
-                         'type' => 'office'
-                     ];
-                 }
-            }
+        $res_view = view('routes.templates.show', [
+            'template' => $template,
+            'items' => $template_items,
+            'pharmacys' => $pharmacys, 
+            'offices' => $offices,
+            'drivers' => $drivers,
+            'pharmacy_locations' => $pharmacy_locations,
+            'title' => 'Edit Route Template: ' . $template->name,
+            'br1' => 'Routes',
+            'br2' => 'Template Edit'
+        ]);
 
-            // Active Drivers for assignment popup
-            $drivers = DB::table('users')->where('role', 'driver')->where('isactive', 1)->where('isblocked', 0)->select('id', 'name', 'last_name')->get();
-
-            $res_view = view('routes.templates.show', [
-                'template' => $template,
-                'items' => $template_items,
-                'pharmacys' => $pharmacys, 
-                'offices' => $offices,
-                'drivers' => $drivers,
-                'pharmacy_locations' => $pharmacy_locations,
-                'title' => 'Edit Route Template: ' . $template->name,
-                'br1' => 'Routes',
-                'br2' => 'Template Edit'
-            ]);
-
-            if(request()->query->has('ajax')) {
-                return $res_view->renderSections();
-            } else {
-                return $res_view;
-            }
-
+        if(request()->query->has('ajax')) {
+            return $res_view->renderSections();
         } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+            return $res_view;
         }
     }
 

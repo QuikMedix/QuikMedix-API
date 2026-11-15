@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\Role;
 use App\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\DB;
@@ -60,16 +61,16 @@ class AuthServiceProvider extends ServiceProvider
             if ($account === null) {
                 return false;
             }
-            if (in_array($account->role, User::ADMIN_ROLES, true)) {
+            if (in_array($account->role, Role::adminValues(), true)) {
                 return $user->role === 'superadmin';
             }
 
             return $user->isAdmin() || ($user->canManagePharmacy($pharmacyId) && (string) $account->pharmacy_id === (string) $pharmacyId);
         });
         Gate::define('assign-role', fn (User $user, string $role): bool => match (true) {
-            ! in_array($role, User::ROLES, true) => false,
+            Role::tryFrom($role) === null => false,
             $user->role === 'superadmin' => true,
-            $user->isAdmin() => ! in_array($role, User::ADMIN_ROLES, true),
+            $user->isAdmin() => ! Role::from($role)->isAdmin(),
             default => $user->role === 'medic' && in_array($role, ['user', 'driver', 'medic'], true),
         });
         Gate::define('manage-pharmacy-facility', fn (User $user, int|string|null $pharmacyId = null, int|string|null $facilityId = null): bool => $managesMember($user, $pharmacyId, $facilityId, 'facility'));

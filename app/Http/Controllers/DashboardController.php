@@ -442,104 +442,101 @@ class DashboardController extends Controller
     }
 
     public function searchJson() {
-        if((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->can('admin')))) {
-            $search = request()->query('search', '');
-            $max_res = 100;
-            if(!empty($search)) {
-                $orders_results = [];
-                $rxs_results = [];
-                $users_results = [];
-                $orders = DB::table('orders')->where('orders.id','LIKE','%'.$search.'%');
-                if(!empty(Auth::user()->pharmacy_id)) {
-                    $orders=$orders->where('orders.pharmacy_id',Auth::user()->pharmacy_id);
+        abort_unless((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->can('admin'))), 403, AccessMessages::NO_PERMISSION);
+        $search = request()->query('search', '');
+        $max_res = 100;
+        if(!empty($search)) {
+            $orders_results = [];
+            $rxs_results = [];
+            $users_results = [];
+            $orders = DB::table('orders')->where('orders.id','LIKE','%'.$search.'%');
+            if(!empty(Auth::user()->pharmacy_id)) {
+                $orders=$orders->where('orders.pharmacy_id',Auth::user()->pharmacy_id);
+            }
+            $orders=$orders->leftJoin('users','users.id','=','orders.user_id')->select('orders.id','orders.created','orders.finish','orders.copay','orders.statuse_id','orders.pharmacy_id','orders.user_id',DB::raw("CONCAT(users.name, ' ', users.last_name) as user_name"))->get();
+            $statuses = self::get_statuses();
+            $pharmacys = self::get_pharmacys($orders->pluck('pharmacy_id')->toArray());
+            foreach($orders as $order) {
+                $data = [];
+                $pharmacy_name = '';
+                if(isset($pharmacys[$order->pharmacy_id])){
+                    $pharmacy_name = $pharmacys[$order->pharmacy_id]->name;
                 }
-                $orders=$orders->leftJoin('users','users.id','=','orders.user_id')->select('orders.id','orders.created','orders.finish','orders.copay','orders.statuse_id','orders.pharmacy_id','orders.user_id',DB::raw("CONCAT(users.name, ' ', users.last_name) as user_name"))->get();
-                $statuses = self::get_statuses();
-                $pharmacys = self::get_pharmacys($orders->pluck('pharmacy_id')->toArray());
-                foreach($orders as $order) {
+                $data['id']=$order->id;
+                $data['created']=date('m/d/Y g:i A', strtotime($order->created ?? ''));
+                $data['finish']=date('m/d/Y g:i A', strtotime($order->finish ?? ''));
+                $data['copay']=number_format($order->copay ?? 0,2);
+                $data['pharmacy_id']=$order->pharmacy_id;
+                $data['user_id']=$order->user_id;
+                $data['status_name']=$statuses[$order->statuse_id]->name;
+                $data['status_color']=$statuses[$order->statuse_id]->color;
+                $data['pharmacy_name']=$pharmacy_name;
+                $data['user_name']=$order->user_name;
+                $data['link']="/orders/{$order->pharmacy_id}/show/{$order->id}";
+                $orders_results[]=$data;
+            }
+            if(count($orders_results)<$max_res) {
+                $rxs = DB::table('rxs')->join('orders','orders.id','=','rxs.order_id')->where('rx_id','LIKE','%'.$search.'%')->select('rxs.*','orders.pharmacy_id','orders.created','orders.finish','orders.copay');
+                if(!empty(Auth::user()->pharmacy_id)) {
+                    $rxs=$rxs->where('orders.pharmacy_id',Auth::user()->pharmacy_id);
+                }
+                $rxs=$rxs->get();
+                foreach($rxs as $rx) {
+                    $data = [];
+                    $data['rx_id']=$rx->rx_id;
+                    $data['order_id']=$rx->order_id;
+                    $data['created']=date('m/d/Y g:i A', strtotime($rx->created ?? ''));
+                    $data['finish']=date('m/d/Y g:i A', strtotime($rx->finish ?? ''));
+                    $data['copay']=number_format($rx->copay ?? 0,2);
+                    $data['link']="/orders/{$rx->pharmacy_id}/show/{$rx->order_id}";
+                    $rxs_results[]=$data;
+                }
+            }
+            if(count($orders_results)+count($rxs_results)<$max_res) {
+                $users = DB::table('users')->where('users.role','user')->whereNotNull('users.pharmacy_id')->where(function($query) use ($search) {
+                    $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
+                        ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
+                        ->orWhere('users.phone','LIKE','%'.$search.'%')
+                        ->orWhere('users.address','LIKE','%'.$search.'%')
+                        ->orWhere('users.zip','LIKE','%'.$search.'%')
+                        ->orWhere('users.id','LIKE','%'.$search.'%');
+                })->leftJoin('orders','orders.user_id','=','users.id')->select('users.id','users.name','users.last_name','users.phone','users.address','users.zip','users.pharmacy_id',DB::raw('count(distinct orders.id) as count_orders'))->groupBy('users.id','users.name','users.last_name','users.phone','users.address','users.zip','users.pharmacy_id');
+                if(!empty(Auth::user()->pharmacy_id)) {
+                    $users=$users->where('users.pharmacy_id',Auth::user()->pharmacy_id);
+                }
+                $users=$users->get();
+                foreach($users as $user) {
                     $data = [];
                     $pharmacy_name = '';
-                    if(isset($pharmacys[$order->pharmacy_id])){
-                        $pharmacy_name = $pharmacys[$order->pharmacy_id]->name;
+                    if(isset($pharmacys[$user->pharmacy_id])){
+                        $pharmacy_name = $pharmacys[$user->pharmacy_id]->name;
                     }
-                    $data['id']=$order->id;
-                    $data['created']=date('m/d/Y g:i A', strtotime($order->created ?? ''));
-                    $data['finish']=date('m/d/Y g:i A', strtotime($order->finish ?? ''));
-                    $data['copay']=number_format($order->copay ?? 0,2);
-                    $data['pharmacy_id']=$order->pharmacy_id;
-                    $data['user_id']=$order->user_id;
-                    $data['status_name']=$statuses[$order->statuse_id]->name;
-                    $data['status_color']=$statuses[$order->statuse_id]->color;
+                    $data['name']=$user->name;
+                    $data['last_name']=$user->last_name;
+                    $data['id']=$user->id;
+                    $data['phone']=$user->phone;
+                    $data['address']=$user->address;
+                    $data['zip']=$user->zip;
+                    $data['count_orders']=$user->count_orders;
                     $data['pharmacy_name']=$pharmacy_name;
-                    $data['user_name']=$order->user_name;
-                    $data['link']="/orders/{$order->pharmacy_id}/show/{$order->id}";
-                    $orders_results[]=$data;
+                    $data['pharmacy_id']=$user->pharmacy_id;
+                    $data['link']="/patients/{$user->pharmacy_id}/edit/{$user->id}";
+                    $users_results[]=$data;
                 }
-                if(count($orders_results)<$max_res) {
-                    $rxs = DB::table('rxs')->join('orders','orders.id','=','rxs.order_id')->where('rx_id','LIKE','%'.$search.'%')->select('rxs.*','orders.pharmacy_id','orders.created','orders.finish','orders.copay');
-                    if(!empty(Auth::user()->pharmacy_id)) {
-                        $rxs=$rxs->where('orders.pharmacy_id',Auth::user()->pharmacy_id);
-                    }
-                    $rxs=$rxs->get();
-                    foreach($rxs as $rx) {
-                        $data = [];
-                        $data['rx_id']=$rx->rx_id;
-                        $data['order_id']=$rx->order_id;
-                        $data['created']=date('m/d/Y g:i A', strtotime($rx->created ?? ''));
-                        $data['finish']=date('m/d/Y g:i A', strtotime($rx->finish ?? ''));
-                        $data['copay']=number_format($rx->copay ?? 0,2);
-                        $data['link']="/orders/{$rx->pharmacy_id}/show/{$rx->order_id}";
-                        $rxs_results[]=$data;
-                    }
-                }
-                if(count($orders_results)+count($rxs_results)<$max_res) {
-                    $users = DB::table('users')->where('users.role','user')->whereNotNull('users.pharmacy_id')->where(function($query) use ($search) {
-                        $query->where(DB::raw("CONCAT(users.name, ' ', users.last_name)"),'LIKE','%'.$search.'%')
-                            ->orWhere(DB::raw("CONCAT(users.last_name, ' ', users.name)"),'LIKE','%'.$search.'%')
-                            ->orWhere('users.phone','LIKE','%'.$search.'%')
-                            ->orWhere('users.address','LIKE','%'.$search.'%')
-                            ->orWhere('users.zip','LIKE','%'.$search.'%')
-                            ->orWhere('users.id','LIKE','%'.$search.'%');
-                    })->leftJoin('orders','orders.user_id','=','users.id')->select('users.id','users.name','users.last_name','users.phone','users.address','users.zip','users.pharmacy_id',DB::raw('count(distinct orders.id) as count_orders'))->groupBy('users.id','users.name','users.last_name','users.phone','users.address','users.zip','users.pharmacy_id');
-                    if(!empty(Auth::user()->pharmacy_id)) {
-                        $users=$users->where('users.pharmacy_id',Auth::user()->pharmacy_id);
-                    }
-                    $users=$users->get();
-                    foreach($users as $user) {
-                        $data = [];
-                        $pharmacy_name = '';
-                        if(isset($pharmacys[$user->pharmacy_id])){
-                            $pharmacy_name = $pharmacys[$user->pharmacy_id]->name;
-                        }
-                        $data['name']=$user->name;
-                        $data['last_name']=$user->last_name;
-                        $data['id']=$user->id;
-                        $data['phone']=$user->phone;
-                        $data['address']=$user->address;
-                        $data['zip']=$user->zip;
-                        $data['count_orders']=$user->count_orders;
-                        $data['pharmacy_name']=$pharmacy_name;
-                        $data['pharmacy_id']=$user->pharmacy_id;
-                        $data['link']="/patients/{$user->pharmacy_id}/edit/{$user->id}";
-                        $users_results[]=$data;
-                    }
-                }
-                $results['orders']=$orders_results;
-                $results['rxs']=$rxs_results;
-                $results['users']=$users_results;
-                $results = array_slice($results,0,$max_res);
-                return json_encode([
-                    'results'=>$results,
-                    'message' => 'OK'
-                ]);
-            } else {
-                return json_encode([
-                    'results'=>[],
-                    'message' => 'OK'
-                ]);
             }
+            $results['orders']=$orders_results;
+            $results['rxs']=$rxs_results;
+            $results['users']=$users_results;
+            $results = array_slice($results,0,$max_res);
+            return json_encode([
+                'results'=>$results,
+                'message' => 'OK'
+            ]);
         } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+            return json_encode([
+                'results'=>[],
+                'message' => 'OK'
+            ]);
         }
     }
 

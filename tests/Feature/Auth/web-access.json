@@ -1,6 +1,7 @@
 {
     "DELETE /route-templates/1": {
         "login": "guest",
+        "no permission": "sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /": {
@@ -918,14 +919,17 @@
     },
     "POST /route-templates": {
         "login": "guest",
+        "no permission": "sale driver user facility",
         "blocked account": "blocked"
     },
     "POST /route-templates/1/assign": {
         "login": "guest",
+        "no permission": "sale driver user facility",
         "blocked account": "blocked"
     },
     "POST /route-templates/1/items": {
         "login": "guest",
+        "no permission": "sale driver user facility",
         "blocked account": "blocked"
     },
     "POST /routes-list/driver/1": {
