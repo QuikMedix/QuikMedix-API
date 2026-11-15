@@ -183,8 +183,9 @@ class MerchantApi extends Controller
                             if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->patient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')])){
                                 
                             }
-                        } catch (\Throwable) {
-                            //throw $th;
+                        } catch (\Throwable $exception) {
+                            // The work around it continues, but the failure is no longer lost.
+                            report($exception);
                         }
                         $patient = DB::table("users")->where("phone",$patient_phone)->where("pharmacy_id",$pharmacy_auth->id)->first();
                     }

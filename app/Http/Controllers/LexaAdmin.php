@@ -2795,8 +2795,9 @@ class LexaAdmin extends Controller
                 try {
                     $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
                     $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Welcome to QuikMedix, ".$user->name."!\nYour account has been verified. Now you can use the app.\nAll the best,\nThe team at QuikMedix", "from" => config('app.twilio_from_phone')]);
-                } catch (\Throwable) {
-                    //throw $th;
+                } catch (\Throwable $exception) {
+                    // The work around it continues, but the failure is no longer lost.
+                    report($exception);
                 }
             }
             if($request->input('block')>0) {

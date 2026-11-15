@@ -39,8 +39,9 @@ class Notifications extends Model
             $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
             try {
                 $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => $title." ".$body, "from" => config('app.twilio_from_phone')]);
-            } catch (\Throwable) {
-                //throw $th;
+            } catch (\Throwable $exception) {
+                // The work around it continues, but the failure is no longer lost.
+                report($exception);
             }
         }
     }

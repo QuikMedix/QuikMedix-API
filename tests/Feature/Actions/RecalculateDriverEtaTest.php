@@ -6,7 +6,9 @@ use App\Http\Controllers\LexaAdmin;
 use App\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\CreatesAuthenticationSchema;
@@ -319,8 +321,12 @@ class RecalculateDriverEtaTest extends TestCase
         DB::table('locations')->where('user_id', $unlocated->id)->delete();
         DB::table('locations')->insert(['user_id' => $unreachable->id, 'location' => '41.00,-75.00']);
         FakeMapServices::$unreachableOrigin = '41,-75';
+        Exceptions::fake();
 
         $this->runScheduledEtaTask();
+
+        // The failed driver is skipped, and the failure is reported instead of discarded.
+        Exceptions::assertReported(ConnectionException::class);
 
         $this->assertSame(['41,-75', '40.7,-74'], [FakeMapServices::query(0)['origin'], FakeMapServices::query(1)['origin']]);
         $this->assertSame([10, 10, 20, 20, 30], $this->stopEtas($working));
