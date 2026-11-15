@@ -95,6 +95,7 @@
   <script>
       var username = '{{Auth::user()->id}}';
       var username2 = '{{$user->id}}';
+      var chatViewer = { viewer: username, signature: '{{ App\Support\ChatViewer::sign(Auth::user()->id) }}' };
       var GENERAL_CHANNEL_UNIQUE_NAME = '{{$chat_name}}';
       var GENERAL_CHANNEL_NAME = '{{$chat_name}}';
   </script>
@@ -105,7 +106,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.1/moment.min.js"></script>
   <script src="https://media.twiliocdn.com/sdk/js/common/v0.1/twilio-common.min.js"></script>
   <script src="https://media.twiliocdn.com/sdk/js/chat/v4.0/twilio-chat.min.js"></script>
-  <script src="{{ asset('js/twiliochat-api.js').'?v=22' }}"></script>
+  <script src="{{ asset('js/twiliochat-api.js').'?v=23' }}"></script>
   <script src="{{ asset('js/dateformatter.js') }}"></script>
 </body>
 </html>

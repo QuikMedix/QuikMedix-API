@@ -43,10 +43,15 @@ Route::post('account/delete', DeleteAccountController::class)->middleware('auth:
 
 Route::get('/pharmacy-list', [LexaAdminApiNoAuth::class, 'pharmacyList']);
 Route::post('/driver-create', [LexaAdminApiNoAuth::class, 'driversUsersAddHandler']);
-Route::post('/chat-token', [TokenController::class, 'generate'])->name('token-generate');
-Route::post('/users/get/', [LexaAdminApiNoAuth::class, 'getUserInfo']);
-Route::post('/chats/new_message', [LexaAdminApiNoAuth::class, 'new_message']);
-Route::post('/user/reset/', [LexaAdminApiNoAuth::class, 'reSendAuthMessage']);
+// Resets the password to a random one and texts it; limited so nobody can do that to someone else over and over.
+Route::post('/user/reset/', [LexaAdminApiNoAuth::class, 'reSendAuthMessage'])->middleware('throttle:password-reset');
+
+// Called by the chat page in the mobile apps' web view: a bearer token or the page's signature says who is asking.
+Route::middleware('chat.viewer')->group(function () {
+    Route::post('/chat-token', [TokenController::class, 'generate'])->name('token-generate');
+    Route::post('/users/get/', [LexaAdminApiNoAuth::class, 'getUserInfo']);
+    Route::post('/chats/new_message', [LexaAdminApiNoAuth::class, 'new_message']);
+});
 
 Route::post('/telegram/auth/', [LexaAdminApiNoAuth::class, 'telegramAuth']);
 

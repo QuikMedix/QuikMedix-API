@@ -210,6 +210,9 @@ class LexaAdminApiNoAuth extends Controller
                     'errors' => 'Not Found'
                 ], 404);
             }
+            // Only the two people in a chat may report a message in it, and only as themselves.
+            $viewer = $request->attributes->get('chat_viewer');
+            abort_unless((string) $user === $viewer && in_array($viewer, [(string) $chat->user1, (string) $chat->user2], true), 403, 'This chat is not yours.');
             if($chat->user1==$user) {
                 if($request->input('not_me_author')>0) {
                     $unread_user=0;

@@ -22,6 +22,7 @@ return Application::configure(basePath: $_ENV['APP_BASE_PATH'] ?? dirname(__DIR_
             'active.api' => \App\Http\Middleware\EnsureApiAccountIsActive::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
             'allowed' => \App\Http\Middleware\EnsureUserIsAllowed::class,
+            'chat.viewer' => \App\Http\Middleware\EnsureChatViewer::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
