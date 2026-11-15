@@ -131,7 +131,7 @@ audio {
                                             <span style="font-size: 11px;" class="badge badge-pill badge-{{$order->statuse_copay_color}} mt-1">{{$order->statuse_copay_name}}</span>
                                         @endif
                                         
-                                        @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'logist') && $order->copay>0 && !in_array($order->statuse_copay,[1,3,4,6]))
+                                        @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->hasRole('logist')) && $order->copay>0 && !in_array($order->statuse_copay,[1,3,4,6]))
                                         <a style="cursor:pointer;" onclick="var win=window.open('/pay/copay/{{$order->id}}','Pay order Co-Pay','width=800,height=700');var timer=setInterval(function(){if(win.closed){clearInterval(timer);document.location.reload();}},600);"><button class="btn btn-success btn-sm" type="button">Pay</button></a>
                                         <form method="post" style="display: inline-block;">
                                             @csrf
@@ -160,7 +160,7 @@ audio {
 									<b>Options:</b> {{$order->delivery_method}}<br>
 									<b>Time:</b> {{$order->delivery_time}}<br>
 									<b>Fridge:</b> {{($order->fridge>0)?'yes':'no'}}<br>
-                                    @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))
+                                    @if((Auth::user()->hasRole('medic') || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))
                                     <b>Customer rating:</b> <div class="rating">
                                     @if(empty($order->rating))
                                     <i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i>
@@ -1144,7 +1144,7 @@ of coverage and/or violation of a policy condition due to the actions or conduct
                         <div class="card-body" style="min-height: 220px;">
 							<h5 class="qm-section-title">Dispatcher Notes</h5>
 							<div style="margin: 10px"> 
-                                @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'logist'))
+                                @if($order->statuse_id!=4 && $order->statuse_id!=5 && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->hasRole('logist')))
 								<div style="min-height: 30px;"><a href="#" id="ajax-alert" class="btn btn-sm btn-primary float-right">Add Note</a></div>
                                 @endif
 								<ol class="activity-feed mb-0">

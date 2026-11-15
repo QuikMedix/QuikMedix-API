@@ -235,7 +235,7 @@ class DeliveryController extends Controller
                     'errors' => 'Forbidden'
                 ], 400);
             }
-        } else if(Auth::user()->role == 'user') {
+        } else if(Auth::user()->hasRole('user')) {
             $validator = Validator::make($request->all(), [
                 'image' => 'mimes:jpeg,jpg,png|max:2048',    
                 'order_id' => 'max:255',    
@@ -286,41 +286,7 @@ class DeliveryController extends Controller
                 } else {
                     $bag = 1;
                 }
-                $order = DB::table('orders')->where('id',$order_id)->where('driver_id', Auth::user()->id)->first();
-                if(isset($order)) {
-                    $count_added = PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
-                    if(1+$count_added>$order->count_bags) {
-                        return response()->json([
-                            'order_id' => $order->id,
-                            'count_bags' => $order->count_bags,
-                            'count_scanned' => $count_added
-                        ], 200);
-                    } else if(1+$count_added<=$order->count_bags) {
-                        if(PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->where('bag',$bag)->count()>0) {
-                            return response()->json([
-                                'message' => 'This bag has already been scanned, please scan the next bag for this order.',
-                                'errors' => 'Not Found'
-                            ], 404);
-                        } else {
-                            PackageTransition::query()->insert(['order_id'=>$order->id,'user_id'=>$order->user_id,'driver_id'=>Auth::user()->id,'bag'=>$bag]);
-                            return response()->json([
-                                'order_id' => $order->id,
-                                'count_bags' => $order->count_bags,
-                                'count_scanned' => $count_added+1
-                            ], 200);
-                        }
-                    } else {
-                        return response()->json([
-                            'message' => 'The indicated number of bags does not match the number of bags in the order, check the quantity or change it in the order settings.',
-                            'errors' => 'Not Found'
-                        ], 404);
-                    }
-                } else {
-                    return response()->json([
-                        'message' => 'Order with such a QR code was not found or order was alredy picked up.',
-                        'errors' => 'Not Found'
-                    ], 404);
-                }
+                return $this->recordPatientScan($order_id, $bag);
             } else {
                 return response()->json([
                     'message' => 'Fields is not be empty.',
@@ -346,41 +312,7 @@ class DeliveryController extends Controller
                 } else {
                     $bag = 1;
                 }
-                $order = DB::table('orders')->where('id',$order_id)->where('driver_id', Auth::user()->id)->first();
-                if(isset($order) && $order_id==$order_id_code) {
-                    $count_added = PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
-                    if(1+$count_added>$order->count_bags) {
-                        return response()->json([
-                            'order_id' => $order->id,
-                            'count_bags' => $order->count_bags,
-                            'count_scanned' => $count_added
-                        ], 200);
-                    } else if(1+$count_added<=$order->count_bags) {
-                        if(PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->where('bag',$bag)->count()>0) {
-                            return response()->json([
-                                'message' => 'This bag has already been scanned, please scan the next bag for this order.',
-                                'errors' => 'Not Found'
-                            ], 404);
-                        } else {
-                            PackageTransition::query()->insert(['order_id'=>$order->id,'user_id'=>$order->user_id,'driver_id'=>Auth::user()->id,'bag'=>$bag]);
-                            return response()->json([
-                                'order_id' => $order->id,
-                                'count_bags' => $order->count_bags,
-                                'count_scanned' => $count_added+1
-                            ], 200);
-                        }
-                    } else {
-                        return response()->json([
-                            'message' => 'The indicated number of bags does not match the number of bags in the order, check the quantity or change it in the order settings.',
-                            'errors' => 'Not Found'
-                        ], 404);
-                    }
-                } else {
-                    return response()->json([
-                        'message' => 'Order with such a QR code was not found or order was alredy picked up.',
-                        'errors' => 'Not Found'
-                    ], 404);
-                }
+                return $this->recordPatientScan($order_id, $bag, $order_id==$order_id_code);
             } else {
                 return response()->json([
                     'message' => 'Fields is not be empty.',
@@ -392,6 +324,53 @@ class DeliveryController extends Controller
                 'message' => 'You cannot open this page',
                 'errors' => 'Forbidden'
             ], 403);
+        }
+    }
+
+    /**
+     * Records that the driver scanned one bag of an order at the patient's door and answers how many
+     * bags are scanned so far.
+     *
+     * @param  int|string  $order_id
+     * @param  int|string  $bag
+     * @param  bool  $codeMatchesOrder  false when the scanned code belongs to a different order than the one on screen
+     */
+    private function recordPatientScan($order_id, $bag, bool $codeMatchesOrder = true)
+    {
+        $order = DB::table('orders')->where('id',$order_id)->where('driver_id', Auth::user()->id)->first();
+        if(isset($order) && $codeMatchesOrder) {
+            $count_added = PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
+            if(1+$count_added>$order->count_bags) {
+                return response()->json([
+                    'order_id' => $order->id,
+                    'count_bags' => $order->count_bags,
+                    'count_scanned' => $count_added
+                ], 200);
+            } else if(1+$count_added<=$order->count_bags) {
+                if(PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->where('bag',$bag)->count()>0) {
+                    return response()->json([
+                        'message' => 'This bag has already been scanned, please scan the next bag for this order.',
+                        'errors' => 'Not Found'
+                    ], 404);
+                } else {
+                    PackageTransition::query()->insert(['order_id'=>$order->id,'user_id'=>$order->user_id,'driver_id'=>Auth::user()->id,'bag'=>$bag]);
+                    return response()->json([
+                        'order_id' => $order->id,
+                        'count_bags' => $order->count_bags,
+                        'count_scanned' => $count_added+1
+                    ], 200);
+                }
+            } else {
+                return response()->json([
+                    'message' => 'The indicated number of bags does not match the number of bags in the order, check the quantity or change it in the order settings.',
+                    'errors' => 'Not Found'
+                ], 404);
+            }
+        } else {
+            return response()->json([
+                'message' => 'Order with such a QR code was not found or order was alredy picked up.',
+                'errors' => 'Not Found'
+            ], 404);
         }
     }
 }

@@ -86,7 +86,7 @@
                                         </h4>
                                         <span class="">
                                             <a style="cursor:pointer;" onclick="$('.balance').hide();$('.refill-inp').show();" class="text-light mr-2"> Refill <i class="mdi mdi-plus-circle-outline"></i> </a> 
-                                            @if(Auth::user()->role=="admin" || Auth::user()->role == 'superadmin')
+                                            @if(Auth::user()->hasAnyRole('admin', 'superadmin'))
                                             <a style="cursor:pointer;" onclick="$('.balance').hide();$('.balance-inp').show();" class="text-light"> Edit <i class="mdi mdi-circle-edit-outline"></i></a>
                                             @endif
                                         </span>
@@ -168,7 +168,7 @@
                                         Correction</br>
                                         <p class="corrections mb-0">
                                             {{($invoice->corrections<0)?'-$'.number_format(abs($invoice->corrections),2):'+$'.number_format($invoice->corrections ?? 0,2)}}
-                                            @if((Auth::user()->role=="admin" || Auth::user()->role == 'superadmin') && $invoice->payed=='0')
+                                            @if((Auth::user()->hasAnyRole('admin', 'superadmin')) && $invoice->payed=='0')
                                             <a style="cursor:pointer;" onclick="$(this).parent('.corrections').hide();$(this).parent('.corrections').next('.corrections-inp').show();" class="text-light"><i style="color:#000;" class="mdi mdi-circle-edit-outline"></i></a>
                                             @endif
                                         </p>
@@ -235,7 +235,7 @@
                         </div>
                         @endforeach
                        
-                        @if(Auth::user()->role=="admin" || Auth::user()->role == 'superadmin')
+                        @if(Auth::user()->hasAnyRole('admin', 'superadmin'))
                         <div class="col-12" style="text-align: right;margin-top: 10px;">
                                 <a href="/billing/{{$pharmacy_id}}/invoice/add" class="addorder"><button class="btn btn-primary">Create Invoice</button></a>   
                         </div>                                                    
@@ -266,7 +266,7 @@
             <script src="{{ URL::asset('/js/pages/table-responsive.init.js?v=page-routes-2')}}"></script>
             <script>
                 $(document).ready(function(){
-                    @if(Auth::user()->role=='medic')
+                    @if(Auth::user()->hasRole('medic'))
                     @if(Auth::user()->pharmacy_balance()<0)
                     Swal.fire({
                         title:"Couldn't process your last payment",

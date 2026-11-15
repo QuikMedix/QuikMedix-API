@@ -63,7 +63,7 @@
                                                 </ul>
                                             </div>
                                         @endif
-                                        @if(in_array(Auth::user()->role, ['superadmin', 'admin', 'dispadmin']) && ($plans->isEmpty() || $areas->isEmpty()))
+                                        @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin') && ($plans->isEmpty() || $areas->isEmpty()))
                                             <div class="alert alert-info" role="status">
                                                 @if($plans->isEmpty())
                                                     A tariff plan is required. <a href="{{ url('/settings/plans/add') }}" target="_blank" rel="noopener">Create a tariff plan</a> with your delivery prices.
@@ -131,7 +131,7 @@
                                                 <input class="form-control" required type="text" name="site" value="{{ old('site', $input['site']) }}">
                                             </div>
                                         </div>
-                                        @if(in_array(Auth::user()->role, ['superadmin', 'admin', 'dispadmin']))
+                                        @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin'))
                                         <div class="form-group row">
                                             <label for="zone_id" class="col-sm-2 col-form-label">Admin Zone</label>
                                             <div class="col-sm-10">

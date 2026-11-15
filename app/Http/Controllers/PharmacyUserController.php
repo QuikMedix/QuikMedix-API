@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
 use App\Actions\LogUserChanges;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
@@ -100,7 +101,7 @@ class PharmacyUserController extends Controller
      * @param int|string $user_id
      */
     public function pharmacyUsersEdit($pharmacy_id,$user_id) {
-        abort_unless(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && User::query()->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin')), 403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->hasRole('medic') && Auth::user()->pharmacy_id==$pharmacy_id && User::query()->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin')), 403, AccessMessages::NO_PERMISSION);
         $user = DB::table('users')->where('id', $user_id)->first();
         $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
         $pharmacys = DB::table('pharmacys')->get();
@@ -157,7 +158,7 @@ class PharmacyUserController extends Controller
         $input['zip']='';
         $input['apartment']='';
         $input['pharmacy']=$pharmacy_id;
-        $pharmacys = DB::table('pharmacys')->get();
+        $pharmacys = Pharmacy::query()->get();
         $res_view = view('pharmacy.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
         return $this->page(request(), $res_view);
     }

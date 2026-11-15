@@ -270,7 +270,7 @@
                                             <button class="btn btn-primary" type="submit">Confirm Receipt</button>
                                         </form>
                                         @endif
-                                        @if(count($orders_transfer) && (Auth::user()->is_massiveBagsTransfer() || Auth::user()->role=="admin"))
+                                        @if(count($orders_transfer) && (Auth::user()->is_massiveBagsTransfer() || Auth::user()->hasRole('admin')))
                                         <form method="POST">
                                             @csrf
                                             <input type="hidden" name="massiveBagsTransfer" value="1">

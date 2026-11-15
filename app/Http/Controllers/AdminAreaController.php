@@ -19,7 +19,7 @@ class AdminAreaController extends Controller
 
 
     public function settingsAdminAreas() {
-        $admin_areas = DB::table('admin_areas')->get();
+        $admin_areas = AdminArea::query()->get();
         return view('settings.admin_areas',['admin_areas'=>$admin_areas,'title'=>'Settings Admin Zones','br1'=>'Settings','br2'=>'Admin Zones','alert'=>'']);
     }
 

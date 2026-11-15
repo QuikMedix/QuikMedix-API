@@ -173,7 +173,7 @@
 
 
 
-    @if(((Auth::user()->can('admin')) || Auth::user()->role == 'logist') && Auth::user()->call_ready=='1')
+    @if(((Auth::user()->can('admin')) || Auth::user()->hasRole('logist')) && Auth::user()->call_ready=='1')
     <script src="https://my.zadarma.com/webphoneWebRTCWidget/v8/js/loader-phone-lib.js?sub_v=61"></script>
     <script src="https://my.zadarma.com/webphoneWebRTCWidget/v8/js/loader-phone-fn.js?sub_v=61"></script>
     <script>
@@ -193,7 +193,7 @@
         <!-- footerScript -->
         @yield('footerScript')
     </div>
-    @if(Auth::user()->role=='medic' && config('services.tidio.widget_key'))
+    @if(Auth::user()->hasRole('medic') && config('services.tidio.widget_key'))
     <script src="https://code.tidio.co/{{ config('services.tidio.widget_key') }}.js" async></script>
     <script>
         document.tidioIdentify = {
@@ -235,7 +235,7 @@
             window.speechSynthesis.speak(message);
         }
         $(function(){
-            @if(Auth::user()->role=='medic')
+            @if(Auth::user()->hasRole('medic'))
             @if((Auth::user()->pharmacy_balance()<0 && session()->has('flash_show_popup')) || Auth::user()->pharmacy_balance_ban())
             Swal.fire({
                 title:"Couldn't process your last payment",

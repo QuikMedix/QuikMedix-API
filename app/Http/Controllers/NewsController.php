@@ -25,7 +25,7 @@ class NewsController extends Controller
         $max_pages=ceil(News::query()->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
-        $news = DB::table('news')->orderBy('id','desc')->leftJoin('news_read',function ($join) {
+        $news = News::query()->orderBy('id','desc')->leftJoin('news_read',function ($join) {
             $join->on("news_read.news_id","=","news.id") ;
             $join->where("news_read.user_id",Auth::user()->id);
         })->select("news.*","news_read.id as viewed")->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
@@ -65,7 +65,7 @@ class NewsController extends Controller
     }
 
     public function news_patientAdd() {
-        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->hasRole('medic') && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
         $input['link']='';
         $input['title']='';
         $input['text']='';
@@ -74,7 +74,7 @@ class NewsController extends Controller
     }
 
     public function news_patientAddHandler(Request $request) {
-        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->hasRole('medic') && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
         if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
             DB::table('news_patient')->insert(["user_id"=>Auth::user()->id,"pharmacy_id"=>Auth::user()->pharmacy_id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }

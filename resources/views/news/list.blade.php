@@ -12,7 +12,7 @@
 
                     
                     <!-- end row -->
-            @if(Auth::user()->role=="admin")
+            @if(Auth::user()->hasRole('admin'))
             <ul class="nav nav-tabs">
                 <li class="nav-item">
                     <a class="nav-link active" data-toggle="tab" href="#push"><i class="mdi mdi-cellphone-information"></i> Push Notification</a>
@@ -380,7 +380,7 @@
 								
 								
 								<!-- 
-                                @if(Auth::user()->role=="admin")
+                                @if(Auth::user()->hasRole('admin'))
                                 <a href="/news/add" class="addorder" style="position:absolute;margin-top: 10px;margin-left: 10px;"><button class="btn btn-primary">Add News</button></a>
                                 @endif
                                 <div style="display: inline-block;text-align: center;margin-top: 10px;">Pages: 
@@ -441,7 +441,7 @@
 			</div>
             @endif
 
-            @if(Auth::user()->role=="medic")
+            @if(Auth::user()->hasRole('medic'))
 
                     <div class="row">
                         <div class="col-12" id="05012023-2">

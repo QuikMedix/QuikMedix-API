@@ -166,7 +166,7 @@
                     </div>
                     <!-- end page title -->
 
-                    @if(Auth::user()->role == 'medic')  
+                    @if(Auth::user()->hasRole('medic'))  
                     <div class="row">
                             @if($count_orders_merchant>0)
                             <div class="col-lg-12">
@@ -1015,7 +1015,7 @@
                         </div>
                         <!-- end row -->
                     @else
-                        @if(Auth::user()->role == 'sale')
+                        @if(Auth::user()->hasRole('sale'))
                             <div class="col-xl-12">
                                 <div class="card">
                                     <div class="card-body">

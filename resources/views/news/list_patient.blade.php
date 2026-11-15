@@ -13,7 +13,7 @@
                     <div class="row">
                         <div class="col-12">
                             <div class="card">
-                                @if(Auth::user()->role=="medic")
+                                @if(Auth::user()->hasRole('medic'))
                                 <a href="/news_patient/add" class="addorder" style="position:absolute;margin-top: 10px;margin-left: 10px;"><button class="btn btn-primary">Add News</button></a>
                                 @endif
                                 <div style="display: inline-block;text-align: center;margin-top: 10px;">Pages: 

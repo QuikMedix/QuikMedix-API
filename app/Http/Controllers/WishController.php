@@ -24,7 +24,7 @@ class WishController extends Controller
         $max_pages=ceil(WishCategory::query()->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
-        $wishes_categorys = DB::table('wishes_category')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $wishes_categorys = WishCategory::query()->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('wishes.category',['wishes_categorys'=>$wishes_categorys,'pages'=>$pages,'title'=>'Print Text Category','br1'=>'Print Text','br2'=>'Category']);
         return $this->page(request(), $res_view);
     }

@@ -19,7 +19,7 @@
                             <div class="card">
                                 <div class="card-body">
                                     <h4 class="card-title">Popular guides and tutorials</h4>
-                                    @if(Auth::user()->role=="admin")
+                                    @if(Auth::user()->hasRole('admin'))
                                     <a href="/faq/add" class="addorder"><button class="btn btn-primary">Add FAQ</button></a>
                                     @endif
                                     <p class="card-title-desc">&nbsp;</p>
@@ -34,7 +34,7 @@
                                                                 {{ $faq->title }}
                                                         </a>
                                                     </h6>
-                                                    @if(Auth::user()->role=="admin")
+                                                    @if(Auth::user()->hasRole('admin'))
                                                     <form method="post" style="position:absolute;top:12px;right:12px;">
                                                         @csrf
                                                         <input type="hidden" name="faq_id" value="{{$faq->id}}">

@@ -193,15 +193,15 @@
                                                         </div>
                                                         <div class="col-sm-6">
                                                             <small>Select Status</small>
-                                                            <select class="form-control" @if(!(Auth::user()->role=="superadmin" || Auth::user()->role=="admin") && $order->statuse_id!=1){{"disabled"}}@endif placeholder="Select Status..." name="statuse">
+                                                            <select class="form-control" @if(!(Auth::user()->hasAnyRole('superadmin', 'admin')) && $order->statuse_id!=1){{"disabled"}}@endif placeholder="Select Status..." name="statuse">
                                                                 <option value="">Status...</option>
                                                                 @foreach($statuses as $statuse)
                                                                     @if($order->statuse_id==$statuse->id)
                                                                         <option value="{{ $statuse->id }}" selected>{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
                                                                     @else
-                                                                        @if(!(Auth::user()->role=="superadmin" || Auth::user()->role=="admin") && in_array($statuse->id,[1,5]))
+                                                                        @if(!(Auth::user()->hasAnyRole('superadmin', 'admin')) && in_array($statuse->id,[1,5]))
                                                                         <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
-                                                                        @elseif((Auth::user()->role=="superadmin" || Auth::user()->role=="admin") && !in_array((int) $statuse->id, \App\Support\OrderStatus::NEEDS_DISPATCH_APPROVAL, true))
+                                                                        @elseif((Auth::user()->hasAnyRole('superadmin', 'admin')) && !in_array((int) $statuse->id, \App\Support\OrderStatus::NEEDS_DISPATCH_APPROVAL, true))
                                                                         <option value="{{ $statuse->id }}">{{ \App\Support\OrderStatus::label($statuse->id, $statuse->name) }}</option>
                                                                         @endif
                                                                     @endif
@@ -210,7 +210,7 @@
                                                         </div>
                                                         <div class="col-sm-6">
                                                             <small>Select Driver</small>
-                                                            <select class="form-control" placeholder="Select Driver..." name="driver" @if($order->type_driver==2) style="display:none;" @endif @if(Auth::user()->role=="medic") disabled @endif>
+                                                            <select class="form-control" placeholder="Select Driver..." name="driver" @if($order->type_driver==2) style="display:none;" @endif @if(Auth::user()->hasRole('medic')) disabled @endif>
                                                                 <option value="">Select Driver...</option>
                                                                 @foreach($drivers as $driver)
                                                                     @if($order->driver_id==$driver->id)

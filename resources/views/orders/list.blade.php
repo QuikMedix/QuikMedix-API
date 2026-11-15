@@ -273,7 +273,7 @@
                                                         </td>
                                                         <td style="vertical-align: middle;text-align: center;">
                                                             <x-order-status :status-id="$order->statuse_id ?? null" :name="$statuses[$order->statuse_id]->name ?? null" :color="$statuses[$order->statuse_id]->color ?? null" />
-                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))                                                            
+                                                            @if((Auth::user()->hasRole('medic') || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==4))                                                            
                                                             <div style="margin: 10px 0;font-size: 20px;line-height: 20px;color: #f5b225;"><span style="margin-top: 10px;font-size: 12px;color:#5b626b;">Customer rating</span><br>
                                                             @if(empty($order->rating))
                                                             <i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i>
@@ -382,7 +382,7 @@
                                                             </button>
                                                             <div class="dropdown-menu text-black">
                                                                 <a class="dropdown-item" href="/orders/{{ $order->pharmacy_id }}/show/{{ $order->id }}">View order</a>
-                                                                @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->hasAnyRole('superadmin', 'admin'))) || (Auth::user()->role == 'logist'))
+                                                                @if(((Auth::user()->hasRole('medic')) && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->hasAnyRole('superadmin', 'admin'))) || (Auth::user()->hasRole('logist')))
                                                                 @if($order->facility)
                                                                 <a href="/orders/{{ $order->pharmacy_id }}/facilitys_edit/{{ $order->id }}" class="dropdown-item">Edit</a>
                                                                 @else
@@ -405,7 +405,7 @@
                                                             @endif                                                             
 
                                                             <!-- <a href="/orders/{{ $order->pharmacy_id }}/show/{{ $order->id }}"><button class="btn btn-success">View order</button></a>
-                                                            @if(((Auth::user()->role == 'medic') && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->hasAnyRole('superadmin', 'admin'))) || (Auth::user()->role == 'logist'))
+                                                            @if(((Auth::user()->hasRole('medic')) && ($order->statuse_id!=4 && $order->statuse_id!=5)) || ((Auth::user()->hasAnyRole('superadmin', 'admin'))) || (Auth::user()->hasRole('logist')))
                                                                 <a href="/orders/{{ $order->pharmacy_id }}/edit/{{ $order->id }}"><button class="btn btn-warning">Edit</button></a>
                                                             @endif
                                                             @if((Auth::user()->hasAnyRole('superadmin', 'admin')) && $order->statuse_id==5)
@@ -416,7 +416,7 @@
                                                                     <button class="btn btn-danger" type="button" onclick="if(confirm('Are you sure?')){$(this).parent('form').submit();}">Remove</button>
                                                                 </form>
                                                             @endif
-                                                            @if((Auth::user()->role == 'medic' || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==1 || $order->statuse_id==2))
+                                                            @if((Auth::user()->hasRole('medic') || (Auth::user()->hasAnyRole('superadmin', 'admin'))) && ($order->statuse_id==1 || $order->statuse_id==2))
                                                             <a href="#" onclick="printTicket('{{$order->id}}')"><button class="btn btn-secondary"><i class="ti-printer"></i></button></a>
                                                             @endif -->
                                                         </td>
@@ -443,7 +443,7 @@
                         <!-- end col -->
                     </div>
                     <!-- end row -->
-                @if(((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->role == 'medic') && !empty($pharmacy_id))
+                @if(((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->hasRole('medic')) && !empty($pharmacy_id))
                 <div class="start-ph" id="sa-params" title="Start route automation" data-bs-original-title="Start route automation">              
                     <i class="ion ion-md-play mr-2" aria-hidden="true"></i>
                     @php
@@ -454,7 +454,7 @@
                     @endif
                 </div>
                 @endif
-                @if(Auth::user()->role == 'medic')  
+                @if(Auth::user()->hasRole('medic'))  
                 <a href="/orders/tickets/print" target="_blank" class="printstick" title="Print all labels">
                     <i class="mdi mdi-printer"></i>
                 </a>

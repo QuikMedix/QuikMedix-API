@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Plan;
+use App\Models\Area;
 use App\Models\Pharmacy;
 use App\Models\PharmacyArea;
 use App\Actions\GeocodeAddress;
@@ -84,7 +86,7 @@ class PharmacyController extends Controller
             $pharmacys = $pharmacys->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_arr = ['pages'=>$pages,'page0'=>$page,'search'=>$search,'pharmacys'=>$pharmacys,'filter'=>$filter,'title'=>'Pharmacies List','br1'=>'Pharmacy','br2'=>'List'];
             return view('pharmacy.list',$res_arr);
-        } else if(Auth::user()->role == 'sale') {
+        } else if(Auth::user()->hasRole('sale')) {
             $pharmacys = DB::table('pharmacys')->where("ref_id",Auth::user()->id);
             if(!empty(request()->query('search'))) {
                 $search = request()->query('search');
@@ -389,7 +391,7 @@ class PharmacyController extends Controller
                 }
             }
             return redirect("pharmacys");
-        } else if(Auth::user()->role == 'user') {
+        } else if(Auth::user()->hasRole('user')) {
             if($request->input('save')>0) {
                 if(!empty(DB::table('pharmacys')->where('email', $request->input('email'))->first())) {
                     $input['name']=$request->input('name');
@@ -438,10 +440,10 @@ class PharmacyController extends Controller
      * @param int|string $pharmacy_id
      */
     public function pharmacysTariffMap($pharmacy_id) {
-        $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-        $pharmacy_areas = DB::table('pharmacys')->where('id', $pharmacy_id)->get();
-        $pharmacy_plan = DB::table('plans')->where('id', $pharmacy->plan_id)->first();
-        $polygons = DB::table('area')->join('pharmacy_areas','pharmacy_areas.area_id',"=","area.id")->where('pharmacy_areas.pharmacy_id',$pharmacy_id)->select('area.name',DB::raw('ST_AsText(area.polygon) as polygon'),'pharmacy_areas.type')->get();
+        $pharmacy = Pharmacy::query()->where('id', $pharmacy_id)->first();
+        $pharmacy_areas = Pharmacy::query()->where('id', $pharmacy_id)->get();
+        $pharmacy_plan = Plan::query()->where('id', $pharmacy->plan_id)->first();
+        $polygons = Area::query()->join('pharmacy_areas','pharmacy_areas.area_id',"=","area.id")->where('pharmacy_areas.pharmacy_id',$pharmacy_id)->select('area.name',DB::raw('ST_AsText(area.polygon) as polygon'),'pharmacy_areas.type')->get();
         foreach($polygons as $key=>$pol) {
             if(!empty($pol->polygon)) {
                 $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);

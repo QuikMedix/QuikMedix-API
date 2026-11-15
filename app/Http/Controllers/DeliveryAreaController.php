@@ -24,7 +24,7 @@ class DeliveryAreaController extends Controller
         $max_pages=ceil(Area::query()->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
-        $areas = DB::table('area')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $areas = Area::query()->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('area.list',['areas'=>$areas,'pages'=>$pages,'title'=>'Area Tariff List','br1'=>'Area','br2'=>'Tariff List']);
         return $this->page(request(), $res_view);
     }

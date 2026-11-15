@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
 use App\Models\ActionLog;
 use App\Actions\LogUserChanges;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -500,7 +501,7 @@ class UserSettingsController extends Controller
         $input['apartment']='';
         $input['zip']='';
         $input['pharmacy']='';
-        $pharmacys = DB::table('pharmacys')->get();
+        $pharmacys = Pharmacy::query()->get();
         $res_view = view('settings.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Settings','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
         return $this->page(request(), $res_view);
     }

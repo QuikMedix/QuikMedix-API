@@ -110,4 +110,26 @@ class RoleMiddlewareTest extends TestCase
         $this->assertGreaterThan(5, $named->count());
         $this->assertSame([], $named->reject(fn (string $role) => Role::tryFrom($role) !== null)->values()->all());
     }
+
+    public function test_every_role_named_in_a_has_role_call_exists(): void
+    {
+        $named = [];
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path('app')));
+        $views = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(resource_path('views')));
+        foreach ([$files, $views] as $tree) {
+            foreach ($tree as $file) {
+                if (! $file->isFile() || $file->getExtension() !== 'php') {
+                    continue;
+                }
+                preg_match_all('/->has(?:Any)?Role\(([^()$]*)\)/', (string) file_get_contents($file->getPathname()), $calls);
+                foreach ($calls[1] as $arguments) {
+                    preg_match_all('/[\'"](\w+)[\'"]/', $arguments, $roles);
+                    $named = [...$named, ...$roles[1]];
+                }
+            }
+        }
+
+        $this->assertGreaterThan(100, count($named));
+        $this->assertSame([], array_values(array_diff(array_unique($named), Role::values())));
+    }
 }

@@ -18,7 +18,7 @@ class Check2FA
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!Session::has('user_2fa') && (auth()->user()->role=='admin' || auth()->user()->role=='dispadmin')) {
+        if (!Session::has('user_2fa') && (auth()->user()->hasAnyRole('admin', 'dispadmin'))) {
             $white_list = DB::table('white_list_ip')->where('ip',$request->ip())->first();
             if(!empty($white_list)) {
                 Session::put('user_2fa', auth()->user()->id);
