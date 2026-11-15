@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesAuthenticationSchema;
-use Tests\Support\FakeHttpsStream;
+use Tests\Support\FakeMapServices;
 use Tests\Support\StubsDashboardLayout;
 use Tests\TestCase;
 
@@ -367,24 +367,20 @@ class DispatchingControllerTest extends TestCase
     {
         $this->actingAsDispatcher();
         Redis::shouldReceive('get')->with('here_access_token')->andReturn('here-token');
-        FakeHttpsStream::install();
-        try {
-            $pharmacy = DB::table('pharmacys')->insertGetId(['location' => '40.71,-74.01']);
-            DB::table('locations')->insert(['user_id' => $this->driver->id, 'location' => '40.70,-74.00']);
-            DB::table('routes_priority')->insert(['driver_id' => $this->driver->id, 'order_id' => 1, 'type' => 'pharmacy', 'type_id' => $pharmacy, 'priority' => 1]);
+        FakeMapServices::install();
+        $pharmacy = DB::table('pharmacys')->insertGetId(['location' => '40.71,-74.01']);
+        DB::table('locations')->insert(['user_id' => $this->driver->id, 'location' => '40.70,-74.00']);
+        DB::table('routes_priority')->insert(['driver_id' => $this->driver->id, 'order_id' => 1, 'type' => 'pharmacy', 'type_id' => $pharmacy, 'priority' => 1]);
 
-            $this->from('/dispatching/show/'.$this->driver->id)->post('/dispatching/show/'.$this->driver->id, ['eta_calculate' => 1])
-                ->assertRedirect('/dispatching/show/'.$this->driver->id)->assertSessionHas('success', 'Successfully the route ETA was updated.');
+        $this->from('/dispatching/show/'.$this->driver->id)->post('/dispatching/show/'.$this->driver->id, ['eta_calculate' => 1])
+            ->assertRedirect('/dispatching/show/'.$this->driver->id)->assertSessionHas('success', 'Successfully the route ETA was updated.');
 
-            $this->assertCount(1, FakeHttpsStream::$requests);
-            $this->assertDatabaseHas('drivers_eta', ['driver_id' => $this->driver->id, 'eta' => 10]);
+        $this->assertCount(1, FakeMapServices::$requests);
+        $this->assertDatabaseHas('drivers_eta', ['driver_id' => $this->driver->id, 'eta' => 10]);
 
-            // Any other post to the page does nothing and answers with an empty page.
-            $response = $this->post('/dispatching/show/'.$this->driver->id, ['something' => 1])->assertOk();
-            $this->assertSame('', $response->getContent());
-            $this->assertCount(1, FakeHttpsStream::$requests);
-        } finally {
-            FakeHttpsStream::uninstall();
-        }
+        // Any other post to the page does nothing and answers with an empty page.
+        $response = $this->post('/dispatching/show/'.$this->driver->id, ['something' => 1])->assertOk();
+        $this->assertSame('', $response->getContent());
+        $this->assertCount(1, FakeMapServices::$requests);
     }
 }

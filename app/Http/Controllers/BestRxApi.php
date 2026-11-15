@@ -105,7 +105,7 @@ class BestRxApi extends Controller
                     if(empty($patient)) {
                         $password = bin2hex(openssl_random_pseudo_bytes(4));
                         $address = $response->recipient->address->address_line_1.' '.$response->recipient->address->address_line_2.', '.$response->recipient->address->city.', '.$response->recipient->address->state.' '.$response->recipient->address->zip_code.', USA';
-                        $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                        $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                         $address = $data->results[0]->formatted_address;
                         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                         $home_phone=NULL;

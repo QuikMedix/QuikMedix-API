@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Redis;
 use RuntimeException;
 
@@ -10,6 +11,10 @@ use RuntimeException;
  */
 class HereMaps
 {
+    private const ROUTING_URL = 'https://router.hereapi.com/v8/routes';
+
+    private const TIMEOUT_SECONDS = 15;
+
     private const TOKEN_CACHE_KEY = 'here_access_token';
 
     private const TOKEN_URL = 'https://account.api.here.com/oauth2/token';
@@ -77,5 +82,25 @@ class HereMaps
         }
 
         throw new RuntimeException('Could not refresh the HERE Maps access token.');
+    }
+
+    /**
+     * Asks HERE for a route and returns its legs, one per stop including the destination, each
+     * with summary->length in metres and summary->duration in seconds; null when HERE finds no
+     * route. Locations are "lat,lng". A request that cannot be made throws.
+     *
+     * @param  list<string>  $via  stops between origin and destination, in order
+     * @return list<object>|null
+     */
+    public static function route(string $transport, string $origin, string $destination, array $via = []): ?array
+    {
+        $url = self::ROUTING_URL."?transportMode=$transport&origin=$origin&destination=$destination&return=summary";
+        if ($via !== []) {
+            $url .= '&via='.implode('&via=', $via);
+        }
+        // HERE describes a failed request in the body too, so the status is not checked.
+        $directions = json_decode(Http::withToken(self::accessToken())->timeout(self::TIMEOUT_SECONDS)->get($url)->body());
+
+        return empty($directions->routes) ? null : $directions->routes[0]->sections;
     }
 }

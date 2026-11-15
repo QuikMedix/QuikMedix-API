@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\CreatesAuthenticationSchema;
-use Tests\Support\FakeHttpsStream;
+use Tests\Support\FakeMapServices;
 use Tests\TestCase;
 
 /**
@@ -53,17 +53,11 @@ class ProfileChangeLogTest extends TestCase
             'zip' => '10001', 'apartment' => '2A', 'car_info' => 'Honda Civic',
         ])->fresh();
         config(['app.googlemaps_apikey' => 'test-key']);
-        FakeHttpsStream::install();
-        FakeHttpsStream::respondWith('maps.googleapis.com/maps/api/geocode', ['results' => [[
+        FakeMapServices::install();
+        FakeMapServices::respondWith('maps.googleapis.com/maps/api/geocode', ['results' => [[
             'formatted_address' => '9 New Ave, New York, NY 10002, USA',
             'geometry' => ['location' => ['lat' => 40.72, 'lng' => -73.99]],
         ]]]);
-    }
-
-    protected function tearDown(): void
-    {
-        FakeHttpsStream::uninstall();
-        parent::tearDown();
     }
 
     /**
@@ -100,7 +94,8 @@ class ProfileChangeLogTest extends TestCase
             'change apartment: from 2A to 5C',
             'change car_info: from Honda Civic to Toyota Prius',
         ], $changes);
-        $this->assertStringContainsString('address='.urlencode('9 New Ave 10002').'&key=test-key', FakeHttpsStream::$requests[0]['url']);
+        parse_str((string) parse_url(FakeMapServices::$requests[0]['url'], PHP_URL_QUERY), $sent);
+        $this->assertSame(['address' => '9 New Ave 10002', 'key' => 'test-key'], $sent);
         $this->assertDatabaseHas('users', [
             'id' => $this->driver->id, 'name' => 'Jordan', 'last_name' => 'Rider', 'phone' => '(555) 010-7002',
             'address' => '9 New Ave, New York, NY 10002, USA', 'location' => '40.72,-73.99', 'zip' => '10002', 'apartment' => '5C', 'car_info' => 'Toyota Prius',
@@ -109,7 +104,7 @@ class ProfileChangeLogTest extends TestCase
 
     public function test_resubmitting_the_stored_profile_logs_nothing(): void
     {
-        FakeHttpsStream::respondWith('maps.googleapis.com/maps/api/geocode', ['results' => [[
+        FakeMapServices::respondWith('maps.googleapis.com/maps/api/geocode', ['results' => [[
             'formatted_address' => '1 Old St, New York, NY 10001, USA',
             'geometry' => ['location' => ['lat' => 40.70, 'lng' => -74.00]],
         ]]]);
@@ -127,7 +122,7 @@ class ProfileChangeLogTest extends TestCase
         $changes = $this->updateProfile(['phone' => '(555) 010-7002']);
 
         $this->assertSame(['change phone: from (555) 010-7001 to (555) 010-7002'], $changes);
-        $this->assertSame([], FakeHttpsStream::$requests);
+        $this->assertSame([], FakeMapServices::$requests);
         $this->assertDatabaseHas('users', [
             'id' => $this->driver->id, 'name' => 'Casey', 'last_name' => 'Courier', 'email' => 'casey@example.test',
             'phone' => '(555) 010-7002', 'zip' => '10001', 'apartment' => '2A', 'car_info' => 'Honda Civic', 'pharmacy_id' => 4,

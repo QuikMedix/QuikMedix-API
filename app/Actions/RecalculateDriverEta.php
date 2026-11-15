@@ -17,8 +17,6 @@ use Illuminate\Support\Facades\DB;
  */
 class RecalculateDriverEta
 {
-    private const ROUTING_URL = 'https://router.hereapi.com/v8/routes';
-
     private const BICYCLE = '2';
 
     /** Time allowed at every stop, on top of travel. */
@@ -142,24 +140,14 @@ class RecalculateDriverEta
         if ($locations === []) {
             return [];
         }
-        $context = stream_context_create(['http' => [
-            'method' => 'GET',
-            'ignore_errors' => true,
-            'header' => 'Authorization: Bearer '.HereMaps::accessToken(),
-        ]]);
-
         $legs = [];
         foreach (array_chunk($locations, self::STOPS_PER_REQUEST) as $chunk) {
             $destination = array_pop($chunk);
-            $url = self::ROUTING_URL."?transportMode=$transport&origin=$origin&destination=$destination&return=summary";
-            if ($chunk !== []) {
-                $url .= '&via='.implode('&via=', $chunk);
-            }
-            $directions = json_decode(file_get_contents($url, false, $context));
-            if (empty($directions->routes)) {
+            $sections = HereMaps::route($transport, $origin, $destination, $chunk);
+            if ($sections === null) {
                 break;
             }
-            array_push($legs, ...$directions->routes[0]->sections);
+            array_push($legs, ...$sections);
             $origin = $destination;
         }
 

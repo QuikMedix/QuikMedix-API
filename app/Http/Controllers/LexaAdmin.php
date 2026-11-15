@@ -621,7 +621,7 @@ class LexaAdmin extends Controller
                 } else {
                     $address = $request->input('address');
                 }
-                $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                 $address = $data->results[0]->formatted_address;
                 $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                 self::action_log_user_check($request,$address,$user_id);
@@ -704,7 +704,7 @@ class LexaAdmin extends Controller
                         } else {
                             $src = '';
                         }
-                        $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
+                        $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                         DB::table('users')->insert(['isactive' => '1', 'role' => 'medic','name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $request->input('address'),'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $pharmacy_id]);
                     }
@@ -1032,7 +1032,7 @@ class LexaAdmin extends Controller
                 } else {
                     $date_end_trial = NULL;
                 }
-                $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
+                $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                 $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                 DB::table('pharmacys')->where('id', $pharmacy_id)->update(['name' => $request->input('name'),'email' => $request->input('email'),'plan_id' => $request->input('plan_id'),'date_end_trial'=>$date_end_trial,'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more'),'phone' => $request->input('phone'),'logo' => $src,'image_front'=>$src2,'site' => $request->input('site'),'copay_bill'=>$copay_bill,'massiveBagsTransfer'=>$massiveBagsTransfer,'merchantFunc'=>$merchantFunc,'merchantKey'=>$merchantKey,'merchantSecret'=>$merchantSecret,'npi'=>$npi,'ncpdp'=>$ncpdp,'dea'=>$dea,'bestrxFunc'=>$bestrxFunc,'bestrx_pharmacy_id'=>$bestrx_pharmacy_id,'bestrxKey'=>$bestrxKey,'bestrxSecret'=>$bestrxSecret,'address' => $request->input('address'),'schedule'=>json_encode($schedule),'location' => $location,'zone_id'=>$request->input('zone_id')]);
             }
@@ -1172,7 +1172,7 @@ class LexaAdmin extends Controller
                     } else {
                         $src2 = '';
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     DB::table('pharmacys')->insert(['isactive'=>'1','name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'address' => $request->input('address'),'location' => $location,'admin_id'=>Auth::user()->id,'ip'=>$request->ip()]);
                     DB::table('users')->where('id', Auth::user()->id)->update(['role' => 'medic','pharmacy_id' => DB::table('pharmacys')->where('admin_id', Auth::user()->id)->value('id')]);
@@ -1300,7 +1300,7 @@ class LexaAdmin extends Controller
                         $office = DB::table('offices')->where('id', $office_id)->first();
                         $src = $office->logo;
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     DB::table('offices')->where('id', $office_id)->update(['name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'address' => $request->input('address'),'location' => $location,'zone_id' => $request->input('zone_id')]);
                 }
@@ -1355,7 +1355,7 @@ class LexaAdmin extends Controller
                     } else {
                         $src = '';
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($request->input('address'))."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     DB::table('offices')->insert(['name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'address' => $request->input('address'),'location' => $location,'zone_id' => $request->input('zone_id')]);
                 }
@@ -3732,7 +3732,7 @@ class LexaAdmin extends Controller
                         } else {
                             $address = $request->input('address');
                         }
-                        $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                        $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                         $address = $data->results[0]->formatted_address;
                         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                         self::action_log_user_check($request,$address,$user_id);
@@ -3751,7 +3751,7 @@ class LexaAdmin extends Controller
                     } else {
                         $address = $request->input('address');
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     self::action_log_user_check($request,$address,$user_id);
@@ -3810,7 +3810,7 @@ class LexaAdmin extends Controller
                         } else {
                             $address = $request->input('address');
                         }
-                        $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                        $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                         $address = $data->results[0]->formatted_address;
                         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                         self::action_log_user_check($request,$address,$user_id);
@@ -3828,7 +3828,7 @@ class LexaAdmin extends Controller
                     } else {
                         $address = $request->input('address');
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     self::action_log_user_check($request,$address,$user_id);
@@ -3920,7 +3920,7 @@ class LexaAdmin extends Controller
                         } else {
                             $address = $request->input('address');
                         }
-                        $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                        $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                         $address = $data->results[0]->formatted_address;
                         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                         DB::table('users')->insert(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $request->input('pharmacy')]);
@@ -5908,7 +5908,7 @@ class LexaAdmin extends Controller
                     } else {
                         $address = $request->input('address');
                     }
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     self::action_log_user_check($request,$address,$user_id);
@@ -6433,13 +6433,13 @@ class LexaAdmin extends Controller
                         $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
                     }
                     $address = $request->input('address');
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     DB::table('users')->insert(['isactive'=>1,'name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $pharmacy_id]);
                 } else {
                     $address = $request->input('address');
-                    $data = json_decode(file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=".config('app.googlemaps_apikey')));
+                    $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     DB::table('users')->where('id',$user->id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment')]);
