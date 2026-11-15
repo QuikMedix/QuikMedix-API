@@ -349,264 +349,269 @@ class RoutePlanningController extends Controller
             }
         }
         abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
-        if($request->input('confirm_order_id')>1) {
-            Order::query()->where('id', $request->input('confirm_order_id'))->update(['driver_id'=>$driver_id,'statuse_id'=>'2','ready'=>'2']);
-            $order = DB::table('orders')->where('id', $request->input('confirm_order_id'))->first();
-            $types = ["pharmacy","patient"];
-            $count_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","desc")->first();
-            $data_array = [];
-            for ($i=0, $c = count($types); $i<$c; ++$i) {
-                $record = [];
-                $record['driver_id'] = $driver_id;
-                $record['order_id'] = $request->input('confirm_order_id');
-                $record['type'] = $types[$i];
-                if($types[$i]=="pharmacy") {
-                    $record['type_id'] = $order->pharmacy_id;
-                } else {
-                    $record['type_id'] = $order->user_id;
-                }
-                if(empty($count_priority)) {
-                    $count_priority = new \stdClass();
-                    $record['priority'] = 1;
-                    $count_priority->priority = 1;
-                } else {
-                    $record['priority'] = $count_priority->priority+1;
-                    $count_priority->priority = $count_priority->priority+1;
-                    if (isset($count_priority->type_pay)) {
-                        $record['type_pay'] = $count_priority->type_pay;
-                        $record['pay_value'] = $count_priority->pay_value;
-                    }
-                }
-                $data_array[] = $record;
-            }
-            RouteStop::query()->insert($data_array);
-            Notifications::send_push($driver_id,"QuikMedix","New route has added to your shift (or schedule)");
-        } else if(!empty($request->input('close_route'))) {
-            $count = DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->count();
-            $type_pay = $request->input('type_pay');
-            if($type_pay==1) {
-                $pay_value=floatval($request->input('pay_value'));
-            } else if($type_pay==4) {
-                $pay_value=90;
-            } else if($type_pay==5) {
-                $pay_value=180;
+        $response = match (true) {
+            $request->input('confirm_order_id') > 1 => $this->confirmOrder($request, $driver_id),
+            ! empty($request->input('close_route')) => $this->closeRoute($request, $driver_id),
+            ! empty($request->input('auto_route')) => $this->buildRouteAutomatically($request, $driver_id),
+            $request->input('eta_calculate') > 0 => $this->refreshEta($request, $driver_id),
+            $request->input('region') > 0 => $this->applyRegion($request, $driver_id),
+            default => $this->saveStops($request, $driver_id),
+        };
+
+        return $response ?? redirect("/routes-list/driver/$driver_id");
+    }
+
+    /**
+     * A dispatcher confirms one order of the route.
+     *
+     * @param  int|string  $driver_id
+     * @return mixed a response, or nothing to return to the driver's route page
+     */
+    private function confirmOrder(Request $request, $driver_id)
+    {
+        Order::query()->where('id', $request->input('confirm_order_id'))->update(['driver_id'=>$driver_id,'statuse_id'=>'2','ready'=>'2']);
+        $order = DB::table('orders')->where('id', $request->input('confirm_order_id'))->first();
+        $types = ["pharmacy","patient"];
+        $count_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","desc")->first();
+        $data_array = [];
+        for ($i=0, $c = count($types); $i<$c; ++$i) {
+            $record = [];
+            $record['driver_id'] = $driver_id;
+            $record['order_id'] = $request->input('confirm_order_id');
+            $record['type'] = $types[$i];
+            if($types[$i]=="pharmacy") {
+                $record['type_id'] = $order->pharmacy_id;
             } else {
-                return redirect()->back()->with('error', 'Unknown pay type.');
+                $record['type_id'] = $order->user_id;
             }
-            if($count>0) {
-                DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->update(["amount"=>round($pay_value/$count,2)]);
-                return redirect()->back()->with('success', "Successfully, $count orders were paid to the driver at the selected rate.");
-            } else {
-                return redirect()->back()->with('error', 'Oh no, no completed orders have been found for the selected driver for the current shift.');
-            }
-        } else if(!empty($request->input('auto_route'))) {
-            $locations = [];
-            $routesL = [];
-            $type_route = $request->input('type');
-            $driver_location_value = DB::table('locations')->where('user_id', $driver_id)->orderBy("id","desc")->value('location');
-            $driver_location = explode(",", (string) $driver_location_value);
-            if(count($driver_location) < 2) {
-                return redirect()->back()->with('error', 'The driver does not have a valid current location.');
-            }
-            array_push($locations,[(float)$driver_location[1],(float)$driver_location[0]]);
-            array_push($routesL,"driver");
-            $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver_id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
-            $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver_id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
-            $routes_priority = array();
-            foreach ($routes_priority1 as $key => $value) {
-                array_push($routes_priority,$value);
-            }
-            foreach ($routes_priority0 as $key => $value) {
-                array_push($routes_priority,$value);
-            }
-            usort($routes_priority, function($a, $b){
-                return ($a->priority - $b->priority);
-            });
-            if(!empty($routes_priority)) {
-                foreach($routes_priority as $key => $routes_priorit){
-                    if($routes_priorit->type=='pharmacy') {
-                        $dot = DB::table('pharmacys')->where("id",$routes_priorit->type_id)->first();
-                        if(!empty($dot) && !empty($dot->location)) {
-                            $location = explode(",",$dot->location);
-                            if(count($location) >= 2) {
-                                array_push($locations,[(float)$location[1],(float)$location[0]]);
-                                array_push($routesL,$routes_priorit);
-                            }
-                        }
-                    }
-                    if($routes_priorit->type=='patient') {
-                        $dot = DB::table('users')->where("id",$routes_priorit->type_id)->first();
-                        if(!empty($dot) && !empty($dot->location)) {
-                            $location = explode(",",$dot->location);
-                            if(count($location) >= 2) {
-                                array_push($locations,[(float)$location[1],(float)$location[0]]);
-                                array_push($routesL,$routes_priorit);
-                            }
-                        }
-                    }
-                    if($routes_priorit->type=='office') {
-                        $dot = DB::table('offices')->where("id",$routes_priorit->type_id)->first();
-                        if(!empty($dot) && !empty($dot->location)) {
-                            $location = explode(",",$dot->location);
-                            if(count($location) >= 2) {
-                                array_push($locations,[(float)$location[1],(float)$location[0]]);
-                                array_push($routesL,$routes_priorit);
-                            }
-                        }
-                    }
-                }
-                $driver = DB::table('users')->where('id',$driver_id)->first();
-                if(empty($driver)) {
-                    return redirect()->back()->with('error', 'Driver not found.');
-                }
-                if($driver->transport=='2') {
-                    $transport = "cycling-regular";
-                } else {
-                    $transport = "driving-car";
-                }
-                $json = json_encode(array("locations"=>$locations,"metrics"=>["distance"]));
-                $curl = curl_init();
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => "https://api.openrouteservice.org/v2/matrix/$transport",
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => "",
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 30,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_CUSTOMREQUEST => "POST",
-                    CURLOPT_POSTFIELDS => $json,
-                    CURLOPT_HTTPHEADER => array(
-                        "authorization: 5b3ce3597851110001cf6248d92d4ca9f6b1425e8bd2527353e736b0",
-                        "cache-control: no-cache",
-                        "content-type: application/json",
-                    ),
-                ));
-                $response = json_decode(curl_exec($curl));
-                $err = curl_error($curl);
-                if ($err) {
-                    return redirect()->back()->with('error', 'Oh no, error automatically built');
-                } else {
-                    $distances = $response->distances;
-                    $routes_res = [];
-                    $used_keys = [];
-                    $next_key = 0;
-                    while(count($used_keys)<count($routesL)) {
-                        $min_val = null; $min_key = null;
-                        array_push($used_keys,$next_key);
-                        foreach($distances[$next_key] as $key => $val) {
-                            if(($val < $min_val || $min_val===null) && !in_array($key,$used_keys)) {
-                                $min_val = $val;
-                                $min_key = $key;
-                            }
-                            if($type_route=="first" && $next_key==0) {
-                                $min_key = 1;
-                            }
-                        }
-                        if($min_key!==null) {
-                            array_push($routes_res,$routesL[$min_key]);
-                            $next_key = $min_key;
-                        } else {
-                            break;
-                        }
-                    }
-                    foreach($routes_res as $key => $routes_priorit){
-                        RouteStop::query()->where('driver_id', $driver_id)->where("type",$routes_priorit->type)->where("type_id",$routes_priorit->type_id)->where("priority",$routes_priorit->priority)->update(["priority"=>$key]);
-                    }
-                    app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
-                    return redirect()->back()->with('success', "Successfully the route is automatically built.");
-                }
-            }
-        } else if($request->input('eta_calculate')>0) {
-            app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
-            return redirect()->back()->with('success', "Successfully the route ETA was updated.");
-        } else if($request->input('region')>0) {
-            $filter = [];
-            if(!empty($request->input('delivery_time')) && !empty($request->input('filter'))) {
-                $filter["delivery_time"] = $request->input('delivery_time');
-            } else {
-                $filter["delivery_time"] = [];
-            }
-            if(!empty($request->input('status')) && !empty($request->input('filter'))) {
-                $filter["status"] = $request->input('status');
-            } else {
-                $filter["status"] = [];
-            }
-            if(!empty($request->input('start')) && !empty($request->input('filter'))) {
-                $filter["start"] = $request->input('start');
-            } else {
-                $filter["start"] = "";
-            }
-            if(!empty($request->input('end')) && !empty($request->input('filter'))) {
-                $filter["end"] = $request->input('end');
-            } else {
-                $filter["end"] = "";
-            }
-            $patients_id = $request->input('patients_id');
-            $pharmacys_id = $request->input('pharmacys_id');
-            $count_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","desc")->first();
             if(empty($count_priority)) {
                 $count_priority = new \stdClass();
-                $count_priority->priority = 0;
-                $type_pay = 4;
-                $pay_value = -1;
+                $record['priority'] = 1;
+                $count_priority->priority = 1;
             } else {
-                $type_pay = $count_priority->type_pay;
-                $pay_value = $count_priority->pay_value;
+                $record['priority'] = $count_priority->priority+1;
+                $count_priority->priority = $count_priority->priority+1;
+                if (isset($count_priority->type_pay)) {
+                    $record['type_pay'] = $count_priority->type_pay;
+                    $record['pay_value'] = $count_priority->pay_value;
+                }
             }
-            if(!empty($pharmacys_id)) {
-                foreach($pharmacys_id as $pharmacy_id) {
-                    if(!empty($patients_id)) {
-                        $orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('user_id', $patients_id)->whereIn("statuse_id",[1,2,3,7,8,9]);
-                        if(!empty($filter["delivery_time"])) {
-                            $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
+            $data_array[] = $record;
+        }
+        RouteStop::query()->insert($data_array);
+        Notifications::send_push($driver_id,"QuikMedix","New route has added to your shift (or schedule)");
+    }
+
+    /**
+     * Closes the route and pays the driver for its completed orders.
+     *
+     * @param  int|string  $driver_id
+     * @return mixed a response, or nothing to return to the driver's route page
+     */
+    private function closeRoute(Request $request, $driver_id)
+    {
+        $count = DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->count();
+        $type_pay = $request->input('type_pay');
+        if($type_pay==1) {
+            $pay_value=floatval($request->input('pay_value'));
+        } else if($type_pay==4) {
+            $pay_value=90;
+        } else if($type_pay==5) {
+            $pay_value=180;
+        } else {
+            return redirect()->back()->with('error', 'Unknown pay type.');
+        }
+        if($count>0) {
+            DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->update(["amount"=>round($pay_value/$count,2)]);
+            return redirect()->back()->with('success', "Successfully, $count orders were paid to the driver at the selected rate.");
+        } else {
+            return redirect()->back()->with('error', 'Oh no, no completed orders have been found for the selected driver for the current shift.');
+        }
+    }
+
+    /**
+     * Orders the stops automatically, starting from the driver's current location.
+     *
+     * @param  int|string  $driver_id
+     * @return mixed a response, or nothing to return to the driver's route page
+     */
+    private function buildRouteAutomatically(Request $request, $driver_id)
+    {
+        $locations = [];
+        $routesL = [];
+        $type_route = $request->input('type');
+        $driver_location_value = DB::table('locations')->where('user_id', $driver_id)->orderBy("id","desc")->value('location');
+        $driver_location = explode(",", (string) $driver_location_value);
+        if(count($driver_location) < 2) {
+            return redirect()->back()->with('error', 'The driver does not have a valid current location.');
+        }
+        array_push($locations,[(float)$driver_location[1],(float)$driver_location[0]]);
+        array_push($routesL,"driver");
+        $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver_id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
+        $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver_id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
+        $routes_priority = array();
+        foreach ($routes_priority1 as $key => $value) {
+            array_push($routes_priority,$value);
+        }
+        foreach ($routes_priority0 as $key => $value) {
+            array_push($routes_priority,$value);
+        }
+        usort($routes_priority, function($a, $b){
+            return ($a->priority - $b->priority);
+        });
+        if(!empty($routes_priority)) {
+            foreach($routes_priority as $key => $routes_priorit){
+                if($routes_priorit->type=='pharmacy') {
+                    $dot = DB::table('pharmacys')->where("id",$routes_priorit->type_id)->first();
+                    if(!empty($dot) && !empty($dot->location)) {
+                        $location = explode(",",$dot->location);
+                        if(count($location) >= 2) {
+                            array_push($locations,[(float)$location[1],(float)$location[0]]);
+                            array_push($routesL,$routes_priorit);
                         }
-                        if(!empty($filter["status"])) {
-                            $orders->whereIn('orders.statuse_id',$filter["status"]);
-                        }
-                        if(!empty($filter["start"]) && !empty($filter["end"])) {
-                            $orders->whereBetween('orders.delivery_date', [\DateTime::createFromFormat('m/d/Y',$filter["start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["end"])->format('Y-m-d')]);
-                        }
-                        $orders = $orders->where(function($query) use ($driver_id) {
-                            $query->whereNull('driver_id')
-                                  ->orWhere('driver_id',$driver_id);
-                        });
-                    } else {
-                        $orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn("statuse_id",[1,2,3,7,8,9]);
-                        if(!empty($filter["delivery_time"])) {
-                            $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
-                        }
-                        if(!empty($filter["status"])) {
-                            $orders->whereIn('orders.statuse_id',$filter["status"]);
-                        }
-                        if(!empty($filter["start"]) && !empty($filter["end"])) {
-                            $orders->whereBetween('orders.delivery_date', [\DateTime::createFromFormat('m/d/Y',$filter["start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["end"])->format('Y-m-d')]);
-                        }
-                        $orders = $orders->where(function($query) use ($driver_id) {
-                            $query->whereNull('driver_id')
-                                  ->orWhere('driver_id',$driver_id);
-                        });
                     }
-                    $orders=$orders->get();
-                    foreach($orders as $order) {
-                        if(empty(DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id', $order->id)->where('type', "pharmacy")->where('type_id', $order->pharmacy_id)->first())) {
-                            $record = [];
-                            $record['driver_id'] = $driver_id;
-                            $record['order_id'] = $order->id;
-                            $record['type'] = "pharmacy";
-                            $record['type_id'] = $order->pharmacy_id;
-                            $record['priority'] = $count_priority->priority+1;
-                            $record['type_pay'] = $type_pay;
-                            $record['pay_value'] = $pay_value;
-                            $count_priority->priority = $count_priority->priority+1;
-                            $data_array[] = $record;
-                            Order::query()->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
+                }
+                if($routes_priorit->type=='patient') {
+                    $dot = DB::table('users')->where("id",$routes_priorit->type_id)->first();
+                    if(!empty($dot) && !empty($dot->location)) {
+                        $location = explode(",",$dot->location);
+                        if(count($location) >= 2) {
+                            array_push($locations,[(float)$location[1],(float)$location[0]]);
+                            array_push($routesL,$routes_priorit);
+                        }
+                    }
+                }
+                if($routes_priorit->type=='office') {
+                    $dot = DB::table('offices')->where("id",$routes_priorit->type_id)->first();
+                    if(!empty($dot) && !empty($dot->location)) {
+                        $location = explode(",",$dot->location);
+                        if(count($location) >= 2) {
+                            array_push($locations,[(float)$location[1],(float)$location[0]]);
+                            array_push($routesL,$routes_priorit);
                         }
                     }
                 }
             }
-            if(!empty($patients_id)) {
-                foreach($patients_id as $patient_id) {
-                    $orders = DB::table('orders')->where('user_id', $patient_id)->whereIn("statuse_id",[1,2,3,7,8,9]);
+            $driver = DB::table('users')->where('id',$driver_id)->first();
+            if(empty($driver)) {
+                return redirect()->back()->with('error', 'Driver not found.');
+            }
+            if($driver->transport=='2') {
+                $transport = "cycling-regular";
+            } else {
+                $transport = "driving-car";
+            }
+            $json = json_encode(array("locations"=>$locations,"metrics"=>["distance"]));
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => "https://api.openrouteservice.org/v2/matrix/$transport",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => $json,
+                CURLOPT_HTTPHEADER => array(
+                    "authorization: 5b3ce3597851110001cf6248d92d4ca9f6b1425e8bd2527353e736b0",
+                    "cache-control: no-cache",
+                    "content-type: application/json",
+                ),
+            ));
+            $response = json_decode(curl_exec($curl));
+            $err = curl_error($curl);
+            if ($err) {
+                return redirect()->back()->with('error', 'Oh no, error automatically built');
+            } else {
+                $distances = $response->distances;
+                $routes_res = [];
+                $used_keys = [];
+                $next_key = 0;
+                while(count($used_keys)<count($routesL)) {
+                    $min_val = null; $min_key = null;
+                    array_push($used_keys,$next_key);
+                    foreach($distances[$next_key] as $key => $val) {
+                        if(($val < $min_val || $min_val===null) && !in_array($key,$used_keys)) {
+                            $min_val = $val;
+                            $min_key = $key;
+                        }
+                        if($type_route=="first" && $next_key==0) {
+                            $min_key = 1;
+                        }
+                    }
+                    if($min_key!==null) {
+                        array_push($routes_res,$routesL[$min_key]);
+                        $next_key = $min_key;
+                    } else {
+                        break;
+                    }
+                }
+                foreach($routes_res as $key => $routes_priorit){
+                    RouteStop::query()->where('driver_id', $driver_id)->where("type",$routes_priorit->type)->where("type_id",$routes_priorit->type_id)->where("priority",$routes_priorit->priority)->update(["priority"=>$key]);
+                }
+                app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
+                return redirect()->back()->with('success', "Successfully the route is automatically built.");
+            }
+        }
+    }
+
+    /**
+     * Recalculates the arrival times of the route.
+     *
+     * @param  int|string  $driver_id
+     * @return mixed a response, or nothing to return to the driver's route page
+     */
+    private function refreshEta(Request $request, $driver_id)
+    {
+        app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
+        return redirect()->back()->with('success', "Successfully the route ETA was updated.");
+    }
+
+    /**
+     * Fills the route from the chosen region.
+     *
+     * @param  int|string  $driver_id
+     * @return mixed a response, or nothing to return to the driver's route page
+     */
+    private function applyRegion(Request $request, $driver_id)
+    {
+        $filter = [];
+        if(!empty($request->input('delivery_time')) && !empty($request->input('filter'))) {
+            $filter["delivery_time"] = $request->input('delivery_time');
+        } else {
+            $filter["delivery_time"] = [];
+        }
+        if(!empty($request->input('status')) && !empty($request->input('filter'))) {
+            $filter["status"] = $request->input('status');
+        } else {
+            $filter["status"] = [];
+        }
+        if(!empty($request->input('start')) && !empty($request->input('filter'))) {
+            $filter["start"] = $request->input('start');
+        } else {
+            $filter["start"] = "";
+        }
+        if(!empty($request->input('end')) && !empty($request->input('filter'))) {
+            $filter["end"] = $request->input('end');
+        } else {
+            $filter["end"] = "";
+        }
+        $patients_id = $request->input('patients_id');
+        $pharmacys_id = $request->input('pharmacys_id');
+        $count_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","desc")->first();
+        if(empty($count_priority)) {
+            $count_priority = new \stdClass();
+            $count_priority->priority = 0;
+            $type_pay = 4;
+            $pay_value = -1;
+        } else {
+            $type_pay = $count_priority->type_pay;
+            $pay_value = $count_priority->pay_value;
+        }
+        if(!empty($pharmacys_id)) {
+            foreach($pharmacys_id as $pharmacy_id) {
+                if(!empty($patients_id)) {
+                    $orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('user_id', $patients_id)->whereIn("statuse_id",[1,2,3,7,8,9]);
                     if(!empty($filter["delivery_time"])) {
                         $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
                     }
@@ -620,63 +625,120 @@ class RoutePlanningController extends Controller
                         $query->whereNull('driver_id')
                               ->orWhere('driver_id',$driver_id);
                     });
-                    $orders=$orders->get();
-                    foreach($orders as $order) {
-                        if(empty(DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id', $order->id)->where('type', "patient")->where('type_id', $order->user_id)->first())) {
-                            $record = [];
-                            $record['driver_id'] = $driver_id;
-                            $record['order_id'] = $order->id;
-                            $record['type'] = "patient";
-                            $record['type_id'] = $order->user_id;
-                            $record['priority'] = $count_priority->priority+1;
-                            $record['type_pay'] = $type_pay;
-                            $record['pay_value'] = $pay_value;
-                            $count_priority->priority = $count_priority->priority+1;
-                            $data_array[] = $record;
-                            Order::query()->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
-                        }
+                } else {
+                    $orders = DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn("statuse_id",[1,2,3,7,8,9]);
+                    if(!empty($filter["delivery_time"])) {
+                        $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
+                    }
+                    if(!empty($filter["status"])) {
+                        $orders->whereIn('orders.statuse_id',$filter["status"]);
+                    }
+                    if(!empty($filter["start"]) && !empty($filter["end"])) {
+                        $orders->whereBetween('orders.delivery_date', [\DateTime::createFromFormat('m/d/Y',$filter["start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["end"])->format('Y-m-d')]);
+                    }
+                    $orders = $orders->where(function($query) use ($driver_id) {
+                        $query->whereNull('driver_id')
+                              ->orWhere('driver_id',$driver_id);
+                    });
+                }
+                $orders=$orders->get();
+                foreach($orders as $order) {
+                    if(empty(DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id', $order->id)->where('type', "pharmacy")->where('type_id', $order->pharmacy_id)->first())) {
+                        $record = [];
+                        $record['driver_id'] = $driver_id;
+                        $record['order_id'] = $order->id;
+                        $record['type'] = "pharmacy";
+                        $record['type_id'] = $order->pharmacy_id;
+                        $record['priority'] = $count_priority->priority+1;
+                        $record['type_pay'] = $type_pay;
+                        $record['pay_value'] = $pay_value;
+                        $count_priority->priority = $count_priority->priority+1;
+                        $data_array[] = $record;
+                        Order::query()->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
                     }
                 }
             }
-            if(!empty($data_array)) {
-                RouteStop::query()->insert($data_array);
-            }
-            //DB::table('users')->where('id', $driver_id)->update(['route_status'=>'updated']);
-            Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
-        } else {
-            $stops = self::validateRouteStops($request);
-            DB::transaction(function () use ($request, $driver_id, $stops): void {
-                RouteStop::query()->where('driver_id', $driver_id)->delete();
-                Order::query()->where('driver_id', $driver_id)->whereIn('statuse_id', [1, 2, 3, 7, 8, 9])->update(['driver_id' => null]);
-                $records = [];
-                foreach ($stops as $index => $stop) {
-                    foreach ($stop['order_ids'] as $orderId) {
-                        Order::query()->where('id', $orderId)->update(['driver_id' => $driver_id, 'ready' => '2']);
-                        $records[] = [
-                            'driver_id' => $driver_id,
-                            'order_id' => $orderId,
-                            'type' => $stop['type'],
-                            'type_id' => $stop['type_id'],
-                            'priority' => $index + 1,
-                        ];
-                    }
-                }
-                if ($records !== []) {
-                    RouteStop::query()->insert($records);
-                }
-                $typePay = $request->input('type_pay');
-                $count = count($records);
-                $payValue = match ((int) $typePay) {
-                    3 => $count === 0 ? 1 : (float) $request->input('pay_value') / $count,
-                    2 => $count === 0 ? 1 : (float) $request->input('pay_value') * 100 / $count,
-                    default => -1,
-                };
-                RouteStop::query()->where('driver_id', $driver_id)->update(['type_pay' => $typePay, 'pay_value' => $payValue]);
-            });
-            app(RecalculateDriverEta::class)->handle($driver_id);
-            Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
         }
-        return redirect("/routes-list/driver/$driver_id");
+        if(!empty($patients_id)) {
+            foreach($patients_id as $patient_id) {
+                $orders = DB::table('orders')->where('user_id', $patient_id)->whereIn("statuse_id",[1,2,3,7,8,9]);
+                if(!empty($filter["delivery_time"])) {
+                    $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
+                }
+                if(!empty($filter["status"])) {
+                    $orders->whereIn('orders.statuse_id',$filter["status"]);
+                }
+                if(!empty($filter["start"]) && !empty($filter["end"])) {
+                    $orders->whereBetween('orders.delivery_date', [\DateTime::createFromFormat('m/d/Y',$filter["start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["end"])->format('Y-m-d')]);
+                }
+                $orders = $orders->where(function($query) use ($driver_id) {
+                    $query->whereNull('driver_id')
+                          ->orWhere('driver_id',$driver_id);
+                });
+                $orders=$orders->get();
+                foreach($orders as $order) {
+                    if(empty(DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id', $order->id)->where('type', "patient")->where('type_id', $order->user_id)->first())) {
+                        $record = [];
+                        $record['driver_id'] = $driver_id;
+                        $record['order_id'] = $order->id;
+                        $record['type'] = "patient";
+                        $record['type_id'] = $order->user_id;
+                        $record['priority'] = $count_priority->priority+1;
+                        $record['type_pay'] = $type_pay;
+                        $record['pay_value'] = $pay_value;
+                        $count_priority->priority = $count_priority->priority+1;
+                        $data_array[] = $record;
+                        Order::query()->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
+                    }
+                }
+            }
+        }
+        if(!empty($data_array)) {
+            RouteStop::query()->insert($data_array);
+        }
+        //DB::table('users')->where('id', $driver_id)->update(['route_status'=>'updated']);
+        Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
+    }
+
+    /**
+     * Saves the stops as the dispatcher arranged them.
+     *
+     * @param  int|string  $driver_id
+     * @return mixed a response, or nothing to return to the driver's route page
+     */
+    private function saveStops(Request $request, $driver_id)
+    {
+        $stops = self::validateRouteStops($request);
+        DB::transaction(function () use ($request, $driver_id, $stops): void {
+            RouteStop::query()->where('driver_id', $driver_id)->delete();
+            Order::query()->where('driver_id', $driver_id)->whereIn('statuse_id', [1, 2, 3, 7, 8, 9])->update(['driver_id' => null]);
+            $records = [];
+            foreach ($stops as $index => $stop) {
+                foreach ($stop['order_ids'] as $orderId) {
+                    Order::query()->where('id', $orderId)->update(['driver_id' => $driver_id, 'ready' => '2']);
+                    $records[] = [
+                        'driver_id' => $driver_id,
+                        'order_id' => $orderId,
+                        'type' => $stop['type'],
+                        'type_id' => $stop['type_id'],
+                        'priority' => $index + 1,
+                    ];
+                }
+            }
+            if ($records !== []) {
+                RouteStop::query()->insert($records);
+            }
+            $typePay = $request->input('type_pay');
+            $count = count($records);
+            $payValue = match ((int) $typePay) {
+                3 => $count === 0 ? 1 : (float) $request->input('pay_value') / $count,
+                2 => $count === 0 ? 1 : (float) $request->input('pay_value') * 100 / $count,
+                default => -1,
+            };
+            RouteStop::query()->where('driver_id', $driver_id)->update(['type_pay' => $typePay, 'pay_value' => $payValue]);
+        });
+        app(RecalculateDriverEta::class)->handle($driver_id);
+        Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
     }
 
     /**
