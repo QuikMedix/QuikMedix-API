@@ -13,11 +13,6 @@ class PageController extends Controller
 {
     use RendersLegacyPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-    }
 
     public function feedback() {
         $res_view = view('feedback.index',['alert'=>'','title'=>'Feedback','br1'=>'Feedback','br2'=>'Index']);

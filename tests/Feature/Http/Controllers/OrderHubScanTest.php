@@ -23,6 +23,12 @@ class OrderHubScanTest extends TestCase
             $table->integer('isblocked')->default(0);
             $table->integer('office_id')->nullable();
         });
+        // The active-account check on the route looks up the signed-in person's pharmacy.
+        Schema::create('pharmacys', function (Blueprint $table): void {
+            $table->id();
+            $table->integer('isactive')->default(1);
+            $table->integer('isblocked')->default(0);
+        });
         Schema::create('orders', function (Blueprint $table): void {
             $table->increments('id');
             $table->integer('statuse_id');
@@ -52,7 +58,7 @@ class OrderHubScanTest extends TestCase
 
     public function test_complete_hub_check_in_sets_hub_and_check_out_sets_on_the_way(): void
     {
-        $staff = User::factory()->create(['role' => 'admin', 'office_id' => 5]);
+        $staff = User::factory()->create(['role' => 'admin', 'office_id' => 5, 'isactive' => 1]);
         $driver = User::factory()->create(['role' => 'driver']);
         DB::table('orders')->insert(['id' => 20, 'statuse_id' => 3, 'driver_id' => $driver->id, 'count_bags' => 2]);
 

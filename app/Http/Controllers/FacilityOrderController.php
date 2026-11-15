@@ -18,10 +18,6 @@ use App\Support\AccessMessages;
  */
 class FacilityOrderController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     /**
      * @param int|string $pharmacy_id

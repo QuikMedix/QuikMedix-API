@@ -11,10 +11,6 @@ use App\Notifications; // Assuming this is used in LexaAdmin
 
 class RouteTemplatesController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
 
     /**
      * Display a listing of the route templates.

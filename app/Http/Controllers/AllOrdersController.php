@@ -15,10 +15,6 @@ class AllOrdersController extends Controller
 {
     use LoadsOrderLookups;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function index() {
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'driver', 'logist')) {

@@ -8,10 +8,6 @@ use App\Support\AccessMessages;
 
 class OrderCreationController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa']);
-    }
 
     public function create(Request $request)
     {

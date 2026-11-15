@@ -20,10 +20,6 @@ class OrderFeedbackController extends Controller
 
     private const DELIVERED = 4;
 
-    public function __construct()
-    {
-        $this->middleware(['auth:api', 'active.api']);
-    }
 
     public function storeNote(Request $request, string $order_id): JsonResponse
     {

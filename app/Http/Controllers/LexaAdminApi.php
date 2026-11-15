@@ -18,12 +18,6 @@ use Twilio\Rest\Client;
 
 class LexaAdminApi extends Controller
 {
-    public function __construct() {
-        $this->middleware('auth:api');
-        // Every action here used to start with the same blocked/unapproved check and token extension.
-        $this->middleware('active.api');
-    }
-
     public static function profile() {
         $user = DB::table('users')->where('id', Auth::user()->id)->first();
         unset($user->password);

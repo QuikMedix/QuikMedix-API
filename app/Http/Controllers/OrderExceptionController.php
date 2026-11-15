@@ -26,10 +26,6 @@ class OrderExceptionController extends Controller
      */
     private const array CLOSED_STATUSES = [4, 5, 8, 9, 10];
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function approve(Request $request, int $pharmacy_id, int $order_id, int $exception_id, FinalizeFailedDelivery $finalizeFailedDelivery): RedirectResponse
     {

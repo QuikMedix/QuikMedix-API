@@ -16,10 +16,6 @@ class DeliveryTimeController extends Controller
 {
     use RespondsWithApiErrors;
 
-    public function __construct()
-    {
-        $this->middleware(['auth:api', 'active.api']);
-    }
 
     public function index(): JsonResponse
     {

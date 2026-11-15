@@ -72,7 +72,8 @@ Route::group(['prefix' => 'enterprise'], function () {
     Route::any('{any}', [PioneerrxApi::class, 'NotFound'])->where('any', '.*');
 });
 
-Route::middleware('auth:api')->group(function () {
+// Signed in with a token, on an account that is neither blocked nor waiting for approval.
+Route::middleware(['auth:api', 'active.api'])->group(function () {
     Route::get('/profile', [LexaAdminApi::class, 'profile']);
     Route::get('/banner', [LexaAdminApi::class, 'banner']);
     Route::post('/profile', [LexaAdminApi::class, 'profileHandler']);

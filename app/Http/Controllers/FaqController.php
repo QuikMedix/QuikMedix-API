@@ -20,11 +20,6 @@ class FaqController extends Controller
 
     private const PER_PAGE = 20;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa']);
-        $this->middleware('active')->except('index');
-    }
 
     public function index(Request $request): View|array
     {

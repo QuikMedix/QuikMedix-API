@@ -25,8 +25,6 @@ class RoutePlanningController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth');
-        $this->middleware('2fa');
         // The route pages load every open order of a driver or pharmacy at once.
         ini_set('memory_limit', '-1');
     }

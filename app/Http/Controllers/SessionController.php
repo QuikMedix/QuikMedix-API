@@ -17,11 +17,6 @@ class SessionController extends Controller
 {
     use RendersLegacyPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-    }
 
     public function logout()
     {

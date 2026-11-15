@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
 use App\Actions\SendWelcomeSms;
@@ -27,14 +28,10 @@ class FacilityController extends Controller
 
     private const PER_PAGE = 30;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function index(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         $facilities = User::where('role', 'facility')->where('pharmacy_id', $pharmacy_id);
         $search = (string) $request->query('search', '');
@@ -65,7 +62,7 @@ class FacilityController extends Controller
     public function updateStatus(Request $request, string $pharmacy_id): RedirectResponse
     {
         $facilityId = $request->input('user_id');
-        $this->authorize('manage-pharmacy-facility', [$pharmacy_id, $facilityId]);
+        Gate::authorize('manage-pharmacy-facility', [$pharmacy_id, $facilityId]);
 
         $changes = array_filter([
             'isactive' => $request->input('activate') > 0 ? 1 : null,
@@ -83,7 +80,7 @@ class FacilityController extends Controller
 
     public function create(Request $request, string $pharmacy_id): View|array|RedirectResponse
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
         if (Auth::user()->pharmacy_balance_ban()) {
             return redirect('billing/'.Auth::user()->pharmacy_id);
         }
@@ -132,7 +129,7 @@ class FacilityController extends Controller
 
     public function edit(Request $request, string $pharmacy_id, string $user_id): View|array
     {
-        $this->authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
 
         return $this->page($request, view('facilitys.user_edit', [
             'user' => DB::table('users')->where('id', $user_id)->first(),
@@ -150,7 +147,7 @@ class FacilityController extends Controller
      */
     public function update(Request $request, string $pharmacy_id, string $user_id, GeocodeAddress $geocoder, LogUserChanges $logChanges): RedirectResponse
     {
-        $this->authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
         $back = redirect("facilitys/$pharmacy_id/edit/$user_id");
 
         if ($request->filled('patients_db')) {

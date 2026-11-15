@@ -15,10 +15,6 @@ class OrderPrintController extends Controller
 {
     use LoadsOrderLookups;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function day() {
         if((Auth::user()->can('admin'))) {

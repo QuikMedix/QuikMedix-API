@@ -10,10 +10,6 @@ use Illuminate\Support\Facades\Gate;
 
 class OrderStatusController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function update(Request $request, int $pharmacy_id, int $order_id, ChangeOrderStatus $changeOrderStatus): RedirectResponse
     {

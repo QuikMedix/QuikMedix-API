@@ -17,10 +17,6 @@ class DriverShiftController extends Controller
 {
     use RespondsWithApiErrors;
 
-    public function __construct()
-    {
-        $this->middleware(['auth:api', 'active.api']);
-    }
 
     public function status(Request $request): JsonResponse
     {

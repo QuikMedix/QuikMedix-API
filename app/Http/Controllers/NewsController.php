@@ -20,8 +20,6 @@ class NewsController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth');
-        $this->middleware('2fa');
         // Kept from LexaAdmin, whose pages load whole result sets at once.
         ini_set('memory_limit', '-1');
     }

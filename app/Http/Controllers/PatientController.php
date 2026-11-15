@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
 use App\Actions\SendWelcomeSms;
@@ -29,14 +30,10 @@ class PatientController extends Controller
 
     private const PER_PAGE = 30;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function index(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         $patients = User::where('role', 'user')->where('pharmacy_id', $pharmacy_id);
         [$patients, $search, $page, $maxPages] = $this->searchAndPaginate($request, $patients);
@@ -54,7 +51,7 @@ class PatientController extends Controller
 
     public function removed(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         $patients = DB::table('deleted_patients')->join('users', 'deleted_patients.user_id', '=', 'users.id')
             ->select('deleted_patients.medic_id', 'users.name', 'users.last_name', 'users.email', 'users.phone', 'users.home_phone', 'users.role', 'users.os', 'deleted_patients.reason')
@@ -78,7 +75,7 @@ class PatientController extends Controller
     public function updateStatus(Request $request, string $pharmacy_id): RedirectResponse
     {
         $patientId = $request->input('user_id');
-        $this->authorize('manage-pharmacy-patient', [$pharmacy_id, $patientId]);
+        Gate::authorize('manage-pharmacy-patient', [$pharmacy_id, $patientId]);
 
         $changes = array_filter([
             'isactive' => $request->input('activate') > 0 ? 1 : null,
@@ -105,7 +102,7 @@ class PatientController extends Controller
 
     public function create(Request $request, string $pharmacy_id): View|array|RedirectResponse
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
         if (Auth::user()->pharmacy_balance_ban()) {
             return redirect('billing/'.Auth::user()->pharmacy_id);
         }
@@ -153,7 +150,7 @@ class PatientController extends Controller
 
     public function edit(Request $request, string $pharmacy_id, string $user_id): View|array
     {
-        $this->authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
 
         $patient = DB::table('users')->where('id', $user_id)->first();
         $zone = empty($patient->location) ? null
@@ -178,7 +175,7 @@ class PatientController extends Controller
      */
     public function update(Request $request, string $pharmacy_id, string $user_id, GeocodeAddress $geocoder, LogUserChanges $logChanges): RedirectResponse
     {
-        $this->authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
         $back = redirect("patients/$pharmacy_id/edit/$user_id");
 
         if ($request->input('family_members') > 0) {
@@ -227,7 +224,7 @@ class PatientController extends Controller
 
     private function recipientOptions(string $patientId, string $table, string $placeholder, bool $withAddress): Response
     {
-        $this->authorize('manage-pharmacy-patient', [Auth::user()->pharmacy_id, $patientId]);
+        Gate::authorize('manage-pharmacy-patient', [Auth::user()->pharmacy_id, $patientId]);
 
         $html = '<option value="">'.e($placeholder).'</option>';
         foreach (DB::table($table)->where('user_id', $patientId)->get() as $member) {

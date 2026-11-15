@@ -25,10 +25,6 @@ class DispatchingController extends Controller
     /** A decision that sends an order back clears what the driver recorded at the door. */
     private const NO_PROOF_OF_DELIVERY = ['drop_off_photo' => null, 'signature_photo' => null, 'signature_type' => null];
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     /**
      * The live board: up to thirty stops of the drivers on shift, soonest arrival first.
