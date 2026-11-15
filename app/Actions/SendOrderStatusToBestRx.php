@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use App\Models\Order;
+use App\Models\Pharmacy;
 use Illuminate\Support\Facades\DB;
 
 class SendOrderStatusToBestRx
@@ -11,9 +13,9 @@ class SendOrderStatusToBestRx
      */
     public function handle(int|string $order_id)
     {
-        $order = DB::table('orders')->where('id',$order_id)->first();
+        $order = Order::query()->where('id',$order_id)->first();
         if(!empty($order) && !empty($order->bestrx_order_id)) {
-            $pharmacy = DB::table('pharmacys')->where('id',$order->pharmacy_id)->first();
+            $pharmacy = Pharmacy::query()->where('id',$order->pharmacy_id)->first();
             $stat_id='1';
             $stat_name='Ready for pick up';
             if($order->statuse_id==2) {

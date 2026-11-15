@@ -1,10 +1,8 @@
-@props(['title' => 'Please fix the following:'])
-
-@if ($errors->any())
+{{-- What validation refused, shown at the top of a form. --}}
+@if($errors->any())
     <div class="alert alert-danger" role="alert">
-        <b>{{ $title }}</b>
         <ul class="mb-0">
-            @foreach ($errors->all() as $error)
+            @foreach($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
         </ul>

@@ -10,7 +10,8 @@ use Tests\TestCase;
  */
 class MapMarkerImagesTest extends TestCase
 {
-    private const PAGES = ['orders/show', 'dispatching/drivers', 'pharmacy/tariff_map'];
+    /** Where each map page keeps its map script: in the view, or in a file under public/. */
+    private const PAGES = ['orders/show' => 'public/js/order-page.js', 'dispatching/drivers' => 'resources/views/dispatching/drivers.blade.php', 'pharmacy/tariff_map' => 'resources/views/pharmacy/tariff_map.blade.php'];
 
     /**
      * Each marker image with the box, in CSS pixels, that the pages draw it in.
@@ -25,9 +26,9 @@ class MapMarkerImagesTest extends TestCase
     public function test_every_marker_image_a_map_page_asks_for_exists(): void
     {
         $asked = [];
-        foreach (self::PAGES as $page) {
+        foreach (self::PAGES as $page => $script) {
             // Marker images are the ones inside Leaflet divIcon markup, which are not draggable.
-            preg_match_all('#src="/images/([A-Za-z0-9_-]+\.svg)" draggable="false"#', file_get_contents(resource_path("views/$page.blade.php")), $matches);
+            preg_match_all('#src="/images/([A-Za-z0-9_-]+\.svg)" draggable="false"#', file_get_contents(base_path($script)), $matches);
             $this->assertNotEmpty($matches[1], "$page draws image markers");
             $asked = array_merge($asked, $matches[1]);
         }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Integrations;
 
+use App\Models\Pharmacy;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use DB;
@@ -27,7 +28,7 @@ class PioneerRxController extends Controller
             $apiKey = $request->header('prx-api-key');
             $timestamp = $request->header('prx-timestamp');
             $signature = $request->header('prx-signature');
-            $pharmacy = DB::table('pharmacys')->where('isactive',1)->where('isblocked',0)->where('pioneerrxKey',$apiKey)->first();
+            $pharmacy = Pharmacy::query()->where('isactive',1)->where('isblocked',0)->where('pioneerrxKey',$apiKey)->first();
             if(!empty($pharmacy)) {
                 $apiSecret = $pharmacy->pioneerrxSecret;
                 $my_signature = base64_encode(hash("sha512",mb_convert_encoding($timestamp.$apiSecret, "UTF-16LE", "UTF-8")));

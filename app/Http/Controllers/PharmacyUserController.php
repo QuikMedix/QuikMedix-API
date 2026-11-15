@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Models\Pharmacy;
 use App\Actions\LogUserChanges;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -103,8 +104,8 @@ class PharmacyUserController extends Controller
     public function pharmacyUsersEdit($pharmacy_id,$user_id) {
         abort_unless(Auth::user()->hasRole('medic') && Auth::user()->pharmacy_id==$pharmacy_id && User::query()->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin')), 403, AccessMessages::NO_PERMISSION);
         $user = DB::table('users')->where('id', $user_id)->first();
-        $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
-        $pharmacys = DB::table('pharmacys')->get();
+        $user_actions = ActionLog::query()->where('user_id', $user_id)->get();
+        $pharmacys = Pharmacy::query()->get();
         $res_view = view('pharmacy.user_edit',['user'=> $user, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
         return $this->page(request(), $res_view);
     }
@@ -180,7 +181,7 @@ class PharmacyUserController extends Controller
                 $input['zip']=$request->input('zip');
                 $input['apartment']=$request->input('apartment');
                 $input['pharmacy']=$pharmacy_id;
-                $pharmacys = DB::table('pharmacys')->get();
+                $pharmacys = Pharmacy::query()->get();
                 return view('pharmacy.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Add','alert'=>'User with this email already exists','input'=>$input]);
             } else {
                 if(!empty(DB::table('users')->where('phone', $request->input('phone'))->first())) {
@@ -194,7 +195,7 @@ class PharmacyUserController extends Controller
                     $input['zip']=$request->input('zip');
                     $input['apartment']=$request->input('apartment');
                     $input['pharmacy']=$pharmacy_id;
-                    $pharmacys = DB::table('pharmacys')->get();
+                    $pharmacys = Pharmacy::query()->get();
                     return view('pharmacy.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Add','alert'=>'User with this phone already exists','input'=>$input]);
                 } else {
                     if($request->hasFile('image')) {

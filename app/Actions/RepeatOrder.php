@@ -19,7 +19,7 @@ class RepeatOrder
      */
     public function handle(int|string $orderId): array
     {
-        $order = DB::table('orders')->where('id', $orderId)->first();
+        $order = Order::query()->where('id', $orderId)->first();
         $order->id = NULL;
         $order->medic_id = Auth::id();
         $order->statuse_id = 1;
@@ -37,7 +37,7 @@ class RepeatOrder
         $order = json_encode($order);
         $order = json_decode($order,true);
         $order_id = Order::query()->insertGetId($order);
-        $rxs = DB::table('rxs')->where('order_id',$orderId)->get();
+        $rxs = Rx::query()->where('order_id',$orderId)->get();
         foreach($rxs as $rx) {
             $rx->id = NULL;
             $rx->order_id = $order_id;

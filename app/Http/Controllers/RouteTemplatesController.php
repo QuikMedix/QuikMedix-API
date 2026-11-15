@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
+use App\Models\Office;
 use App\Models\RouteTemplate;
 use App\Models\RouteTemplateItem;
 use App\Models\Order;
@@ -84,8 +86,8 @@ class RouteTemplatesController extends Controller
         // Prepare data for the view
         // We need lists of Pharmacies and Offices to show on the map/list
         
-        $pharmacys = DB::table('pharmacys')->where("isactive",1)->where("isblocked",0)->get();
-        $offices = DB::table('offices')->get();
+        $pharmacys = Pharmacy::query()->where("isactive",1)->where("isblocked",0)->get();
+        $offices = Office::query()->get();
         
         // For the map, we need locations of all potential points? 
         // Or just the points in the template + all pharmacies?

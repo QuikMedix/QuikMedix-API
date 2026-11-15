@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Integrations;
 
+use App\Models\Pharmacy;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Order;
@@ -273,7 +274,7 @@ class MicroMerchantController extends Controller
     public function orderRxAdd(Request $request,$order_id){
         if($pharmacy_auth = $this->checkAuth($request)){
             $response = json_decode($request->getContent());
-            $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
+            $order=Order::query()->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
                 $copay=$order->copay;
                 $fridge=$order->fridge;
@@ -327,7 +328,7 @@ class MicroMerchantController extends Controller
      */
     public function orderRxDelete(Request $request,$order_id,$rx_number) {
         if($pharmacy_auth = $this->checkAuth($request)){
-            $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
+            $order=Order::query()->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
                 Rx::query()->where('order_id',$order_id)->where("rx_id",$rx_number)->delete();
                 return response()->json(NULL, 200);
@@ -350,7 +351,7 @@ class MicroMerchantController extends Controller
      */
     public function orderDelete(Request $request,$order_id) {
         if($pharmacy_auth = $this->checkAuth($request)){
-            $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
+            $order=Order::query()->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
                 if($order->statuse_id==1) {
                     Order::query()->where('id',$order_id)->update(["statuse_id"=>5]);
@@ -587,9 +588,9 @@ class MicroMerchantController extends Controller
                 $apiKey = $header[0];
                 $apiSecret = $header[1];
                 if(!empty($pharmacy_id)){
-                    $pharmacy = DB::table('pharmacys')->where('isactive',1)->where('isblocked',0)->where('balance_ban','0')->where('npi',$pharmacy_id)->where('merchantKey',$apiKey)->where('merchantSecret',$apiSecret)->first();
+                    $pharmacy = Pharmacy::query()->where('isactive',1)->where('isblocked',0)->where('balance_ban','0')->where('npi',$pharmacy_id)->where('merchantKey',$apiKey)->where('merchantSecret',$apiSecret)->first();
                 } else {
-                    $pharmacy = DB::table('pharmacys')->where('isactive',1)->where('isblocked',0)->where('balance_ban','0')->where('merchantKey',$apiKey)->where('merchantSecret',$apiSecret)->first();
+                    $pharmacy = Pharmacy::query()->where('isactive',1)->where('isblocked',0)->where('balance_ban','0')->where('merchantKey',$apiKey)->where('merchantSecret',$apiSecret)->first();
                 }
                 return $pharmacy;
             } else {

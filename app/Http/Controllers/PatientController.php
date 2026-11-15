@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Area;
+use App\Models\Order;
+use App\Models\ActionLog;
 use App\Models\FamilyMember;
 use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
@@ -155,17 +158,17 @@ class PatientController extends Controller
 
         $patient = DB::table('users')->where('id', $user_id)->first();
         $zone = empty($patient->location) ? null
-            : DB::table('area')->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', GeoPoint::bindings($patient->location))->select('area.id', 'area.name')->first();
+            : Area::query()->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', GeoPoint::bindings($patient->location))->select('area.id', 'area.name')->first();
 
         return $this->page($request, view('patients.user_edit', [
             'user' => $patient,
             'orders' => $this->recentOrders($user_id),
-            'orders_stat' => DB::table('orders')->where('user_id', $user_id)->where('statuse_id', 4)
+            'orders_stat' => Order::query()->where('user_id', $user_id)->where('statuse_id', 4)
                 ->select(DB::raw('count(distinct id) as count'), DB::raw('sum(copay) as copay'))->first(),
             'user_zone' => $zone,
-            'user_actions' => DB::table('action_log')->where('user_id', $user_id)->get(),
+            'user_actions' => ActionLog::query()->where('user_id', $user_id)->get(),
             'pharmacys' => DB::table('pharmacys')->get()->keyBy('id'),
-            'family_members' => DB::table('family_members')->where('user_id', $user_id)->get(),
+            'family_members' => FamilyMember::query()->where('user_id', $user_id)->get(),
             'title' => 'Patients Edit', 'br1' => 'Patients', 'br2' => 'Patients Edit',
             'alert' => '',
         ]));
@@ -315,7 +318,7 @@ class PatientController extends Controller
     {
         $address = fn (string $column) => "case when users.primary_address=2 then users.{$column}2 when users.primary_address=3 then users.{$column}3 else users.{$column} end";
 
-        return DB::table('orders')->where('user_id', $patientId)
+        return Order::query()->where('user_id', $patientId)
             ->join('users', 'orders.user_id', '=', 'users.id')
             ->leftJoin('users as driver', 'orders.driver_id', '=', 'driver.id')
             ->join('statuses', 'orders.statuse_id', '=', 'statuses.id')

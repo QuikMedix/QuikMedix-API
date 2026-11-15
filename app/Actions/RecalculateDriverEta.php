@@ -92,8 +92,8 @@ class RecalculateDriverEta
     private function locatedStops(int|string $driverId): array
     {
         // GROUP_CONCAT without a separator joins with a comma on MySQL, as the explicit separator did.
-        $pickupsAndDeliveries = DB::table('routes_priority')->select('driver_id', DB::raw('GROUP_CONCAT(order_id) as order_id'), 'type', 'type_id', DB::raw('min(priority) as priority'))->where('driver_id', $driverId)->where('type', '!=', 'office')->groupBy('type', 'type_id', 'driver_id')->orderBy('priority', 'asc')->get();
-        $officeVisits = DB::table('routes_priority')->select('driver_id', DB::raw('GROUP_CONCAT(order_id) as order_id'), 'type', 'type_id', 'priority')->where('driver_id', $driverId)->where('type', 'office')->groupBy('type', 'type_id', 'driver_id', 'priority')->orderBy('priority', 'asc')->get();
+        $pickupsAndDeliveries = RouteStop::query()->select('driver_id', DB::raw('GROUP_CONCAT(order_id) as order_id'), 'type', 'type_id', DB::raw('min(priority) as priority'))->where('driver_id', $driverId)->where('type', '!=', 'office')->groupBy('type', 'type_id', 'driver_id')->orderBy('priority', 'asc')->get();
+        $officeVisits = RouteStop::query()->select('driver_id', DB::raw('GROUP_CONCAT(order_id) as order_id'), 'type', 'type_id', 'priority')->where('driver_id', $driverId)->where('type', 'office')->groupBy('type', 'type_id', 'driver_id', 'priority')->orderBy('priority', 'asc')->get();
         $routes = [...$pickupsAndDeliveries, ...$officeVisits];
         usort($routes, fn ($a, $b) => $a->priority - $b->priority);
 

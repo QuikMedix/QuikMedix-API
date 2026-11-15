@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
 use App\Models\ActionLog;
 use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Support\Facades\Auth;
@@ -47,7 +48,7 @@ class SessionController extends Controller
         DB::table('users')->where('id',$user_id)->update(['password'=>Hash::make($password)]);
         ActionLog::query()->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
         if(!empty($user->pharmacy_id)) {
-            $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
+            $pharmacy = Pharmacy::query()->where('id',$user->pharmacy_id)->first();
             if(!empty($pharmacy) && !empty($pharmacy->name)) {
                 $pharmacy_name = $pharmacy->name;
             } else {

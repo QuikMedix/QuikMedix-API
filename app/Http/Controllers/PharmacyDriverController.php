@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
+use App\Models\Pharmacy;
 use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
@@ -165,8 +167,8 @@ class PharmacyDriverController extends Controller
     {
         return view('drivers.user_edit', [
             'user' => DB::table('users')->where('id', $driverId)->first(),
-            'user_actions' => DB::table('action_log')->where('user_id', $driverId)->get(),
-            'pharmacys' => DB::table('pharmacys')->get(),
+            'user_actions' => ActionLog::query()->where('user_id', $driverId)->get(),
+            'pharmacys' => Pharmacy::query()->get(),
             'title' => 'Drivers Edit', 'br1' => 'Drivers', 'br2' => 'Users', 'br3' => 'Driver Edit',
             'alert' => '',
         ]);

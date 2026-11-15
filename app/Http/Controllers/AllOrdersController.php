@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\OrderListFilter;
 use App\Actions\RepeatOrder;
 use App\Models\Order;
 use App\Models\Rx;
@@ -23,90 +24,8 @@ class AllOrdersController extends Controller
         if(Auth::user()->hasRole('driver') && Auth::user()->pharmacy_id > 0) {
             $orders = $orders->where('orders.pharmacy_id', Auth::user()->pharmacy_id);
         }
-        $filter = [];
-        if(!empty(request()->query('delivery_time')) && !empty(request()->query('filter'))) {
-            $filter["delivery_time"] = request()->query('delivery_time');
-        } else {
-            $filter["delivery_time"] = [];
-        }
-        if(!empty(request()->query('delivery_method')) && !empty(request()->query('filter'))) {
-            $filter["delivery_method"] = request()->query('delivery_method');
-        } else {
-            $filter["delivery_method"] = [];
-        }
-        if(!empty(request()->query('pharmacy')) && !empty(request()->query('filter'))) {
-            $filter["pharmacy"] = request()->query('pharmacy');
-        } else {
-            $filter["pharmacy"] = [];
-        }
-        if(!empty(request()->query('status')) && !empty(request()->query('filter'))) {
-            $filter["status"] = request()->query('status');
-        } else {
-            $filter["status"] = [];
-        }
-        if(!empty(request()->query('facility')) && !empty(request()->query('filter'))) {
-            $filter["facility"] = request()->query('facility');
-        } else {
-            $filter["facility"] = [];
-        }
-        if(!empty(request()->query('create_start')) && !empty(request()->query('filter'))) {
-            $filter["create_start"] = request()->query('create_start');
-        } else {
-            $filter["create_start"] = "";
-        }
-        if(!empty(request()->query('create_end')) && !empty(request()->query('filter'))) {
-            $filter["create_end"] = request()->query('create_end');
-        } else {
-            $filter["create_end"] = "";
-        }
-        if(!empty(request()->query('delivered_start')) && !empty(request()->query('filter'))) {
-            $filter["delivered_start"] = request()->query('delivered_start');
-        } else {
-            $filter["delivered_start"] = "";
-        }
-        if(!empty(request()->query('delivered_end')) && !empty(request()->query('filter'))) {
-            $filter["delivered_end"] = request()->query('delivered_end');
-        } else {
-            $filter["delivered_end"] = "";
-        }
-        if(!empty(request()->query('need_delivery_start')) && !empty(request()->query('filter'))) {
-            $filter["need_delivery_start"] = request()->query('need_delivery_start');
-        } else {
-            $filter["need_delivery_start"] = "";
-        }
-        if(!empty(request()->query('need_delivery_end')) && !empty(request()->query('filter'))) {
-            $filter["need_delivery_end"] = request()->query('need_delivery_end');
-        } else {
-            $filter["need_delivery_end"] = "";
-        }
-        if(!empty($filter["delivery_time"])) {
-            $orders = $orders->whereIn("delivery_time_id",$filter["delivery_time"]);
-        }
-        if(!empty($filter["delivery_method"])) {
-            $orders = $orders->whereIn("delivery_method_id",$filter["delivery_method"]);
-        }
-        if(!empty($filter["pharmacy"])) {
-            $orders = $orders->whereIn('orders.pharmacy_id',$filter["pharmacy"]);
-        }
-        if(!empty($filter["status"])) {
-            $orders = $orders->whereIn('orders.statuse_id',$filter["status"]);
-        }
-        if(count($filter["facility"])==1) {
-            if($filter["facility"][0]==0) {
-                $orders = $orders->whereNull('orders.facility');
-            } else {
-                $orders = $orders->whereNotNull('orders.facility');
-            }
-        }
-        if(!empty($filter["create_start"]) && !empty($filter["create_end"])) {
-            $orders = $orders->whereBetween('orders.created', [\DateTime::createFromFormat('m/d/Y',$filter["create_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["create_end"])->format('Y-m-d')]);
-        }
-        if(!empty($filter["delivered_start"]) && !empty($filter["delivered_end"])) {
-            $orders = $orders->whereBetween('orders.finish', [\DateTime::createFromFormat('m/d/Y',$filter["delivered_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["delivered_end"])->format('Y-m-d')]);
-        }
-        if(!empty($filter["need_delivery_start"]) && !empty($filter["need_delivery_end"])) {
-            $orders = $orders->whereBetween('orders.delivery_date', [\DateTime::createFromFormat('m/d/Y',$filter["need_delivery_start"])->format('Y-m-d'), \DateTime::createFromFormat('m/d/Y',$filter["need_delivery_end"])->format('Y-m-d')]);
-        }
+        $filter = OrderListFilter::fromRequest(request(), ['delivery_time', 'delivery_method', 'pharmacy', 'status', 'facility', 'create_start', 'create_end', 'delivered_start', 'delivered_end', 'need_delivery_start', 'need_delivery_end']);
+        $orders = OrderListFilter::apply($orders, $filter);
         if(!empty(request()->query('without_sign'))) {
             $orders = $orders->where('statuse_id','4')->where('orders.signature','1')->whereNull('orders.signature_photo')->whereDate('orders.created', '>', date('Y-m-d', strtotime('now -1 month')));
         }

@@ -33,7 +33,7 @@ class ReturnOrderToOffice
             ]);
         }
 
-        $office = DB::table('routes_priority')->where('driver_id', $order->driver_id)->where('type', 'office')->first();
+        $office = RouteStop::query()->where('driver_id', $order->driver_id)->where('type', 'office')->first();
         if (! empty($office)) {
             RouteStop::query()->insert([
                 'driver_id' => $order->driver_id, 'order_id' => $order->id, 'type' => 'office', 'type_id' => $office->type_id,

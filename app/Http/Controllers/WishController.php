@@ -51,7 +51,7 @@ class WishController extends Controller
 
     public function settingsWishesCategoryAddHandler(Request $request) {
         if($request->input('save')>0) {
-            if(!empty(DB::table('wishes_category')->where('name', $request->input('name'))->first())) {
+            if(!empty(WishCategory::query()->where('name', $request->input('name'))->first())) {
                 $input['name']=$request->input('name');
                 return view('wishes.category_add',['input'=>$input,'alert'=>'Print Text Category with this name is alredy exist.','title'=>'Print Text Category Add','br1'=>'Print Text','br2'=>'Category Add']);
             } else {
@@ -69,7 +69,7 @@ class WishController extends Controller
         $max_pages=ceil(Wish::query()->where("category_id",$wish_id)->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
-        $wishes = DB::table('wishes')->where("category_id",$wish_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $wishes = Wish::query()->where("category_id",$wish_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('wishes.wishes',['wishes'=>$wishes,'wish_id'=>$wish_id,'pages'=>$pages,'title'=>'Print Text','br1'=>'Print Text','br2'=>'List']);
         return $this->page(request(), $res_view);
     }

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Status;
+use App\Models\FamilyMember;
+use App\Models\AreaZip;
 use App\Models\Pharmacy;
 use App\Models\DeliveryMethod;
 use App\Models\DeliveryTime;
@@ -218,21 +221,21 @@ class FacilityOrderController extends Controller
     public function edit($pharmacy_id,$order_id) {
         Gate::authorize('access-order', $order_id);
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id) || Auth::user()->hasAnyRole('logist'), 403, AccessMessages::NO_PERMISSION);
-        $order = DB::table('orders')->where('id', $order_id)->first();
-        $rxs = DB::table('rxs')->where('order_id', $order_id)->get();
+        $order = Order::query()->where('id', $order_id)->first();
+        $rxs = Rx::query()->where('order_id', $order_id)->get();
         $users = DB::table('users')->where('role', 'user')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
         $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->select('users.id','users.name','users.last_name','users.phone')->get();
         $drivers = DB::table('users')->where('role', 'driver')->whereNull("pharmacy_id")->get();
         $drivers2 = DB::table('users')->where('role', 'driver')->where("pharmacy_id",$pharmacy_id)->get();
-        $delivery_methods = DB::table('delivery_methods')->get();
-        $delivery_times = DB::table('delivery_times')->get();
-        $statuses = DB::table('statuses')->get();
-        $family_members = DB::table('family_members')->where('user_id', $order->user_id)->get();
-        $additional_recipients = DB::table('additional_recipients')->where('user_id', $order->user_id)->join('rxs','rxs.rx_recipient','=','additional_recipients.id')->where('rxs.order_id', $order_id)->select('additional_recipients.id','additional_recipients.family_type','additional_recipients.family_name','additional_recipients.family_phone')->groupBy('additional_recipients.id','additional_recipients.family_type','additional_recipients.family_name','additional_recipients.family_phone')->get();
-        $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
+        $delivery_methods = DeliveryMethod::query()->get();
+        $delivery_times = DeliveryTime::query()->get();
+        $statuses = Status::query()->get();
+        $family_members = FamilyMember::query()->where('user_id', $order->user_id)->get();
+        $additional_recipients = AdditionalRecipient::query()->where('user_id', $order->user_id)->join('rxs','rxs.rx_recipient','=','additional_recipients.id')->where('rxs.order_id', $order_id)->select('additional_recipients.id','additional_recipients.family_type','additional_recipients.family_name','additional_recipients.family_phone')->groupBy('additional_recipients.id','additional_recipients.family_type','additional_recipients.family_name','additional_recipients.family_phone')->get();
+        $pharmacy=Pharmacy::query()->where('pharmacys.id',$pharmacy_id)->first();
         $patient=DB::table('users')->where('users.id',$order->user_id)->first();
         $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-        $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
+        $zip_tariff=AreaZip::query()->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
         $res_view = view('facilitys.edit',['order'=>$order, 'rxs'=>$rxs, "time_ranges"=>$time_ranges, 'users'=>$users, 'facilitys'=>$facilitys, 'pharmacy'=>$pharmacy, 'zip_tariff'=>$zip_tariff, 'drivers'=>$drivers, 'drivers2'=>$drivers2, 'family_members'=>$family_members, 'additional_recipients'=>$additional_recipients, 'statuses'=>$statuses, 'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times, 'title'=>'Order Edit','br1'=>'Orders','br2'=>'Order Edit','alert'=>'']);
         if(request()->query->has('ajax')) {
             return $res_view->renderSections();

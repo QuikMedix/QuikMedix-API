@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Integrations;
 
+use App\Models\Pharmacy;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Order;
@@ -332,7 +333,7 @@ class BestRxController extends Controller
         if($pharmacy_auth = $this->checkAuth($request)){
             $response = json_decode($request->getContent());
             if(isset($response->bestrx_order_id)) {
-                $order=DB::table('orders')->where('pharmacy_id',$pharmacy_auth->id)->where('bestrx_order_id',$response->bestrx_order_id)->first();
+                $order=Order::query()->where('pharmacy_id',$pharmacy_auth->id)->where('bestrx_order_id',$response->bestrx_order_id)->first();
                 if(!empty($order)){
                     if($order->statuse_id==1) {
                         Order::query()->where('bestrx_order_id',$response->bestrx_order_id)->update(["statuse_id"=>5]);
@@ -405,9 +406,9 @@ class BestRxController extends Controller
                     }
                 }
                 if(!empty($pharmacy_id)){
-                    $pharmacy = DB::table('pharmacys')->where('isactive',1)->where('isblocked',0)->where('bestrx_pharmacy_id',$pharmacy_id)->where('bestrxKey',$apiKey)->where('bestrxSecret',$apiSecret)->first();
+                    $pharmacy = Pharmacy::query()->where('isactive',1)->where('isblocked',0)->where('bestrx_pharmacy_id',$pharmacy_id)->where('bestrxKey',$apiKey)->where('bestrxSecret',$apiSecret)->first();
                 } else {
-                    $pharmacy = DB::table('pharmacys')->where('isactive',1)->where('isblocked',0)->where('bestrxKey',$apiKey)->where('bestrxSecret',$apiSecret)->first();
+                    $pharmacy = Pharmacy::query()->where('isactive',1)->where('isblocked',0)->where('bestrxKey',$apiKey)->where('bestrxSecret',$apiSecret)->first();
                 }
                 return $pharmacy;
             } else {
