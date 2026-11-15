@@ -520,3 +520,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Commit status: three commits plus this record on `refactor/modularize-phase-4`, added to the owner's fork checkout. Not pushed by the session.
 - Next action: owner to confirm how the mobile apps call the chat endpoints; then models page by page, starting with orders.
 
+## Session log — 2026-11-15: modularization phase 5
+
+- Goal: the owner asked for the items left undone: models for row-returning reads, policies for role comparisons, form validation, inline scripts and the Vite build, OrderController, the Zadarma webhook.
+- Done: Zadarma signature check on the call webhook; `hasRole`/`hasAnyRole` in place of 108 string comparisons, with a test over every role named; a dead navbar menu removed; 56 page reads through models in the 58 actions the browser check covers; `App\Actions\RepeatOrder`; one `recordPatientScan` for the two driver scan endpoints.
+- Browser: before/after comparison of 82 pages on MySQL as the test superadmin, 81 identical, one differing only in a generated image.
+- Not done: see FEATURE_LIST.json `codebase-modularization-phase-5` notes.
+- Not verified: form submissions in a browser; other roles in a browser; PHP 8.5; Vite build.
+- Commit status: six commits plus this record on `refactor/modularize-phase-5`, added to the owner's fork checkout. Not pushed by the session.
+- Next action: owner to say whether test records may be created through the forms, which form validation needs; then the order-list filter and the account actions.
+

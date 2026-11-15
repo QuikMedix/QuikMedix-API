@@ -390,6 +390,28 @@
         "2026-11-15 browser, built-in browser pane, http://127.0.0.1:8000 on refactor/modularize-phase-4 with MySQL: 51 list and form pages and 33 detail pages fetched, all 200 with their own titles, no SQL or PHP error text in any. /routes-list/driver/6 loaded both moved scripts, window.driverRoutePage was set, reload_priority, updateOfficeId and initMap were defined and the trash drop target was initialised; no script errors in the console. Only GET requests were made; nothing was submitted, dragged or saved."
       ],
       "notes": "The chat page (resources/views/chats/chat_api.blade.php) now sends viewer and signature with its five calls; twiliochat-api.js is at ?v=23. If a mobile app calls these three endpoints natively without its bearer token it will get 401 until it sends the token. Not changed, for the owner: the Zadarma webhook is not signature-checked; api/pharmacy-list and api/driver-create are public by design (driver sign-up). The CI job mysql-schema has not been run; CI is on manual dispatch. The browser check covered pages before the three commits of this entry were applied to the owner's folder, and did not cover form submissions or the chat page inside the mobile web view."
+    },
+    {
+      "id": "codebase-modularization-phase-5",
+      "priority": 15,
+      "area": "security and maintainability",
+      "title": "Signed phone webhook, role checks through hasRole, page reads through models, repeat-order and patient-scan duplicates merged",
+      "user_visible_behavior": "Pages are unchanged. POST /zadarma records a 'call answered' notice only when it carries Zadarma's signature for the configured secret; otherwise 403, or 503 when no secret is configured. A navbar menu that could never show is gone.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests for the webhook signature, RepeatOrder and both patient-scan endpoints (the scan tests also pass on the old code).",
+        "Compare the 2,497 recorded route answers before and after the read conversion.",
+        "In a browser against the owner's local app on MySQL, signed in as the test superadmin, capture 82 GET pages on main, switch the checkout to this branch, capture them again and compare.",
+        "composer test."
+      ],
+      "evidence": [
+        "2026-11-15 ZadarmaWebhookTest 4 tests; RepeatOrderTest 1; PatientScanTest 3 (also green on the old controller); role-name test found one non-existent role, 'medic1', guarding a dead navbar menu.",
+        "2026-11-15 role checks: 108 comparisons of the signed-in user's role replaced by hasRole/hasAnyRole in 34 files. Reads: 56 row-returning chains in 58 page actions converted; 21 actions skipped by the risk filter (toArray, merge-style collection calls, array casts, stdClass hints, in the action or its view).",
+        "2026-11-15 route answers: 0 of 2,497 changed by the read conversion (the medic dashboard differs from run to run on its own).",
+        "2026-11-15 browser: 82 pages, all 200 before and after; 81 identical once whitespace is collapsed; the order page differs only inside a generated image. Captured before the RepeatOrder and patient-scan commits, which do not touch GET pages.",
+        "2026-11-15 composer test: 569 tests / 2663 assertions, 45 routing and 69 tariff checks."
+      ],
+      "notes": "The browser comparison is for the superadmin and the test data only; other roles are covered by the SQLite route answers. Not done: form requests (the web handlers do not validate; rules would have to come from each form and be tested by submitting it); the remaining inline scripts and the Vite build; a shared filter for the two order lists (about 115 shared lines, with different extra filters); the account actions repeated across the users, medics, drivers and logists handlers, where role changes other than to admin are guarded only by manage-account; reads outside the 58 actions (about 850 DB::table calls remain). Deploy: ZADARMA_SECRET must be set or the call webhook answers 503."
     }
   ]
 }
