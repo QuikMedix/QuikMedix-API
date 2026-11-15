@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use App\Support\AccessMessages;
 
 /**
  * The dashboard, the search box's results, the notifications list and the delivery calendar.
@@ -33,7 +34,7 @@ class DashboardController extends Controller
 
     public function root() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->role == 'medic'){
             $res_arr=self::get_cached_value(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id);
@@ -447,7 +448,7 @@ class DashboardController extends Controller
 
     public function searchJson() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->can('admin')))) {
             $search = request()->query('search', '');
@@ -546,7 +547,7 @@ class DashboardController extends Controller
                 ]);
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -652,7 +653,7 @@ class DashboardController extends Controller
             $user->save();
             return redirect()->back();
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

@@ -10,6 +10,8 @@ use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\AccessMessages;
+use App\Actions\NotifyNextPatient;
 
 /**
  * Drivers: a driver's payouts, packages and profile, and the QR scans that hand orders and bags to
@@ -32,7 +34,7 @@ class DriverController extends Controller
      */
     public function driversPayouts($driver_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'driver')) {
             $user = User::find($driver_id);
@@ -51,7 +53,7 @@ class DriverController extends Controller
             $res_view = view('drivers.payouts',['user'=>$user,'orders'=>$orders,'pages'=>$pages,'duty'=>$duty,'title'=>'Drivers Payouts','br1'=>'Drivers','br2'=>'Payouts']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -123,7 +125,7 @@ class DriverController extends Controller
                                 $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                                 if(!empty($next_route)) {
                                     if($next_route->type=='patient') {
-                                        LexaAdmin::next_patient_push($driver_id,$next_route);
+                                        app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                                     }
                                 }
                                 return json_encode([
@@ -167,7 +169,7 @@ class DriverController extends Controller
                             $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                             if(!empty($next_route)) {
                                 if($next_route->type=='patient') {
-                                    LexaAdmin::next_patient_push($driver_id,$next_route);
+                                    app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                                 }
                             }
                             return json_encode([
@@ -230,7 +232,7 @@ class DriverController extends Controller
                                 $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                                 if(!empty($next_route)) {
                                     if($next_route->type=='patient') {
-                                        LexaAdmin::next_patient_push($driver_id,$next_route);
+                                        app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                                     }
                                 }
                                 return json_encode([
@@ -352,7 +354,7 @@ class DriverController extends Controller
                             $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                             if(!empty($next_route)) {
                                 if($next_route->type=='patient') {
-                                    LexaAdmin::next_patient_push($driver_id,$next_route);
+                                    app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                                 }
                             }
                             return json_encode([
@@ -429,7 +431,7 @@ class DriverController extends Controller
                             $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                             if(!empty($next_route)) {
                                 if($next_route->type=='patient') {
-                                    LexaAdmin::next_patient_push($driver_id,$next_route);
+                                    app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                                 }
                             }
                             return json_encode([
@@ -473,7 +475,7 @@ class DriverController extends Controller
                         $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                         if(!empty($next_route)) {
                             if($next_route->type=='patient') {
-                                LexaAdmin::next_patient_push($driver_id,$next_route);
+                                app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                             }
                         }
                         return json_encode([
@@ -536,7 +538,7 @@ class DriverController extends Controller
                             $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                             if(!empty($next_route)) {
                                 if($next_route->type=='patient') {
-                                    LexaAdmin::next_patient_push($driver_id,$next_route);
+                                    app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                                 }
                             }
                             return json_encode([
@@ -658,7 +660,7 @@ class DriverController extends Controller
                         $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                         if(!empty($next_route)) {
                             if($next_route->type=='patient') {
-                                LexaAdmin::next_patient_push($driver_id,$next_route);
+                                app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                             }
                         }
                         return json_encode([
@@ -697,7 +699,7 @@ class DriverController extends Controller
      */
     public function driversPackages($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('medic', 'superadmin', 'admin', 'dispadmin')) {
             $driver = DB::table('users')->where('id', $user_id)->first();
@@ -735,7 +737,7 @@ class DriverController extends Controller
             $res_view = view('drivers.packages',['driver'=>$driver,'need_cash'=>$need_cash,'orders_transfer'=>$orders_transfer,'orders_pick_up'=>$orders_pick_up,'title'=>'Drivers Packages','br1'=>'Drivers','br2'=>'Drivers Packages','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -744,7 +746,7 @@ class DriverController extends Controller
      */
     public function driversPackagesHandler(Request $request, $user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('medic', 'superadmin', 'admin', 'dispadmin')) {
             if($request->input('confirm_receipt')>0) {
@@ -771,7 +773,7 @@ class DriverController extends Controller
                     $next_route = DB::table('routes_priority')->where('driver_id',$driver_id)->orderBy("priority","asc")->first();
                     if(!empty($next_route)) {
                         if($next_route->type=='patient') {
-                            LexaAdmin::next_patient_push($driver_id,$next_route);
+                            app(NotifyNextPatient::class)->handle($driver_id,$next_route);
                         }
                     }
                 }
@@ -801,7 +803,7 @@ class DriverController extends Controller
             }
             return redirect("drivers/$user_id/packages");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -823,7 +825,7 @@ class DriverController extends Controller
             }
             return abort(404);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -936,7 +938,7 @@ class DriverController extends Controller
             }
             return abort(404);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

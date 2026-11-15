@@ -7,6 +7,7 @@ use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\AccessMessages;
 
 /**
  * Greeting wishes in settings: categories and the wishes of a category. Formerly actions of
@@ -34,7 +35,7 @@ class WishController extends Controller
             $res_view = view('wishes.category',['wishes_categorys'=>$wishes_categorys,'pages'=>$pages,'title'=>'Print Text Category','br1'=>'Print Text','br2'=>'Category']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -52,7 +53,7 @@ class WishController extends Controller
             }
             return redirect("settings/wishes");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -62,7 +63,7 @@ class WishController extends Controller
             $res_view = view('wishes.category_add',['input'=>$input,'alert'=>'','title'=>'Print Text Category Add','br1'=>'Print Text','br2'=>'Category Add']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -78,7 +79,7 @@ class WishController extends Controller
             }
             return redirect("settings/wishes");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -95,7 +96,7 @@ class WishController extends Controller
             $res_view = view('wishes.wishes',['wishes'=>$wishes,'wish_id'=>$wish_id,'pages'=>$pages,'title'=>'Print Text','br1'=>'Print Text','br2'=>'List']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -109,7 +110,7 @@ class WishController extends Controller
             }
             return redirect("settings/wishes/$wish_id/list");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -119,7 +120,7 @@ class WishController extends Controller
             $res_view = view('wishes.add',['input'=>$input,'alert'=>'','title'=>'Print Text Add','br1'=>'Print Text','br2'=>'Add']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -133,7 +134,7 @@ class WishController extends Controller
             }
             return redirect("settings/wishes/$wish_id/list");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

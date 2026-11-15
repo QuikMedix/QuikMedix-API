@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Support\AccessMessages;
 
 /**
  * Pharmacy billing: the billing page and its actions, invoice printing, and adding and editing
@@ -29,7 +30,7 @@ class BillingController extends Controller
      */
     public function billing2($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->can('admin'))) || (Auth::user()->role == 'driver') || (Auth::user()->role == 'user' && Auth::user()->pharmacy_id==$pharmacy_id)) {
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.statuse_id', 'orders.pharmacy_id', 'orders.copay', 'users.name as username', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', DB::raw('case when orders.tariff is null then pharmacys.tariff else orders.tariff end as tariff'),'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id',$pharmacy_id)->where('orders.statuse_id','4')->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'delivery_methods.name', 'delivery_times.name', 'orders.copay', 'orders.pharmacy_id', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', DB::raw('case when orders.tariff is null then pharmacys.tariff else orders.tariff end'), 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->get();
@@ -39,7 +40,7 @@ class BillingController extends Controller
             }
             return view('billing.list2',['orders'=>$orders,'sum_amount'=>$sum_amount,'pharmacy_id'=>$pharmacy_id,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -48,7 +49,7 @@ class BillingController extends Controller
      */
     public function billing($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -101,7 +102,7 @@ class BillingController extends Controller
                 $res_view = view('billing.list',['invoices'=>$invoices,'pharmacy'=>$pharmacy,'pharmacy_plan'=>$pharmacy_plan,'payment_account'=>$payment_account,'error'=>$error,'pharmacy_id'=>$pharmacy_id,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
                 return $this->page(request(), $res_view);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -114,7 +115,7 @@ class BillingController extends Controller
      */
     public function billingOrders($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -127,7 +128,7 @@ class BillingController extends Controller
                 $orders = DB::table('orders')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->select("orders.id","delivery_times.name as delivery_time","orders.finish","orders.created","orders.copay","orders.tariff","orders.pharmacy_id")->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->get();
                 return view('billing.orders',['invoice'=>$invoice,'orders'=>$orders,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -140,7 +141,7 @@ class BillingController extends Controller
      */
     public function billingPrint($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -183,7 +184,7 @@ class BillingController extends Controller
                 }
                 return view('billing.print',['invoice'=>$invoice,'orders'=>$orders,'pharmacy'=>$pharmacy,'pharmacy_driver'=>$pharmacy_driver,'next_day'=>$next_day,'same_day'=>$same_day,'asap'=>$asap,'after_hours'=>$after_hours,'payment_account'=>$payment_account,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -196,7 +197,7 @@ class BillingController extends Controller
      */
     public function billingPrintReport($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -210,7 +211,7 @@ class BillingController extends Controller
                 $orders = DB::table('orders')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select("orders.id","delivery_times.name as delivery_time","statuses.name as status",DB::raw("CONCAT(users.name, ' ', users.last_name) as username"),"orders.finish","orders.created","orders.copay","orders.statuse_copay","orders.tariff","orders.pharmacy_id")->where('orders.pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('orders.id',$invoice_exclusions)->get();
                 return view('billing.report',['invoice'=>$invoice,'orders'=>$orders,'pharmacy'=>$pharmacy,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -222,7 +223,7 @@ class BillingController extends Controller
      */
     public function billingHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -444,7 +445,7 @@ class BillingController extends Controller
                 }
                 return redirect("/billing/$pharmacy_id")->with([ 'error' => $error ]);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -456,7 +457,7 @@ class BillingController extends Controller
      */
     public function billingInvoiceAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -468,7 +469,7 @@ class BillingController extends Controller
                 $res_view = view('billing.invoice_form',['invoice'=>$invoice,'invoice_exclusions'=>$invoice_exclusions,'alert'=>'','title'=>'Billing Invoice Add','br1'=>'Billings','br2'=>'Invoice Add']);
                 return $this->page(request(), $res_view);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -480,7 +481,7 @@ class BillingController extends Controller
      */
     public function billingInvoiceAddHandler($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -609,7 +610,7 @@ class BillingController extends Controller
                 }
                 return redirect("billing/$pharmacy_id");
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -622,7 +623,7 @@ class BillingController extends Controller
      */
     public function billingInvoiceEdit($pharmacy_id,$invoice_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -635,7 +636,7 @@ class BillingController extends Controller
                 $res_view = view('billing.invoice_form',['invoice'=>$invoice,'invoice_exclusions'=>$invoice_exclusions,'alert'=>'','title'=>'Billing Invoice Edit','br1'=>'Billings','br2'=>'Invoice Edit']);
                 return $this->page(request(), $res_view);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -648,7 +649,7 @@ class BillingController extends Controller
      */
     public function billingInvoiceEditHandler($pharmacy_id,$invoice_id, Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -673,7 +674,7 @@ class BillingController extends Controller
                 }
                 return redirect("billing/$pharmacy_id");
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");

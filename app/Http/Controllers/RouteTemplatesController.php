@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use App\Support\AccessMessages;
 use App\Notifications; // Assuming this is used in LexaAdmin
 
 class RouteTemplatesController extends Controller
@@ -15,16 +16,13 @@ class RouteTemplatesController extends Controller
         $this->middleware('auth');
     }
 
-    public static $err_act_ban = "We're sorry for the inconvenience, but it seems we have a little hiccup here. Our team is already on the case, working hard to get things back on track as quickly as possible.";
-    public static $err_perm = 'Permision error.';
-
     /**
      * Display a listing of the route templates.
      */
     public function index()
     {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             
@@ -40,7 +38,7 @@ class RouteTemplatesController extends Controller
                 'br2' => 'Templates'
             ]);
         } else {
-            return abort(403, self::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -69,7 +67,7 @@ class RouteTemplatesController extends Controller
     public function destroy($id)
     {
          if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         DB::table('route_templates')->where('id', $id)->delete();
         return redirect('/route-templates')->with('success', 'Template deleted successfully');
@@ -82,7 +80,7 @@ class RouteTemplatesController extends Controller
     public function show($id)
     {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, self::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         // Similar permissions as routesDriver
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
@@ -159,7 +157,7 @@ class RouteTemplatesController extends Controller
             }
 
         } else {
-            return abort(403, self::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 

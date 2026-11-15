@@ -7,6 +7,7 @@ use App\Support\PageLinks;
 use App\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\AccessMessages;
 
 /**
  * A pharmacy's process board: its drivers on route and one driver's stops. Formerly actions of
@@ -29,7 +30,7 @@ class PharmacyProcessController extends Controller
      */
     public function process($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $etas = DB::table('drivers_eta')->select(DB::raw("MAX(id) as id"))->groupBy("driver_id")->pluck('id');
@@ -60,7 +61,7 @@ class PharmacyProcessController extends Controller
             $res_view = view('process.drivers',['users'=>$users,'pharmacy_id'=>$pharmacy_id,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Process','br1'=>'Drivers','br2'=>'Process','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -70,7 +71,7 @@ class PharmacyProcessController extends Controller
      */
     public function processShow($pharmacy_id,$driver_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'medic')) {
             $driver = DB::table('users')->where('users.id',$driver_id)->leftJoin('drivers_eta', function($query) {
@@ -116,7 +117,7 @@ class PharmacyProcessController extends Controller
             $res_view = view('process.show',['orders'=>$orders,'locations'=>$locations,'driver'=>$driver,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Process Detail','br1'=>'Process','br2'=>'Process Detail']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

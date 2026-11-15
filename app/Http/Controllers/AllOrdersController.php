@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\AccessMessages;
 
 /**
  * Every pharmacy's orders in one list, for QuikMedix staff and couriers. Formerly ordersList of LexaAdmin.
@@ -182,7 +183,7 @@ class AllOrdersController extends Controller
             $res_arr = ['pages'=>$pages,'page0'=>$page,'filter'=>$filter,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'statuses_copay'=>$statuses_copay,'delivery_methods'=>$delivery_methods,'delivery_times'=>$delivery_times,'pharmacys'=>$pharmacys,'patients'=>$patients,'drivers'=>$drivers,'pharmacy_id'=>$pharmacy_id,'title'=>'Orders','br1'=>'Orders','br2'=>'List'];
             return view('orders.list',$res_arr);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -223,7 +224,7 @@ class AllOrdersController extends Controller
             }
             return redirect('orders');
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

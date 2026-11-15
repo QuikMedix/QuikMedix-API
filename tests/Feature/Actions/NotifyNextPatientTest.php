@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Actions;
 
-use App\Http\Controllers\LexaAdmin;
+use App\Actions\NotifyNextPatient;
 use App\Http\Controllers\LexaAdminApi;
 use App\User;
 use Illuminate\Database\Schema\Blueprint;
@@ -89,7 +89,7 @@ class NotifyNextPatientTest extends TestCase
      */
     public static function entryPoints(): array
     {
-        return ['dispatch pages' => [LexaAdmin::class], 'driver app' => [LexaAdminApi::class]];
+        return ['dispatch pages' => [DispatchPagesEntry::class], 'driver app' => [LexaAdminApi::class]];
     }
 
     private function nextStop(): object
@@ -146,8 +146,8 @@ class NotifyNextPatientTest extends TestCase
         return [
             'driver app, second address' => [LexaAdminApi::class, 2, '40.82,-74.02'],
             'driver app, third address' => [LexaAdminApi::class, 3, '40.93,-74.03'],
-            'dispatch pages, second address' => [LexaAdmin::class, 2, '40.82,-74.02'],
-            'dispatch pages, third address' => [LexaAdmin::class, 3, '40.93,-74.03'],
+            'dispatch pages, second address' => [DispatchPagesEntry::class, 2, '40.82,-74.02'],
+            'dispatch pages, third address' => [DispatchPagesEntry::class, 3, '40.93,-74.03'],
         ];
     }
 
@@ -206,5 +206,16 @@ class NotifyNextPatientTest extends TestCase
             $this->pushes(),
         );
         $this->assertDatabaseHas('orders', ['id' => $this->orderId, 'eta' => 40]);
+    }
+}
+
+/**
+ * How the dispatch and driver pages send the notification: straight through the action.
+ */
+class DispatchPagesEntry
+{
+    public static function next_patient_push($driverId, $nextRoute): bool
+    {
+        return app(NotifyNextPatient::class)->handle($driverId, $nextRoute);
     }
 }

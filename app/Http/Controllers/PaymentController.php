@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
+use App\Support\AccessMessages;
 
 /**
  * Card payments: a patient's card, a pharmacy's payment method and balance refill, and paying an
@@ -27,7 +28,7 @@ class PaymentController extends Controller
 
     public function cardAdd() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
@@ -35,13 +36,13 @@ class PaymentController extends Controller
             $error='';
             return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function cardAddHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $success='';
@@ -179,7 +180,7 @@ class PaymentController extends Controller
             $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
             return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -188,7 +189,7 @@ class PaymentController extends Controller
      */
     public function cardPharmacyAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -198,7 +199,7 @@ class PaymentController extends Controller
                 $error='';
                 return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -210,7 +211,7 @@ class PaymentController extends Controller
      */
     public function cardPharmacyAddHandler($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -334,7 +335,7 @@ class PaymentController extends Controller
                 $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
                 return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
             return abort(404, "Not found pharmacy");
@@ -346,7 +347,7 @@ class PaymentController extends Controller
      */
     public function refillPharmacyBalance($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -356,10 +357,10 @@ class PaymentController extends Controller
                 $error='';
                 return view('card_pharmacy.pay',['payment_account'=>$payment_account,'pharmacy'=>$pharmacy,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -368,7 +369,7 @@ class PaymentController extends Controller
      */
     public function refillPharmacyBalanceHandler(Request $request, $pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
@@ -431,10 +432,10 @@ class PaymentController extends Controller
                 }
                 return view('card_pharmacy.pay',['payment_account'=>$payment_account,'pharmacy'=>$pharmacy,'success'=>$success,'error'=>$error,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -443,7 +444,7 @@ class PaymentController extends Controller
      */
     public function payCopay($order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
@@ -454,10 +455,10 @@ class PaymentController extends Controller
                 $res_view = view('card.pay-copay',['payment_account'=>$payment_account,'order'=>$order,'success'=>$success,'error'=>$error,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
                 return $this->page(request(), $res_view);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -466,7 +467,7 @@ class PaymentController extends Controller
      */
     public function payCopayHandler(Request $request, $order_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
@@ -658,10 +659,10 @@ class PaymentController extends Controller
                 $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
                 return view('card.pay-copay',['payment_account'=>$payment_account,'order'=>$order,'success'=>$success,'error'=>$error,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

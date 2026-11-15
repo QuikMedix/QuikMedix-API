@@ -7,6 +7,7 @@ use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\AccessMessages;
 
 /**
  * Offices: list, add and edit. Formerly actions of LexaAdmin, moved as they were.
@@ -25,7 +26,7 @@ class OfficeController extends Controller
 
     public function officesList() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             $offices = DB::table('offices');
@@ -48,13 +49,13 @@ class OfficeController extends Controller
             $res_view = view('offices.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'offices'=>$offices,'title'=>'Offices List','br1'=>'Office','br2'=>'List']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function officesListHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             if($request->input('remove')>0) {
@@ -80,7 +81,7 @@ class OfficeController extends Controller
             $res_view = view('offices.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'offices'=>$offices,'title'=>'Offices List','br1'=>'Office','br2'=>'List']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -89,7 +90,7 @@ class OfficeController extends Controller
      */
     public function officesListEdit($office_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             $office = DB::table('offices')->where('id', $office_id)->first();
@@ -100,7 +101,7 @@ class OfficeController extends Controller
             $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas, 'title'=>'Office Edit','br1'=>'Offices','br2'=>'Office','br3'=>'Office Edit','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -109,7 +110,7 @@ class OfficeController extends Controller
      */
     public function officesListEditHandler(Request $request,$office_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             if($request->input('save')>0) {
@@ -141,13 +142,13 @@ class OfficeController extends Controller
             }
             return redirect("offices");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function officesListAdd() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             $office=new \StdClass();
@@ -161,13 +162,13 @@ class OfficeController extends Controller
             $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas,'title'=>'Office Add','br1'=>'Offices','br2'=>'Office','br3'=>'Office Add','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function officesListAddHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             if($request->input('save')>0) {
@@ -196,7 +197,7 @@ class OfficeController extends Controller
             }
             return redirect("offices");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use App\Support\AccessMessages;
+use App\Actions\RecalculateDriverEta;
 
 /**
  * Route planning: the lists of orders ready for a route, by order, driver and pharmacy, the
@@ -31,7 +33,7 @@ class RoutePlanningController extends Controller
 
     public function orders() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.statuse_id', 'orders.pharmacy_id', 'orders.driver_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.pharmacy_id', 'orders.driver_id', 'delivery_methods.name', 'delivery_times.name', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc');
@@ -93,13 +95,13 @@ class RoutePlanningController extends Controller
             $res_view = view('routes.list',['pages'=>$pages,'page0'=>$page,'search'=>$search,'orders'=>$orders,'statuses'=>$statuses,'pharmacys'=>$pharmacys,'title'=>'Routes','br1'=>'Routes','br2'=>'List']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function drivers() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $routes_logs = DB::table('routes_priority_logs')->whereRaw('Date(routes_priority_logs.created) = CURDATE()')->select(DB::raw('count(distinct routes_priority_logs.type,routes_priority_logs.type_id) as count_delivered'),'driver_id')->groupBy('driver_id');
@@ -154,13 +156,13 @@ class RoutePlanningController extends Controller
             $res_arr = ['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Active Drivers','br1'=>'Routes','br2'=>'Drivers','alert'=>''];
             return view('routes.drivers',$res_arr);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function pharmacies() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
             $orders = DB::table("orders")->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->where("orders.ready",'1')->where("orders.statuse_id",1)->select(DB::raw("max(orders.created) as created"), "pharmacys.name as pharmacyname", 'orders.pharmacy_id', DB::raw("count(orders.id) as count"))->groupBy("orders.pharmacy_id","pharmacys.name");
@@ -171,7 +173,7 @@ class RoutePlanningController extends Controller
             $res_view = view('routes.pharmacys',['orders'=>$orders, 'title'=>'Ready Orders Pharmacys','br1'=>'Routes','br2'=>'Ready Orders Pharmacys','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -181,7 +183,7 @@ class RoutePlanningController extends Controller
     public function showOrder($order_id) {
         Gate::authorize('access-order', $order_id);
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.driver_id', 'orders.statuse_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress', 'pharmacys.location as pharmacylocation', 'pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.driver_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.address', 'pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color')->first();
@@ -194,7 +196,7 @@ class RoutePlanningController extends Controller
             $res_view = view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -204,7 +206,7 @@ class RoutePlanningController extends Controller
     public function assignOrder(Request $request,$order_id) {
         Gate::authorize('access-order', $order_id);
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             if($request->input('driver_id')>1) {
@@ -220,7 +222,7 @@ class RoutePlanningController extends Controller
             $res_view= view('routes.show',['order'=>$order,'locations'=>$locations,'driver'=>$driver,'title'=>'Route Show','br1'=>'Routes','br2'=>'Route Show']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -232,7 +234,7 @@ class RoutePlanningController extends Controller
             Gate::authorize('manage-pharmacy-driver', [Auth::user()->pharmacy_id, $driver_id]);
         }
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             $filter = [];
@@ -367,7 +369,7 @@ class RoutePlanningController extends Controller
             $res_view = view('routes.driver',['orders'=>$orders,'pharmacys'=>$pharmacys,'pharmacys_list'=>$pharmacys_list,'locations'=>$locations,'driver'=>$driver,'delivery_times'=>$delivery_times,'filter'=>$filter,'offices'=>$offices,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'pay_value'=>$pay_value,'type_pay'=>$type_pay,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'order_statuses'=>$order_statuses,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'orders_id'=>$orders_id,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Driver Detail','br1'=>'Routes','br2'=>'Driver Detail']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -384,7 +386,7 @@ class RoutePlanningController extends Controller
             }
         }
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {
             if($request->input('confirm_order_id')>1) {
@@ -550,12 +552,12 @@ class RoutePlanningController extends Controller
                         foreach($routes_res as $key => $routes_priorit){
                             DB::table('routes_priority')->where('driver_id', $driver_id)->where("type",$routes_priorit->type)->where("type_id",$routes_priorit->type_id)->where("priority",$routes_priorit->priority)->update(["priority"=>$key]);
                         }
-                        LexaAdmin::eta_calculate($driver_id,TRUE);
+                        app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
                         return redirect()->back()->with('success', "Successfully the route is automatically built.");
                     }
                 }
             } else if($request->input('eta_calculate')>0) {
-                LexaAdmin::eta_calculate($driver_id,TRUE);
+                app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
                 return redirect()->back()->with('success', "Successfully the route ETA was updated.");
             } else if($request->input('region')>0) {
                 $filter = [];
@@ -711,12 +713,12 @@ class RoutePlanningController extends Controller
                     };
                     DB::table('routes_priority')->where('driver_id', $driver_id)->update(['type_pay' => $typePay, 'pay_value' => $payValue]);
                 });
-                LexaAdmin::eta_calculate($driver_id);
+                app(RecalculateDriverEta::class)->handle($driver_id);
                 Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
             }
             return redirect("/routes-list/driver/$driver_id");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 

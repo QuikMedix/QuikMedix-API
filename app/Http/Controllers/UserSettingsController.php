@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Twilio\Rest\Client;
+use App\Support\AccessMessages;
 
 /**
  * Accounts in settings: the lists of administrators, patients, pharmacy staff, drivers and
@@ -32,7 +33,7 @@ class UserSettingsController extends Controller
 
     public function settingsAdmins() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             $users = User::where('role','admin');
@@ -56,13 +57,13 @@ class UserSettingsController extends Controller
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.admins',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Admins','br1'=>'Settings','br2'=>'Admins','alert'=>'']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsAdminsHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->role == 'superadmin')) {
             if($request->input('activate')>0) {
@@ -81,13 +82,13 @@ class UserSettingsController extends Controller
             }
             return redirect('/settings/admins');
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsUsers() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $users = User::where('role','!=','driver')->where('role','!=','logist')->where('role','!=','medic');
@@ -112,13 +113,13 @@ class UserSettingsController extends Controller
             $res_view = view('settings.users',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsUsersHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             if($request->filled('user_id')) {
@@ -177,13 +178,13 @@ class UserSettingsController extends Controller
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.users',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsMedics() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $users = User::where('role','medic');
@@ -205,13 +206,13 @@ class UserSettingsController extends Controller
             $res_view = view('settings.medics',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsMedicsHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             if($request->filled('user_id')) {
@@ -270,13 +271,13 @@ class UserSettingsController extends Controller
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.medics',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsDrivers() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $users = User::where('role','driver');
@@ -298,13 +299,13 @@ class UserSettingsController extends Controller
             $res_view = view('settings.drivers',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsDriversHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             if($request->filled('user_id')) {
@@ -371,13 +372,13 @@ class UserSettingsController extends Controller
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.drivers',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsLogists() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $users = User::where('role','logist');
@@ -399,13 +400,13 @@ class UserSettingsController extends Controller
             $res_view = view('settings.logists',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Settings Users','br1'=>'Settings','br2'=>'Users','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsLogistsHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             if($request->filled('user_id')) {
@@ -464,7 +465,7 @@ class UserSettingsController extends Controller
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('settings.logists',['users'=>$users,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Users','br1'=>'Settings','br2'=>'Users','alert'=>$alert]);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -473,7 +474,7 @@ class UserSettingsController extends Controller
      */
     public function settingsUsersedit($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             Gate::authorize('manage-account', [$user_id]);
@@ -484,7 +485,7 @@ class UserSettingsController extends Controller
             $res_view = view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Settings','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -493,7 +494,7 @@ class UserSettingsController extends Controller
      */
     public function settingsUserseditHandler(Request $request,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             Gate::authorize('manage-account', [$user_id]);
@@ -575,13 +576,13 @@ class UserSettingsController extends Controller
             $admin_areas = DB::table('admin_areas')->get();
             return view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas,'user_actions'=>$user_actions,'pharmacys'=>$pharmacys,'title'=>'User Edit','br1'=>'Settings','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsUsersAdd() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $input['name']='';
@@ -598,13 +599,13 @@ class UserSettingsController extends Controller
             $res_view = view('settings.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Settings','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function settingsUsersAddHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
@@ -657,7 +658,7 @@ class UserSettingsController extends Controller
             }
             return redirect('settings/users');
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

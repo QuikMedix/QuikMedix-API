@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use App\Support\AccessMessages;
 
 /**
  * The staff accounts of one pharmacy: list, add and edit. Formerly actions of LexaAdmin, moved as
@@ -33,7 +34,7 @@ class PharmacyUserController extends Controller
      */
     public function pharmacyUsers($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $users = User::where('role','medic')->where('pharmacy_id',$pharmacy_id);
@@ -55,7 +56,7 @@ class PharmacyUserController extends Controller
             $res_view = view('pharmacy.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'title'=>'Pharmacy Users','br1'=>'Pharmacy','br2'=>'Users']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -64,7 +65,7 @@ class PharmacyUserController extends Controller
      */
     public function pharmacyUsersHandler(Request $request, $pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->filled('user_id')) {
@@ -109,7 +110,7 @@ class PharmacyUserController extends Controller
             $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             return view('pharmacy.users',['pages'=>$pages,'page0'=>$page,'search'=>$search,'users'=>$users,'pharmacy_id'=>$pharmacy_id,'title'=>'Pharmacy Users','br1'=>'Pharmacy','br2'=>'Users']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -119,7 +120,7 @@ class PharmacyUserController extends Controller
      */
     public function pharmacyUsersEdit($pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin'))) {
             $user = DB::table('users')->where('id', $user_id)->first();
@@ -128,7 +129,7 @@ class PharmacyUserController extends Controller
             $res_view = view('pharmacy.user_edit',['user'=> $user, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -138,7 +139,7 @@ class PharmacyUserController extends Controller
      */
     public function pharmacyUsersEditHandler(Request $request,$pharmacy_id,$user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             Gate::authorize('manage-account', [$user_id, $pharmacy_id]);
@@ -167,7 +168,7 @@ class PharmacyUserController extends Controller
             }
             return redirect("pharmacy/$pharmacy_id/users");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -176,7 +177,7 @@ class PharmacyUserController extends Controller
      */
     public function pharmacyUsersAdd($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $input['name']='';
@@ -194,7 +195,7 @@ class PharmacyUserController extends Controller
             $res_view = view('pharmacy.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -203,7 +204,7 @@ class PharmacyUserController extends Controller
      */
     public function pharmacyUsersAddHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->input('save')>0) {
@@ -250,7 +251,7 @@ class PharmacyUserController extends Controller
             }
             return redirect("pharmacy/$pharmacy_id/users");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

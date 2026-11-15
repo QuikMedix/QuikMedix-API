@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Twilio\Rest\Client;
+use App\Support\AccessMessages;
 
 /**
  * Signing out, returning from a signed-in-as session to the superadmin, and sending a patient new
@@ -44,7 +45,7 @@ class SessionController extends Controller
      */
     public function reSendAuthMessage($user_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $user = DB::table('users')->where('id',$user_id)->first();
         if(!empty($user)) {
@@ -96,10 +97,10 @@ class SessionController extends Controller
                     ]);
                 }
             } else {
-                return abort(403, LexaAdmin::$err_perm);
+                return abort(403, AccessMessages::NO_PERMISSION);
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

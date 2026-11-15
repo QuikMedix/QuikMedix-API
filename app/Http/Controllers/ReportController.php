@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Support\AccessMessages;
 
 /**
  * Reports: billing, apps, invoices, drivers, pharmacies, customers and the delivery map. Formerly
@@ -89,7 +90,7 @@ class ReportController extends Controller
 
     public function reportsMap() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $date = date('Y-m-d');
@@ -110,13 +111,13 @@ class ReportController extends Controller
             }
             return view('reports.map',['date'=>$date,'polygons'=>$polygons,'alert'=>'','title'=>'Reports Map','br1'=>'Reports','br2'=>'Map']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function reportsMapHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $date = date('Y-m-d',strtotime($request->input('date')));
@@ -137,7 +138,7 @@ class ReportController extends Controller
             }
             return view('reports.map',['date'=>$date,'polygons'=>$polygons,'alert'=>'','title'=>'Reports Map','br1'=>'Reports','br2'=>'Map']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 

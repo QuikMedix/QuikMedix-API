@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Http\Controllers\LexaAdmin;
 use App\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +12,7 @@ use Tests\Support\CreatesAuthenticationSchema;
 use Tests\Support\FakeMapServices;
 use Tests\Support\StubsDashboardLayout;
 use Tests\TestCase;
+use App\Support\AccessMessages;
 
 /**
  * Dispatching: the live board of drivers on shift, the dispatcher's decisions about an
@@ -177,7 +177,7 @@ class DispatchingControllerTest extends TestCase
         foreach (['sale', 'medic', 'driver', 'user', 'facility'] as $role) {
             $account = $this->account($role);
             $this->actingAs($account)->withSession(['user_2fa' => $account->id])->{$method}($uri)
-                ->assertForbidden()->assertSee(LexaAdmin::$err_perm);
+                ->assertForbidden()->assertSee(AccessMessages::NO_PERMISSION);
         }
         $this->assertDatabaseCount('notes', 0);
     }
@@ -188,7 +188,7 @@ class DispatchingControllerTest extends TestCase
         $blocked = $this->account('admin', ['isblocked' => 1]);
 
         $this->actingAs($blocked)->withSession(['user_2fa' => $blocked->id])->{$method}($uri)
-            ->assertForbidden()->assertSee(LexaAdmin::$err_act_ban);
+            ->assertForbidden()->assertSee(AccessMessages::ACCOUNT_INACTIVE);
     }
 
     public function test_dispatcher_note_is_added_to_each_order_and_nothing_else_happens(): void

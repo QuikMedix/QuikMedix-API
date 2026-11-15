@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Smalot\PdfParser\Parser;
+use App\Support\AccessMessages;
 
 /**
  * Imports for a pharmacy: patients from a spreadsheet and an order from a PDF. Formerly actions of
@@ -32,13 +33,13 @@ class ImportController extends Controller
      */
     public function patientsImport($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $res_view = view('patients.import',['step'=>"1",'title'=>'Patients Import','br1'=>'Patients','br2'=>'Patient Import','alert'=>'']);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -47,7 +48,7 @@ class ImportController extends Controller
      */
     public function patientsImportHandler(Request $request,$pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->input('step')==1) {
@@ -175,7 +176,7 @@ class ImportController extends Controller
                 return redirect("patients/$pharmacy_id");
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -184,7 +185,7 @@ class ImportController extends Controller
      */
     public function import_order($pharmacy_id) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->pharmacy_balance_ban()) {
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
@@ -192,7 +193,7 @@ class ImportController extends Controller
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             return view('import.step1',['alert'=>'','title'=>'Import Order','br1'=>'Import','br2'=>'Import Order']);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -201,7 +202,7 @@ class ImportController extends Controller
      */
     public function import_orderHandler($pharmacy_id,Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->pharmacy_balance_ban()) {
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
@@ -323,7 +324,7 @@ class ImportController extends Controller
             }
             return redirect("orders/$pharmacy_id?added=$id_max");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

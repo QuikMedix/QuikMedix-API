@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use App\Support\AccessMessages;
 
 /**
  * News for pharmacies and for patients: the lists and adding an item. Formerly actions of
@@ -46,7 +47,7 @@ class NewsController extends Controller
 
     public function newsAdd() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $input['link']='';
@@ -55,13 +56,13 @@ class NewsController extends Controller
             $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function newsAddHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
@@ -69,7 +70,7 @@ class NewsController extends Controller
             }
             return redirect("news");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -85,7 +86,7 @@ class NewsController extends Controller
 
     public function news_patientAdd() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) {
             $input['link']='';
@@ -94,13 +95,13 @@ class NewsController extends Controller
             $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function news_patientAddHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) {
             if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
@@ -108,7 +109,7 @@ class NewsController extends Controller
             }
             return redirect("news_patient");
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

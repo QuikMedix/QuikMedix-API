@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Support\AccessMessages;
 
 /**
  * The signed-in user's own profile. Formerly actions of LexaAdmin, moved as they were.
@@ -26,7 +27,7 @@ class ProfileController extends Controller
 
     public function profile() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $pharmacys = DB::table('pharmacys')->get();
         $user = Auth::user();
@@ -37,7 +38,7 @@ class ProfileController extends Controller
 
     public function profileHandler(Request $request) {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         $user_id = Auth::user()->id;
         if($user_id) {
@@ -93,7 +94,7 @@ class ProfileController extends Controller
                 return redirect("profile");
             }
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

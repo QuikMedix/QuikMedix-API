@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 use QuickBooksOnline\API\DataService\DataService;
 use URL;
+use App\Support\AccessMessages;
 
 /**
  * The QuickBooks connection page and its OAuth callback. Formerly actions of LexaAdmin, moved as
@@ -27,7 +28,7 @@ class QuickbookController extends Controller
 
     public function quickbook() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $accessTokenDb = DB::table('quickbook')->where('id',1)->value('data');
@@ -66,13 +67,13 @@ class QuickbookController extends Controller
             $res_view = view('quickbook.index',['alert'=>'','title'=>'Quickbook','br1'=>'Quickbook','br2'=>'Index','authUrl'=>$authUrl,'userInfo'=>$userInfo]);
             return $this->page(request(), $res_view);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
     public function quickbookCallback() {
         if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, LexaAdmin::$err_act_ban);
+            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
         }
         if((Auth::user()->can('admin'))) {
             $dataService = DataService::Configure(array(
@@ -93,7 +94,7 @@ class QuickbookController extends Controller
             }
             return abort(400, 'QuickBooks authorization was not completed.');
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }

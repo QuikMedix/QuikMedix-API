@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * stop and on the driver. The driver's own transport decides the routing mode, and a patient
  * stop is the patient's primary address, where dispatch and the driver app send the delivery.
  *
- * One implementation for the dispatch pages (LexaAdmin::eta_calculate) and the scheduled task,
+ * One implementation for the dispatch and route pages and the scheduled task,
  * which used to carry its own copy that never loaded the driver's transport and so routed by car.
  */
 class RecalculateDriverEta

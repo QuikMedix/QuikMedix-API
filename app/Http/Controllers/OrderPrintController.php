@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use App\Support\AccessMessages;
 
 /**
  * Printable order sheets: the day's deliveries and pickup tickets. Formerly the orders*Print actions of LexaAdmin.
@@ -54,7 +55,7 @@ class OrderPrintController extends Controller
             }
             return view('orders.print',['orders'=>$orders]);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -79,7 +80,7 @@ class OrderPrintController extends Controller
             $res_arr = ['order'=>$order,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
             return view(request()->boolean('print') ? 'orders.label-page' : 'orders.ticket', $res_arr);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 
@@ -104,7 +105,7 @@ class OrderPrintController extends Controller
             $res_arr = ['orders'=>$orders,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
             return view('orders.tickets',$res_arr);
         } else {
-            return abort(403, LexaAdmin::$err_perm);
+            return abort(403, AccessMessages::NO_PERMISSION);
         }
     }
 }
