@@ -66,6 +66,7 @@
                                     <form method="post" enctype="multipart/form-data">
                                         @csrf
                                         <input type="hidden" name="save" value="1">
+                                        <x-form-errors />
                                         @if($alert!='') 
                                             <div class="alert alert-danger" role="alert">{{ $alert }}</div>
                                         @endif									

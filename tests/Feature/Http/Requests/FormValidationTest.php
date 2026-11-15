@@ -66,6 +66,10 @@ class FormValidationTest extends TestCase
         $this->from('/offices/add')->post('/offices/add', ['save' => 1])->assertRedirect('/offices/add')->assertSessionHasErrors(['name', 'email', 'phone', 'address', 'zone_id']);
         $this->from('/offices/edit/1')->post('/offices/edit/1', ['save' => 1, 'email' => 'nope'] + self::OFFICE)->assertSessionHasErrors(['email']);
 
+        // Every one of these forms has a place that shows the messages.
+        foreach (['settings/user_add', 'settings/user_edit', 'pharmacy/pharmacy_add', 'pharmacy/pharmacy_edit', 'offices/form'] as $view) {
+            $this->assertMatchesRegularExpression('/<x-form-errors \/>|\$errors->any\(\)/', (string) file_get_contents(resource_path("views/$view.blade.php")), $view);
+        }
         $this->assertSame(0, DB::table('pharmacys')->count() + DB::table('offices')->count());
         $this->assertSame('x', DB::table('users')->where('id', 2)->value('name'));
     }
