@@ -191,7 +191,7 @@ namespace {
     check($response->getStatusCode() === 500, 'Fixture must trigger an area insert failure.');
     check(!DB::table('pharmacys')->where('email', 'rollback@example.invalid')->exists(), 'Area insert failure must roll back pharmacy creation.');
     $app['session']->flashInput(['tariff_areas' => 'bad']);
-    $view = App\Http\Controllers\LexaAdmin::pharmacysListAdd();
+    $view = app(App\Http\Controllers\PharmacyController::class)->pharmacysListAdd();
     check(str_contains($view->render(), 'Updated coverage'), 'Malformed old input must not break the selection form.');
     $app['session']->flashInput([]);
     config(['app.googlemaps_apikey' => null]);

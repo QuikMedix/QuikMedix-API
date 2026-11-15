@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\OfficeController;
+use App\Http\Controllers\PharmacyProcessController;
+use App\Http\Controllers\PharmacyUserController;
+use App\Http\Controllers\PharmacyController;
 use App\Http\Controllers\RoutePlanningController;
 use App\Http\Controllers\DispatchingController;
 use App\Http\Controllers\OrderController;
@@ -52,37 +56,37 @@ Route::get('/keep-live', [LexaAdmin::class, 'live']);
 Route::get('/', [LexaAdmin::class, 'root'])->name('home');
 Route::post('/back-to-superadmin-user', [LexaAdmin::class, 'back_to_superadmin_user'])->name('back_to_superadmin_user');
 
-Route::get('/pharmacy/{pharmacy_id}/users', [LexaAdmin::class, 'pharmacyUsers']);
-Route::post('/pharmacy/{pharmacy_id}/users', [LexaAdmin::class, 'pharmacyUsersHandler']);
+Route::get('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsers']);
+Route::post('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsersHandler']);
 
-Route::get('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [LexaAdmin::class, 'pharmacyUsersEdit']);
-Route::post('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [LexaAdmin::class, 'pharmacyUsersEditHandler']);
+Route::get('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [PharmacyUserController::class, 'pharmacyUsersEdit']);
+Route::post('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [PharmacyUserController::class, 'pharmacyUsersEditHandler']);
 
-Route::get('/pharmacy/{pharmacy_id}/users/add', [LexaAdmin::class, 'pharmacyUsersAdd']);
-Route::post('/pharmacy/{pharmacy_id}/users/add', [LexaAdmin::class, 'pharmacyUsersAddHandler']);
+Route::get('/pharmacy/{pharmacy_id}/users/add', [PharmacyUserController::class, 'pharmacyUsersAdd']);
+Route::post('/pharmacy/{pharmacy_id}/users/add', [PharmacyUserController::class, 'pharmacyUsersAddHandler']);
 
-Route::get('/pharmacys', [LexaAdmin::class, 'pharmacysList']);
-Route::post('/pharmacys', [LexaAdmin::class, 'pharmacysListHandler']);
+Route::get('/pharmacys', [PharmacyController::class, 'pharmacysList']);
+Route::post('/pharmacys', [PharmacyController::class, 'pharmacysListHandler']);
 
-Route::get('/pharmacys/integrations', [LexaAdmin::class, 'pharmacysIntegrations']);
-Route::post('/pharmacys/integrations', [LexaAdmin::class, 'pharmacysIntegrationsHandler']);
+Route::get('/pharmacys/integrations', [PharmacyController::class, 'pharmacysIntegrations']);
+Route::post('/pharmacys/integrations', [PharmacyController::class, 'pharmacysIntegrationsHandler']);
 
-Route::get('/pharmacys/edit/{pharmacy_id}', [LexaAdmin::class, 'pharmacysListEdit']);
-Route::post('/pharmacys/edit/{pharmacy_id}', [LexaAdmin::class, 'pharmacysListEditHandler']);
+Route::get('/pharmacys/edit/{pharmacy_id}', [PharmacyController::class, 'pharmacysListEdit']);
+Route::post('/pharmacys/edit/{pharmacy_id}', [PharmacyController::class, 'pharmacysListEditHandler']);
 
-Route::get('/pharmacys/tariff_map/{pharmacy_id}', [LexaAdmin::class, 'pharmacysTariffMap']);
+Route::get('/pharmacys/tariff_map/{pharmacy_id}', [PharmacyController::class, 'pharmacysTariffMap']);
 
-Route::get('/pharmacys/add', [LexaAdmin::class, 'pharmacysListAdd']);
-Route::post('/pharmacys/add', [LexaAdmin::class, 'pharmacysListAddHandler']);
+Route::get('/pharmacys/add', [PharmacyController::class, 'pharmacysListAdd']);
+Route::post('/pharmacys/add', [PharmacyController::class, 'pharmacysListAddHandler']);
 
-Route::get('/offices', [LexaAdmin::class, 'officesList']);
-Route::post('/offices', [LexaAdmin::class, 'officesListHandler']);
+Route::get('/offices', [OfficeController::class, 'officesList']);
+Route::post('/offices', [OfficeController::class, 'officesListHandler']);
 
-Route::get('/offices/edit/{office_id}', [LexaAdmin::class, 'officesListEdit']);
-Route::post('/offices/edit/{office_id}', [LexaAdmin::class, 'officesListEditHandler']);
+Route::get('/offices/edit/{office_id}', [OfficeController::class, 'officesListEdit']);
+Route::post('/offices/edit/{office_id}', [OfficeController::class, 'officesListEditHandler']);
 
-Route::get('/offices/add', [LexaAdmin::class, 'officesListAdd']);
-Route::post('/offices/add', [LexaAdmin::class, 'officesListAddHandler']);
+Route::get('/offices/add', [OfficeController::class, 'officesListAdd']);
+Route::post('/offices/add', [OfficeController::class, 'officesListAddHandler']);
 
 Route::get('/drivers/{pharmacy_id}/users', [PharmacyDriverController::class, 'index']);
 Route::post('/drivers/{pharmacy_id}/users', [PharmacyDriverController::class, 'updateStatus']);
@@ -161,8 +165,8 @@ Route::post('/billing/{pharmacy_id}/invoice/add', [LexaAdmin::class, 'billingInv
 Route::get('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [LexaAdmin::class, 'billingInvoiceEdit']);
 Route::post('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [LexaAdmin::class, 'billingInvoiceEditHandler']);
 
-Route::get('/process/{pharmacy_id}', [LexaAdmin::class, 'process']);
-Route::get('/process/{pharmacy_id}/show/{driver_id}', [LexaAdmin::class, 'processShow']);
+Route::get('/process/{pharmacy_id}', [PharmacyProcessController::class, 'process']);
+Route::get('/process/{pharmacy_id}/show/{driver_id}', [PharmacyProcessController::class, 'processShow']);
 
 Route::get('/import/{pharmacy_id}/order', [LexaAdmin::class, 'import_order']);
 Route::post('/import/{pharmacy_id}/order', [LexaAdmin::class, 'import_orderHandler']);
