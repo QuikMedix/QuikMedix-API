@@ -624,7 +624,7 @@ class LexaAdmin extends Controller
                 $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                 $address = $data->results[0]->formatted_address;
                 $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                self::action_log_user_check($request,$address,$user_id);
+                app(LogUserChanges::class)->handle($request,$address,$user_id);
                 DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment')]);
             }
             return redirect("pharmacy/$pharmacy_id/users");
@@ -730,7 +730,7 @@ class LexaAdmin extends Controller
             $polygons = DB::table('area')->join('pharmacy_areas','pharmacy_areas.area_id',"=","area.id")->where('pharmacy_areas.pharmacy_id',$pharmacy_id)->select('area.name',DB::raw('ST_AsText(area.polygon) as polygon'),'pharmacy_areas.type')->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
-                    $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
+                    $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
                 } else {
                     $polygons[$key]->polygon = "";
                 }   
@@ -3021,7 +3021,7 @@ class LexaAdmin extends Controller
                         $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                         $address = $data->results[0]->formatted_address;
                         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                        self::action_log_user_check($request,$address,$user_id);
+                        app(LogUserChanges::class)->handle($request,$address,$user_id);
                         DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'), 'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'transport' => $request->input('transport'), 'car_info' => $request->input('car_info'),'car_img' => $car_img,'payment_card' => $request->input('payment_card'), 'pharmacy_id' => $request->input('pharmacy'), 'role' => $role, 'zone_id'=>$zone_id]);
                         DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
                     } else {
@@ -3040,7 +3040,7 @@ class LexaAdmin extends Controller
                     $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                    self::action_log_user_check($request,$address,$user_id);
+                    app(LogUserChanges::class)->handle($request,$address,$user_id);
                     DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'), 'image' => $src,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'transport' => $request->input('transport'), 'car_info' => $request->input('car_info'),'car_img' => $car_img,'payment_card' => $request->input('payment_card'), 'pharmacy_id' => $request->input('pharmacy'),'role' => $role, 'zone_id'=>$zone_id]);
                 }
             }
@@ -3099,7 +3099,7 @@ class LexaAdmin extends Controller
                         $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                         $address = $data->results[0]->formatted_address;
                         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                        self::action_log_user_check($request,$address,$user_id);
+                        app(LogUserChanges::class)->handle($request,$address,$user_id);
                         DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'car_info' => $request->input('car_info'),'payment_card' => $request->input('payment_card'),'pharmacy_id' => $request->input('pharmacy')]);
                         DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
                     } else {
@@ -3117,7 +3117,7 @@ class LexaAdmin extends Controller
                     $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                    self::action_log_user_check($request,$address,$user_id);
+                    app(LogUserChanges::class)->handle($request,$address,$user_id);
                     DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'car_info' => $request->input('car_info'),'payment_card' => $request->input('payment_card'),'pharmacy_id' => $request->input('pharmacy')]);
                 }
                 return redirect("profile");
@@ -3127,15 +3127,6 @@ class LexaAdmin extends Controller
         }
     }
 
-
-    /**
-     * @param string|null $address
-     * @param int|string $user_id
-     */
-    private static function action_log_user_check(Request $request,$address,$user_id,$address2=NULL,$address3=NULL) {
-        app(LogUserChanges::class)->handle($request, $address, $user_id, $address2, $address3);
-        return true;
-    }
 
     public static function settingsUsersAdd() {
         if(Auth::user()->isblocked_or_isactive()) {
@@ -5197,7 +5188,7 @@ class LexaAdmin extends Controller
                     $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                     $address = $data->results[0]->formatted_address;
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                    self::action_log_user_check($request,$address,$user_id);
+                    app(LogUserChanges::class)->handle($request,$address,$user_id);
                     DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'transport' => $request->input('transport'),'car_info' => $request->input('car_info'),'car_img' => $car_img]);
                 }
                 if($request->input('ajax_stat')>0) {
@@ -5538,13 +5529,6 @@ class LexaAdmin extends Controller
             }
         }
         return json_encode($polygon_json);
-    }
-
-    /**
-     * @param string $polygon_str
-     */
-    function encodePolygon2($polygon_str) {
-        return \App\Support\WktPolygon::toJsonPoints($polygon_str);
     }
 
     public function settingsPlans() {
@@ -6055,7 +6039,7 @@ class LexaAdmin extends Controller
             $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
-                    $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
+                    $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
                     $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
                         $join->on('area.polygon','!=','orders.id');
                         $join->where('area.id',$pol->id);
@@ -6082,7 +6066,7 @@ class LexaAdmin extends Controller
             $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
             foreach($polygons as $key=>$pol) {
                 if(!empty($pol->polygon)) {
-                    $polygons[$key]->polygon = $this->encodePolygon2($pol->polygon);
+                    $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
                     $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
                         $join->on('area.polygon','!=','orders.id');
                         $join->where('area.id',$pol->id);
