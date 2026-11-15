@@ -22,6 +22,11 @@ class LexaAdminApiNoAuth extends Controller
 
     public static function zadarma_post(Request $request) {
         if($request->event=="NOTIFY_ANSWER") {
+            // Zadarma signs each notice with the account's secret; an unsigned or wrongly signed one is not from Zadarma.
+            $secret = (string) config('services.zadarma.secret');
+            abort_if($secret === '', 503, 'Zadarma is not configured.');
+            $expected = base64_encode(hash_hmac('sha1', (new \Zadarma_API\Webhook\NotifyAnswer($request->post()))->getSignatureString(), $secret));
+            abort_unless(hash_equals($expected, (string) $request->header('Signature')), 403, 'Bad signature.');
             DB::table('calls')->insert(["created"=>$request->call_start,"call_id"=>$request->pbx_call_id,"to"=>$request->destination]);
         }
         if(isset($request->zd_echo)) {
