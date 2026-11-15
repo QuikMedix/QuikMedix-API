@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Rx;
 use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,10 +16,6 @@ class OrderPrintController extends Controller
 {
     use LoadsOrderLookups;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function day() {
         if((Auth::user()->can('admin'))) {
@@ -60,52 +57,44 @@ class OrderPrintController extends Controller
     }
 
     public function ticket() {
-        if(Auth::user()->hasAnyRole('medic', 'superadmin', 'admin', 'dispadmin', 'driver', 'logist')) {
-            $order_id = request()->query('order_id');
-            $order = DB::table('orders')->where('id',$order_id)->first();
-            if(empty($order)) {
-                return abort(404, 'Order not found');
-            }
-            Gate::authorize('access-order', $order->id);
-            $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
-            foreach($rxs as $key0=>$rx) {
-                if(empty($rx->rx_id)) {
-                    $rxs[$key0]->rx_id = 'null';
-                }
-            }
-            $order->rxs=$rxs;
-            $pharmacys = self::get_pharmacys([$order->pharmacy_id]);
-            $patients = self::get_patients([$order->user_id]);
-            $wishs = self::get_wishs();
-            $res_arr = ['order'=>$order,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
-            return view(request()->boolean('print') ? 'orders.label-page' : 'orders.ticket', $res_arr);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+        $order_id = request()->query('order_id');
+        $order = DB::table('orders')->where('id',$order_id)->first();
+        if(empty($order)) {
+            return abort(404, 'Order not found');
         }
+        Gate::authorize('access-order', $order->id);
+        $rxs = DB::table('rxs')->where('order_id',$order->id)->get();
+        foreach($rxs as $key0=>$rx) {
+            if(empty($rx->rx_id)) {
+                $rxs[$key0]->rx_id = 'null';
+            }
+        }
+        $order->rxs=$rxs;
+        $pharmacys = self::get_pharmacys([$order->pharmacy_id]);
+        $patients = self::get_patients([$order->user_id]);
+        $wishs = self::get_wishs();
+        $res_arr = ['order'=>$order,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
+        return view(request()->boolean('print') ? 'orders.label-page' : 'orders.ticket', $res_arr);
     }
 
     public function tickets() {
-        if(Auth::user()->hasAnyRole('medic', 'superadmin', 'admin', 'dispadmin', 'driver', 'logist')) {
-            if(Auth::user()->pharmacy_id>0) {
-                $orders = DB::table('orders')->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->where('orders.statuse_id',1);
-            } else {
-                $orders = DB::table('orders')->where('orders.statuse_id',1);
-            }
-            if(!empty(Auth::user()->zone_id)){
-                $orders=$orders->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
-            }
-            $orders=$orders->get();
-            foreach($orders as $key=>$order){
-                $rxs = DB::table('rxs')->where('order_id',$order->id)->count();
-                $orders[$key]->rxs_count=$rxs;
-            }
-            $pharmacys = self::get_pharmacys($orders->pluck('pharmacy_id')->all());
-            $patients = self::get_patients($orders->pluck('user_id')->all());
-            $wishs = self::get_wishs();
-            $res_arr = ['orders'=>$orders,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
-            return view('orders.tickets',$res_arr);
+        if(Auth::user()->pharmacy_id>0) {
+            $orders = DB::table('orders')->where('orders.pharmacy_id',Auth::user()->pharmacy_id)->where('orders.statuse_id',1);
         } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+            $orders = DB::table('orders')->where('orders.statuse_id',1);
         }
+        if(!empty(Auth::user()->zone_id)){
+            $orders=$orders->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
+        }
+        $orders=$orders->get();
+        foreach($orders as $key=>$order){
+            $rxs = Rx::query()->where('order_id',$order->id)->count();
+            $orders[$key]->rxs_count=$rxs;
+        }
+        $pharmacys = self::get_pharmacys($orders->pluck('pharmacy_id')->all());
+        $patients = self::get_patients($orders->pluck('user_id')->all());
+        $wishs = self::get_wishs();
+        $res_arr = ['orders'=>$orders,'pharmacys'=>$pharmacys,'patients'=>$patients,'wishs'=>$wishs];
+        return view('orders.tickets',$res_arr);
     }
 }

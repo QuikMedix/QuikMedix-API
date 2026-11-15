@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 use QuickBooksOnline\API\DataService\DataService;
 use URL;
-use App\Support\AccessMessages;
 
 /**
  * The QuickBooks connection page and its OAuth callback. Formerly actions of LexaAdmin, moved as
@@ -16,15 +15,8 @@ use App\Support\AccessMessages;
  */
 class QuickbookController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function quickbook() {
         $accessTokenDb = DB::table('quickbook')->where('id',1)->value('data');

@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Models\DriverEta;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
-use App\User;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Support\AccessMessages;
@@ -15,51 +16,41 @@ use App\Support\AccessMessages;
  */
 class PharmacyProcessController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     /**
      * @param int|string $pharmacy_id
      */
     public function process($pharmacy_id) {
-        if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
-            $etas = DB::table('drivers_eta')->select(DB::raw("MAX(id) as id"))->groupBy("driver_id")->pluck('id');
-            $users = User::where('role','driver')->where('pharmacy_id',$pharmacy_id)->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->leftJoin('routes_priority_logs',function ($join) {
-                $join->on('routes_priority_logs.driver_id', '=' , 'users.id') ;
-                $join->whereRaw('Date(routes_priority_logs.created) = CURDATE()');
-            })->leftJoin('drivers_eta', function($query) use($etas) {
-               $query->on('users.id','=','drivers_eta.driver_id')
-               ->whereIn('drivers_eta.id',$etas);
-            })->having(DB::raw("count(distinct routes_priority.type,routes_priority.type_id)+count(distinct routes_priority_logs.type,routes_priority_logs.type_id)"),">",0)->select("users.id","users.image", "users.car_img", "users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os",DB::raw("count(distinct routes_priority.type,routes_priority.type_id) as count_delivery"), DB::raw("count(distinct routes_priority_logs.type,routes_priority_logs.type_id) as count_delivered"), "drivers_eta.eta")->groupBy("users.id","users.image","users.car_img","users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os","drivers_eta.eta");
-            if(!empty(request()->query('search'))) {
-                $search = request()->query('search');
-                $users = $users->where(function($query) use ($search) {
-                    $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
-                          ->orWhere('email','LIKE','%'.$search.'%')
-                          ->orWhere('phone','LIKE','%'.$search.'%')
-                          ->orWhere('users.id','=',$search);
-                    });
-            } else {
-                $search='';
-            }
-            $countOnPage=100;
-            $page = $this->currentPage(request());
-            $max_pages=ceil(1/$countOnPage);
-            $users = $users->orderBy(DB::raw("count(distinct routes_priority.id)+count(distinct routes_priority_logs.id)"),"desc")->orderBy(DB::raw("count(distinct routes_priority.id)"),"asc");
-            $pages = PageLinks::around($page, $max_pages);
-            $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $res_view = view('process.drivers',['users'=>$users,'pharmacy_id'=>$pharmacy_id,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Process','br1'=>'Drivers','br2'=>'Process','alert'=>'']);
-            return $this->page(request(), $res_view);
+        abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        $etas = DriverEta::query()->select(DB::raw("MAX(id) as id"))->groupBy("driver_id")->pluck('id');
+        $users = User::where('role','driver')->where('pharmacy_id',$pharmacy_id)->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->leftJoin('routes_priority_logs',function ($join) {
+            $join->on('routes_priority_logs.driver_id', '=' , 'users.id') ;
+            $join->whereRaw('Date(routes_priority_logs.created) = CURDATE()');
+        })->leftJoin('drivers_eta', function($query) use($etas) {
+           $query->on('users.id','=','drivers_eta.driver_id')
+           ->whereIn('drivers_eta.id',$etas);
+        })->having(DB::raw("count(distinct routes_priority.type,routes_priority.type_id)+count(distinct routes_priority_logs.type,routes_priority_logs.type_id)"),">",0)->select("users.id","users.image", "users.car_img", "users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os",DB::raw("count(distinct routes_priority.type,routes_priority.type_id) as count_delivery"), DB::raw("count(distinct routes_priority_logs.type,routes_priority_logs.type_id) as count_delivered"), "drivers_eta.eta")->groupBy("users.id","users.image","users.car_img","users.name","users.last_name","users.phone","users.isblocked","users.isactive","users.os","drivers_eta.eta");
+        if(!empty(request()->query('search'))) {
+            $search = request()->query('search');
+            $users = $users->where(function($query) use ($search) {
+                $query->where(DB::raw("CONCAT(name, ' ', last_name)"),'LIKE','%'.$search.'%')
+                      ->orWhere('email','LIKE','%'.$search.'%')
+                      ->orWhere('phone','LIKE','%'.$search.'%')
+                      ->orWhere('users.id','=',$search);
+                });
         } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+            $search='';
         }
+        $countOnPage=100;
+        $page = $this->currentPage(request());
+        $max_pages=ceil(1/$countOnPage);
+        $users = $users->orderBy(DB::raw("count(distinct routes_priority.id)+count(distinct routes_priority_logs.id)"),"desc")->orderBy(DB::raw("count(distinct routes_priority.id)"),"asc");
+        $pages = PageLinks::around($page, $max_pages);
+        $users = $users->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $res_view = view('process.drivers',['users'=>$users,'pharmacy_id'=>$pharmacy_id,'pages'=>$pages,'page0'=>$page,'search'=>$search,'title'=>'Process','br1'=>'Drivers','br2'=>'Process','alert'=>'']);
+        return $this->page(request(), $res_view);
     }
 
     /**

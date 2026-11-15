@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Models\WishCategory;
+use App\Models\Wish;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Support\AccessMessages;
 
 /**
  * Greeting wishes in settings: categories and the wishes of a category. Formerly actions of
@@ -15,19 +16,12 @@ use App\Support\AccessMessages;
  */
 class WishController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function settingsWishesCategory() {
         $countOnPage=20;
-        $max_pages=ceil(DB::table('wishes_category')->count()/$countOnPage);
+        $max_pages=ceil(WishCategory::query()->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $wishes_categorys = DB::table('wishes_category')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
@@ -37,14 +31,14 @@ class WishController extends Controller
 
     public function settingsWishesCategoryHandler(Request $request) {
         if($request->input('remove')>0) {
-            DB::table('wishes')->where('category_id', $request->input('wishes_category_id'))->delete();
-            DB::table('wishes_category')->where('id', $request->input('wishes_category_id'))->delete();
+            Wish::query()->where('category_id', $request->input('wishes_category_id'))->delete();
+            WishCategory::query()->where('id', $request->input('wishes_category_id'))->delete();
         }
         if($request->input('activate')>0) {
-            DB::table('wishes_category')->where('id', $request->input('wishes_category_id'))->update(["status"=>1]);
+            WishCategory::query()->where('id', $request->input('wishes_category_id'))->update(["status"=>1]);
         }
         if($request->input('noactivate')>0) {
-            DB::table('wishes_category')->where('id', $request->input('wishes_category_id'))->update(["status"=>0]);
+            WishCategory::query()->where('id', $request->input('wishes_category_id'))->update(["status"=>0]);
         }
         return redirect("settings/wishes");
     }
@@ -61,7 +55,7 @@ class WishController extends Controller
                 $input['name']=$request->input('name');
                 return view('wishes.category_add',['input'=>$input,'alert'=>'Print Text Category with this name is alredy exist.','title'=>'Print Text Category Add','br1'=>'Print Text','br2'=>'Category Add']);
             } else {
-                DB::table('wishes_category')->insert(['name' => $request->input('name')]);
+                WishCategory::query()->insert(['name' => $request->input('name')]);
             }
         }
         return redirect("settings/wishes");
@@ -72,7 +66,7 @@ class WishController extends Controller
      */
     public function settingsWishes($wish_id) {
         $countOnPage=20;
-        $max_pages=ceil(DB::table('wishes')->where("category_id",$wish_id)->count()/$countOnPage);
+        $max_pages=ceil(Wish::query()->where("category_id",$wish_id)->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $wishes = DB::table('wishes')->where("category_id",$wish_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
@@ -85,7 +79,7 @@ class WishController extends Controller
      */
     public function settingsWishesHandler($wish_id,Request $request) {
         if($request->input('remove')>0) {
-            DB::table('wishes')->where('id', $request->input('wishes_id'))->delete();
+            Wish::query()->where('id', $request->input('wishes_id'))->delete();
         }
         return redirect("settings/wishes/$wish_id/list");
     }
@@ -101,7 +95,7 @@ class WishController extends Controller
      */
     public function settingsWishesAddHandler($wish_id,Request $request) {
         if($request->input('save')>0) {
-            DB::table('wishes')->insert(['category_id'=>$wish_id,'text' => $request->input('text')]);
+            Wish::query()->insert(['category_id'=>$wish_id,'text' => $request->input('text')]);
         }
         return redirect("settings/wishes/$wish_id/list");
     }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Location;
+use App\Models\DriverPayout;
 use App\Http\Controllers\Concerns\RespondsWithApiErrors;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -17,10 +19,6 @@ class DriverShiftController extends Controller
 {
     use RespondsWithApiErrors;
 
-    public function __construct()
-    {
-        $this->middleware(['auth:api', 'active.api']);
-    }
 
     public function status(Request $request): JsonResponse
     {
@@ -47,7 +45,7 @@ class DriverShiftController extends Controller
         if (empty($location)) {
             return $this->badRequest();
         }
-        DB::table('locations')->insert(['user_id' => $request->user()->id, 'location' => $location]);
+        Location::query()->insert(['user_id' => $request->user()->id, 'location' => $location]);
 
         return response()->json(['message' => 'Location was added']);
     }
@@ -76,7 +74,7 @@ class DriverShiftController extends Controller
             return $this->forbidden();
         }
 
-        $amount = round(DB::table('payouts_driver')->where('driver_id', $request->user()->id)->where('withdraw', 0)->sum('amount'), 1);
+        $amount = round(DriverPayout::query()->where('driver_id', $request->user()->id)->where('withdraw', 0)->sum('amount'), 1);
 
         return response()->json(['amount' => $amount]);
     }

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Http\Requests\PharmacyDriverRequest;
-use App\User;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,21 +19,17 @@ use Illuminate\View\View;
  */
 class PharmacyDriverController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     private const PER_PAGE = 30;
 
     /** @var list<string> */
     private const PROFILE_FIELDS = ['name', 'last_name', 'email', 'phone', 'zip', 'apartment', 'driving_license', 'identification_cards', 'transport', 'car_info', 'payment_card'];
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function index(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         // type[]=1: this pharmacy's drivers (default), type[]=2: drivers without a pharmacy.
         $users = User::where('role', 'driver');
@@ -78,7 +75,7 @@ class PharmacyDriverController extends Controller
     public function updateStatus(Request $request, string $pharmacy_id): RedirectResponse
     {
         $driverId = $request->input('user_id');
-        $this->authorize('manage-pharmacy-driver', [$pharmacy_id, $driverId]);
+        Gate::authorize('manage-pharmacy-driver', [$pharmacy_id, $driverId]);
 
         $changes = array_filter([
             'isactive' => $request->input('activate') > 0 ? 1 : null,
@@ -101,7 +98,7 @@ class PharmacyDriverController extends Controller
 
     public function create(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         $input = array_fill_keys([...self::PROFILE_FIELDS, 'address', 'password', 'image', 'driving_license_img', 'car_img'], '');
         $input = array_merge($input, array_intersect_key($request->old(), $input), ['password' => '', 'pharmacy' => $pharmacy_id]);
@@ -136,7 +133,7 @@ class PharmacyDriverController extends Controller
 
     public function edit(Request $request, string $pharmacy_id, string $user_id): View|array
     {
-        $this->authorize('manage-pharmacy-driver', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-driver', [$pharmacy_id, $user_id]);
 
         return $this->page($request, $this->editView($user_id));
     }

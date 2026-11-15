@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Models\Area;
+use App\Models\AreaZip;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Support\AccessMessages;
 
 /**
  * Delivery areas in settings: the list, and drawing and editing an area with its tariff. Formerly
@@ -15,19 +16,12 @@ use App\Support\AccessMessages;
  */
 class DeliveryAreaController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function settingsStates() {
         $countOnPage=20;
-        $max_pages=ceil(DB::table('area')->count()/$countOnPage);
+        $max_pages=ceil(Area::query()->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $areas = DB::table('area')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
@@ -37,8 +31,8 @@ class DeliveryAreaController extends Controller
 
     public function settingsStatesHandler(Request $request) {
         if($request->input('remove')>0) {
-            DB::table('area')->where('id', $request->input('area_id'))->delete();
-            DB::table('area_zip')->where("area_id",$request->input('area_id'))->delete();
+            Area::query()->where('id', $request->input('area_id'))->delete();
+            AreaZip::query()->where("area_id",$request->input('area_id'))->delete();
         }
         return redirect("settings/area");
     }
@@ -64,12 +58,12 @@ class DeliveryAreaController extends Controller
 
     public function settingsStatesAddHandler(Request $request) {
         if($request->input('save')>0) {
-            $area_id = DB::table('area')->insertGetId($this->tariffAreaData($request));
+            $area_id = Area::query()->insertGetId($this->tariffAreaData($request));
             if(!empty($request->input('zip'))){
                 $zips = array_filter(explode("\n",$request->input('zip')));
                 foreach($zips as $zip){
                     if(!empty($zip)){
-                        DB::table('area_zip')->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
+                        AreaZip::query()->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
                     }
                 }
             }
@@ -106,13 +100,13 @@ class DeliveryAreaController extends Controller
      */
     public function settingsStatesEditHandler($area_id, Request $request) {
         if($request->input('save')>0) {
-            DB::table('area')->where("id",$area_id)->update($this->tariffAreaData($request));
+            Area::query()->where("id",$area_id)->update($this->tariffAreaData($request));
             //DB::table('area_zip')->where("area_id",$area_id)->delete();
             if(!empty($request->input('zip'))){
                 $zips = array_filter(explode("\r\n",$request->input('zip')));
                 foreach($zips as $zip){
                     if(!empty($zip)){
-                        DB::table('area_zip')->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
+                        AreaZip::query()->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
                     }
                 }
             }

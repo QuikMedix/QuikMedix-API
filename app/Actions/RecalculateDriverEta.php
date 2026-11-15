@@ -2,6 +2,9 @@
 
 namespace App\Actions;
 
+use App\Models\RouteStop;
+use App\Models\Order;
+use App\Models\DriverEta;
 use App\Support\HereMaps;
 use App\Support\PatientAddress;
 use Illuminate\Support\Facades\DB;
@@ -63,18 +66,18 @@ class RecalculateDriverEta
             }
             $stop = $stops[$key];
             $minutes = ceil($duration / 60);
-            DB::table('routes_priority')->where('driver_id', $driver->id)->where('type', $stop['type'])->where('type_id', $stop['type_id'])->where('priority', $stop['priority'])->update(['eta' => $minutes]);
+            RouteStop::query()->where('driver_id', $driver->id)->where('type', $stop['type'])->where('type_id', $stop['type_id'])->where('priority', $stop['priority'])->update(['eta' => $minutes]);
             if ($stop['type'] == 'patient') {
-                DB::table('orders')->whereIn('id', explode(',', $stop['order_id']))->update(['eta' => $minutes]);
+                Order::query()->whereIn('id', explode(',', $stop['order_id']))->update(['eta' => $minutes]);
             }
         }
 
         $distance = round($distance * self::MILES_PER_METER, 1);
         $totals = ['distance' => $distance, 'eta' => ceil($duration / 60), 'last_location' => $origin];
         if (! empty($eta)) {
-            DB::table('drivers_eta')->where('driver_id', $driver->id)->update($totals);
+            DriverEta::query()->where('driver_id', $driver->id)->update($totals);
         } else {
-            DB::table('drivers_eta')->insert(['driver_id' => $driver->id] + $totals);
+            DriverEta::query()->insert(['driver_id' => $driver->id] + $totals);
         }
 
         return $distance;

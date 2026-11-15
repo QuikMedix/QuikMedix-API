@@ -3,11 +3,15 @@
 namespace Tests\Feature\Http\Middleware;
 
 use App\Support\AccessMessages;
-use App\User;
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\CreatesAuthenticationSchema;
+use App\Enums\Role;
+use App\Http\Middleware\EnsureUserHasRole;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Tests\TestCase;
 
 /**
@@ -74,5 +78,36 @@ class RoleMiddlewareTest extends TestCase
         $this->get('/_test/by-role')->assertForbidden()->assertSee(AccessMessages::ACCOUNT_INACTIVE);
         $this->signIn('superadmin', ['isblocked' => 1]);
         $this->get('/_test/by-role')->assertForbidden()->assertSee(AccessMessages::ACCOUNT_INACTIVE);
+    }
+
+    public function test_the_role_enum_is_the_one_list_of_roles(): void
+    {
+        $this->assertSame(['superadmin', 'admin', 'dispadmin', 'logist', 'sale', 'medic', 'driver', 'user', 'facility'], Role::values());
+        $this->assertSame(['superadmin', 'admin', 'dispadmin'], Role::adminValues());
+        $this->assertTrue(Role::DispatchAdmin->isAdmin());
+        $this->assertFalse(Role::Logist->isAdmin());
+        $this->assertTrue((new User)->forceFill(['role' => 'dispadmin'])->isAdmin());
+        $this->assertFalse((new User)->forceFill(['role' => 'no-such-role'])->isAdmin());
+    }
+
+    public function test_a_misspelled_role_on_a_route_is_an_error_not_a_refusal(): void
+    {
+        $request = Request::create('/x');
+        $request->setUserResolver(fn () => (new User)->forceFill(['role' => 'admin']));
+
+        $this->expectException(\ValueError::class);
+        (new EnsureUserHasRole)->handle($request, fn () => new Response('ok'), 'admin', 'admn');
+    }
+
+    public function test_every_role_named_on_a_route_exists(): void
+    {
+        $named = collect(Route::getRoutes()->getRoutes())
+            ->flatMap(fn ($route) => $route->gatherMiddleware())
+            ->filter(fn ($middleware) => is_string($middleware) && str_starts_with($middleware, 'role:'))
+            ->flatMap(fn (string $middleware) => explode(',', substr($middleware, 5)))
+            ->unique();
+
+        $this->assertGreaterThan(5, $named->count());
+        $this->assertSame([], $named->reject(fn (string $role) => Role::tryFrom($role) !== null)->values()->all());
     }
 }

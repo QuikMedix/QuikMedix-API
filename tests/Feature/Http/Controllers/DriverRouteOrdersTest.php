@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\User;
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -246,8 +246,11 @@ class DriverRouteOrdersTest extends TestCase
                 'pharmacy_locations' => [['id' => 99, 'location' => ''], ['id' => 2, 'location' => '40.1,-73.1'], ['id' => 4, 'location' => '42,-75']],
                 'show_ids' => [], 'show_priority' => [], 'errors' => new \Illuminate\Support\ViewErrorBag,
             ])->assertSee('/js/route-order-select.js', false)
-                ->assertSee('window.routeOrderSelect.options', false)
-                ->assertSee('window.officeOrderPicker.updateOfficeId(ids)', false)
+                ->assertSee('/js/driver-route-menu.js?v=1', false)
+                ->assertSee('/js/driver-route-page.js?v=1', false)
+                ->assertSee('window.driverRoutePage = {', false)
+                ->assertSee($hasExistingOrders ? "orderIds: JSON.parse('[\\u00224\\u0022]')" : 'orderIds: []', false)
+                ->assertSee('hasStops: '.($routeStops ? 'true' : 'false'), false)
                 ->assertSee('/js/office-order-picker.js?v=2', false)
                 ->assertSee('window.officeOrderPicker.init([4,5', false)
                 ->assertSee('id="office-order-dialog"', false)
@@ -262,6 +265,16 @@ class DriverRouteOrdersTest extends TestCase
                 ->assertSee('Use Choose orders at each office stop to select its deliveries before saving.');
 
             $html = (string) $view;
+            // The page's own scripts moved out of the view; they must still hold what the view used to.
+            $pageScript = (string) file_get_contents(public_path('js/driver-route-page.js'));
+            $menuScript = (string) file_get_contents(public_path('js/driver-route-menu.js'));
+            $this->assertStringContainsString('window.routeOrderSelect.options', $pageScript);
+            $this->assertStringContainsString('window.routeOrderSelect.options', $menuScript);
+            $this->assertStringContainsString('window.officeOrderPicker.updateOfficeId(ids)', $pageScript);
+            $this->assertStringContainsString('var orderIds = window.driverRoutePage.orderIds;', $pageScript);
+            foreach (['google.maps.drawing', 'libraries=drawing', '.disableSelection()', '{{', '@if', '@json'] as $unwanted) {
+                $this->assertStringNotContainsString($unwanted, $pageScript.$menuScript);
+            }
             $this->assertSame($showRoute ? ['1'] : ['1', '2'], $this->mapValues($html, 'locationOfficeID'));
             $this->assertSame($showRoute ? ($deliveryStops ? ['2;2'] : []) : ['2', '4'], $this->mapValues($html, 'locationPharmacyID'));
             $this->assertSame($showRoute ? ($deliveryStops ? ['20;3'] : []) : ['20', '21'], $this->mapValues($html, 'locationPatientsID'));

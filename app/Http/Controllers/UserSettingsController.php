@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Actions\LogUserChanges;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
-use App\User;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Twilio\Rest\Client;
-use App\Support\AccessMessages;
 
 /**
  * Accounts in settings: the lists of administrators, patients, pharmacy staff, drivers and
@@ -21,15 +21,8 @@ use App\Support\AccessMessages;
  */
 class UserSettingsController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function settingsAdmins() {
         $users = User::where('role','admin');
@@ -114,7 +107,7 @@ class UserSettingsController extends Controller
             DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
         }
         if($request->input('remove')>0) {
-            DB::table('users')->where('id', $request->input('user_id'))->delete();
+            User::query()->where('id', $request->input('user_id'))->delete();
         }
         if($request->input('todriver')>0) {
             DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'driver']);
@@ -193,7 +186,7 @@ class UserSettingsController extends Controller
             DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
         }
         if($request->input('remove')>0) {
-            DB::table('users')->where('id', $request->input('user_id'))->delete();
+            User::query()->where('id', $request->input('user_id'))->delete();
         }
         if($request->input('todriver')>0) {
             DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'driver']);
@@ -280,7 +273,7 @@ class UserSettingsController extends Controller
             DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
         }
         if($request->input('remove')>0) {
-            DB::table('users')->where('id', $request->input('user_id'))->delete();
+            User::query()->where('id', $request->input('user_id'))->delete();
         }
         if($request->input('todriver')>0) {
             DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'driver']);
@@ -359,7 +352,7 @@ class UserSettingsController extends Controller
             DB::table('users')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
         }
         if($request->input('remove')>0) {
-            DB::table('users')->where('id', $request->input('user_id'))->delete();
+            User::query()->where('id', $request->input('user_id'))->delete();
         }
         if($request->input('todriver')>0) {
             DB::table('users')->where('id', $request->input('user_id'))->update(['role' => 'driver']);
@@ -448,7 +441,7 @@ class UserSettingsController extends Controller
             }
             if(!empty($request->input('role')) && $request->input('role') !== $user->role) {
                 $role = $request->input('role');
-                DB::table('action_log')->insert(['type'=>'change role ('.$role.')','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
+                ActionLog::query()->insert(['type'=>'change role ('.$role.')','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
             } else {
                 $role = $user->role;
             }
@@ -468,7 +461,7 @@ class UserSettingsController extends Controller
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     app(LogUserChanges::class)->handle($request,$address,$user_id);
                     DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'), 'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'transport' => $request->input('transport'), 'car_info' => $request->input('car_info'),'car_img' => $car_img,'payment_card' => $request->input('payment_card'), 'pharmacy_id' => $request->input('pharmacy'), 'role' => $role, 'zone_id'=>$zone_id]);
-                    DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
+                    ActionLog::query()->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
                 } else {
                     $pharmacys = DB::table('pharmacys')->get();
                     $user = DB::table('users')->where('id', $user_id)->first();

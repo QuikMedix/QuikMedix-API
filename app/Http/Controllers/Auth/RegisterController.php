@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\Pharmacy;
 use App\Actions\GeocodeAddress;
 use App\Http\Controllers\Controller;
-use App\Providers\AppServiceProvider;
-use App\User;
+use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -31,17 +31,8 @@ class RegisterController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = AppServiceProvider::HOME;
+    protected $redirectTo = '/';
 
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->middleware('guest');
-    }
 
     /**
      * Get a validator for an incoming registration request.
@@ -77,7 +68,7 @@ class RegisterController extends Controller
      * Create a new user instance after a valid registration.
      *
      * @param  array  $data
-     * @return \App\User
+     * @return \App\Models\User
      */
     protected function create(array $data)
     {
@@ -116,7 +107,7 @@ class RegisterController extends Controller
         } else {
             $src = NULL;
         }
-        $pharmacy_id = DB::table('pharmacys')->insertGetId(['name' => $data['pharmacyName'],'email' => $data['pharmacyEmail'],'phone' => $data['pharmacyPhone'],'address' => $data['pharmacyAddress'],'location' => $location,'logo'=>$src,'site'=>$data['pharmacyWebsite'] ?? null,'admin_id' => $user->id, 'ref_id' => $ref_id,'ip'=>\Request::ip()]);
+        $pharmacy_id = Pharmacy::query()->insertGetId(['name' => $data['pharmacyName'],'email' => $data['pharmacyEmail'],'phone' => $data['pharmacyPhone'],'address' => $data['pharmacyAddress'],'location' => $location,'logo'=>$src,'site'=>$data['pharmacyWebsite'] ?? null,'admin_id' => $user->id, 'ref_id' => $ref_id,'ip'=>\Request::ip()]);
         $user->pharmacy_id = $pharmacy_id;
         $user->save();
         return $user;

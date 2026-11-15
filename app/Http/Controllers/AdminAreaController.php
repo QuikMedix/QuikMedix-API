@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Models\AdminArea;
+use App\Models\AdminAreaZone;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Support\AccessMessages;
 
 /**
  * Administrator areas in settings: list, add and edit. Formerly actions of LexaAdmin, moved as
@@ -14,15 +15,8 @@ use App\Support\AccessMessages;
  */
 class AdminAreaController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function settingsAdminAreas() {
         $admin_areas = DB::table('admin_areas')->get();
@@ -42,8 +36,8 @@ class AdminAreaController extends Controller
     public function settingsAdminAreasAddHandler(Request $request) {
         $row = DB::table('admin_areas')->where('name',$request->input('name'))->first();
         if(empty($row)){
-            $admin_area_id = DB::table('admin_areas')->insertGetId(['name'=>$request->input('name')]);
-            DB::table('admin_area_zones')->where('admin_area_id',$admin_area_id)->delete();
+            $admin_area_id = AdminArea::query()->insertGetId(['name'=>$request->input('name')]);
+            AdminAreaZone::query()->where('admin_area_id',$admin_area_id)->delete();
             $tariff_areas = $request->input('tariff_areas');
             $data=[];
             if(!empty($tariff_areas)) {
@@ -51,7 +45,7 @@ class AdminAreaController extends Controller
                     $data[]=["admin_area_id"=>$admin_area_id,"area_id"=>$value];
                 }
             }
-            DB::table('admin_area_zones')->insert($data);
+            AdminAreaZone::query()->insert($data);
             return redirect('/settings/admin_areas');
         } else {
             $admin_area= new \stdClass();
@@ -82,8 +76,8 @@ class AdminAreaController extends Controller
     public function settingsAdminAreasEditHandler(Request $request,$admin_area_id) {
         $row = DB::table('admin_areas')->where('name',$request->input('name'))->where('id','!=',$admin_area_id)->first();
         if(empty($row)){
-            DB::table('admin_areas')->where('id',$admin_area_id)->update(['name'=>$request->input('name')]);
-            DB::table('admin_area_zones')->where('admin_area_id',$admin_area_id)->delete();
+            AdminArea::query()->where('id',$admin_area_id)->update(['name'=>$request->input('name')]);
+            AdminAreaZone::query()->where('admin_area_id',$admin_area_id)->delete();
             $tariff_areas = $request->input('tariff_areas');
             $data=[];
             if(!empty($tariff_areas)) {
@@ -91,7 +85,7 @@ class AdminAreaController extends Controller
                     $data[]=["admin_area_id"=>$admin_area_id,"area_id"=>$value];
                 }
             }
-            DB::table('admin_area_zones')->insert($data);
+            AdminAreaZone::query()->insert($data);
             return redirect('/settings/admin_areas');
         } else {
             $admin_area= DB::table('admin_areas')->where('id',$admin_area_id)->first();

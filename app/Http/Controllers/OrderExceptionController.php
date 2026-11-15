@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Actions\FinalizeFailedDelivery;
 use App\Actions\RequestDispatchApproval;
-use App\Notifications;
+use App\Support\Notifications;
 use App\Support\OrderStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,10 +27,6 @@ class OrderExceptionController extends Controller
      */
     private const array CLOSED_STATUSES = [4, 5, 8, 9, 10];
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function approve(Request $request, int $pharmacy_id, int $order_id, int $exception_id, FinalizeFailedDelivery $finalizeFailedDelivery): RedirectResponse
     {
@@ -103,7 +100,7 @@ class OrderExceptionController extends Controller
     {
         Gate::authorize('review-delivery-report', $pharmacyId);
         Gate::authorize('access-order', $orderId);
-        abort_unless(DB::table('orders')->where('id', $orderId)->where('pharmacy_id', $pharmacyId)->exists(), 404);
+        abort_unless(Order::query()->where('id', $orderId)->where('pharmacy_id', $pharmacyId)->exists(), 404);
     }
 
     private function lockPending(int $orderId, int $exceptionId): ?stdClass

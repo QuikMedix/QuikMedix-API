@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FamilyMember;
+use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
 use App\Actions\SendWelcomeSms;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Http\Requests\StorePatientRequest;
 use App\Support\GeoPoint;
-use App\User;
+use App\Models\User;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,18 +27,14 @@ use Illuminate\View\View;
  */
 class PatientController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     private const PER_PAGE = 30;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function index(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         $patients = User::where('role', 'user')->where('pharmacy_id', $pharmacy_id);
         [$patients, $search, $page, $maxPages] = $this->searchAndPaginate($request, $patients);
@@ -54,7 +52,7 @@ class PatientController extends Controller
 
     public function removed(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         $patients = DB::table('deleted_patients')->join('users', 'deleted_patients.user_id', '=', 'users.id')
             ->select('deleted_patients.medic_id', 'users.name', 'users.last_name', 'users.email', 'users.phone', 'users.home_phone', 'users.role', 'users.os', 'deleted_patients.reason')
@@ -78,7 +76,7 @@ class PatientController extends Controller
     public function updateStatus(Request $request, string $pharmacy_id): RedirectResponse
     {
         $patientId = $request->input('user_id');
-        $this->authorize('manage-pharmacy-patient', [$pharmacy_id, $patientId]);
+        Gate::authorize('manage-pharmacy-patient', [$pharmacy_id, $patientId]);
 
         $changes = array_filter([
             'isactive' => $request->input('activate') > 0 ? 1 : null,
@@ -105,7 +103,7 @@ class PatientController extends Controller
 
     public function create(Request $request, string $pharmacy_id): View|array|RedirectResponse
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
         if (Auth::user()->pharmacy_balance_ban()) {
             return redirect('billing/'.Auth::user()->pharmacy_id);
         }
@@ -129,7 +127,7 @@ class PatientController extends Controller
 
         $geo = $geocoder->lookup(trim($request->input('address').' '.$request->input('zip')));
         $password = bin2hex(random_bytes(4));
-        $email = $request->input('email') ?: 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
+        $email = $request->input('email') ?: 'patients'.User::query()->max('id').'@'.config('branding.account_email_domain');
 
         $patientId = DB::table('users')->insertGetId([
             ...$request->safe()->only(['name', 'last_name', 'phone', 'birth_date', 'zip', 'apartment']),
@@ -153,7 +151,7 @@ class PatientController extends Controller
 
     public function edit(Request $request, string $pharmacy_id, string $user_id): View|array
     {
-        $this->authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
 
         $patient = DB::table('users')->where('id', $user_id)->first();
         $zone = empty($patient->location) ? null
@@ -178,7 +176,7 @@ class PatientController extends Controller
      */
     public function update(Request $request, string $pharmacy_id, string $user_id, GeocodeAddress $geocoder, LogUserChanges $logChanges): RedirectResponse
     {
-        $this->authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-patient', [$pharmacy_id, $user_id]);
         $back = redirect("patients/$pharmacy_id/edit/$user_id");
 
         if ($request->input('family_members') > 0) {
@@ -189,13 +187,13 @@ class PatientController extends Controller
                 'family_address' => ['required', 'string', 'max:255'],
             ]);
             $location = $geocoder->handle($family['family_address'], 'family_address');
-            DB::table('family_members')->insert($family + ['user_id' => $user_id, 'location' => $location]);
+            FamilyMember::query()->insert($family + ['user_id' => $user_id, 'location' => $location]);
 
             return $back->with('success', 'Family member added.');
         }
 
         if ($request->input('family_member_remove') > 0) {
-            DB::table('family_members')->where('id', $request->input('family_member_remove'))->where('user_id', $user_id)->delete();
+            FamilyMember::query()->where('id', $request->input('family_member_remove'))->where('user_id', $user_id)->delete();
 
             return $back->with('success', 'Family member removed.');
         }
@@ -227,7 +225,7 @@ class PatientController extends Controller
 
     private function recipientOptions(string $patientId, string $table, string $placeholder, bool $withAddress): Response
     {
-        $this->authorize('manage-pharmacy-patient', [Auth::user()->pharmacy_id, $patientId]);
+        Gate::authorize('manage-pharmacy-patient', [Auth::user()->pharmacy_id, $patientId]);
 
         $html = '<option value="">'.e($placeholder).'</option>';
         foreach (DB::table($table)->where('user_id', $patientId)->get() as $member) {
@@ -284,7 +282,7 @@ class PatientController extends Controller
 
         $row = [
             ...Arr::only($validated, ['name', 'last_name', 'phone', 'zip', 'apartment', 'zip2', 'apartment2', 'zip3', 'apartment3']),
-            'email' => $request->input('email') ?: 'patients'.((int) DB::table('users')->max('id') + 1).'@'.config('branding.account_email_domain'),
+            'email' => $request->input('email') ?: 'patients'.((int) User::query()->max('id') + 1).'@'.config('branding.account_email_domain'),
             'home_phone' => $request->input('home_phone') ?: null,
             'image' => $image,
             'primary_address' => $primary,

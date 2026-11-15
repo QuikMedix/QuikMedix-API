@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Models\News;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,19 +17,12 @@ use App\Support\AccessMessages;
  */
 class NewsController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('2fa');
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function news() {
         $countOnPage=20;
-        $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
+        $max_pages=ceil(News::query()->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $news = DB::table('news')->orderBy('id','desc')->leftJoin('news_read',function ($join) {
@@ -55,14 +49,14 @@ class NewsController extends Controller
 
     public function newsAddHandler(Request $request) {
         if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
-            DB::table('news')->insert(["user_id"=>Auth::user()->id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
+            News::query()->insert(["user_id"=>Auth::user()->id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }
         return redirect("news");
     }
 
     public function news_patient() {
         $countOnPage=20;
-        $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
+        $max_pages=ceil(News::query()->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $news = DB::table('news_patient')->where("pharmacy_id",Auth::user()->pharmacy_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
@@ -71,25 +65,19 @@ class NewsController extends Controller
     }
 
     public function news_patientAdd() {
-        if(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) {
-            $input['link']='';
-            $input['title']='';
-            $input['text']='';
-            $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
-            return $this->page(request(), $res_view);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
-        }
+        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        $input['link']='';
+        $input['title']='';
+        $input['text']='';
+        $res_view = view('news.add',['title'=>'News Add','br1'=>'News list','br2'=>'News','br3'=>'News Add','alert'=>'','input'=>$input]);
+        return $this->page(request(), $res_view);
     }
 
     public function news_patientAddHandler(Request $request) {
-        if(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) {
-            if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
-                DB::table('news_patient')->insert(["user_id"=>Auth::user()->id,"pharmacy_id"=>Auth::user()->pharmacy_id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
-            }
-            return redirect("news_patient");
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
+            DB::table('news_patient')->insert(["user_id"=>Auth::user()->id,"pharmacy_id"=>Auth::user()->pharmacy_id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }
+        return redirect("news_patient");
     }
 }

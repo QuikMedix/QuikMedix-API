@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdditionalRecipient;
+use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
 use App\Actions\SendWelcomeSms;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Http\Requests\StoreFacilityRequest;
-use App\User;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -23,18 +25,14 @@ use Illuminate\View\View;
  */
 class FacilityController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     private const PER_PAGE = 30;
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function index(Request $request, string $pharmacy_id): View|array
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
 
         $facilities = User::where('role', 'facility')->where('pharmacy_id', $pharmacy_id);
         $search = (string) $request->query('search', '');
@@ -65,7 +63,7 @@ class FacilityController extends Controller
     public function updateStatus(Request $request, string $pharmacy_id): RedirectResponse
     {
         $facilityId = $request->input('user_id');
-        $this->authorize('manage-pharmacy-facility', [$pharmacy_id, $facilityId]);
+        Gate::authorize('manage-pharmacy-facility', [$pharmacy_id, $facilityId]);
 
         $changes = array_filter([
             'isactive' => $request->input('activate') > 0 ? 1 : null,
@@ -83,7 +81,7 @@ class FacilityController extends Controller
 
     public function create(Request $request, string $pharmacy_id): View|array|RedirectResponse
     {
-        $this->authorize('manage-pharmacy', $pharmacy_id);
+        Gate::authorize('manage-pharmacy', $pharmacy_id);
         if (Auth::user()->pharmacy_balance_ban()) {
             return redirect('billing/'.Auth::user()->pharmacy_id);
         }
@@ -113,7 +111,7 @@ class FacilityController extends Controller
             'role' => 'facility',
             'isactive' => '1',
             'last_name' => $request->input('last_name') ?: ' ',
-            'email' => $request->input('email') ?: 'facilitys'.DB::table('users')->max('id').'@'.config('branding.account_email_domain'),
+            'email' => $request->input('email') ?: 'facilitys'.User::query()->max('id').'@'.config('branding.account_email_domain'),
             'home_phone' => $request->input('home_phone') ?: null,
             'image' => $this->storeUpload($request->file('image'), 'users') ?? '',
             'address' => $geo['formatted_address'],
@@ -132,7 +130,7 @@ class FacilityController extends Controller
 
     public function edit(Request $request, string $pharmacy_id, string $user_id): View|array
     {
-        $this->authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
 
         return $this->page($request, view('facilitys.user_edit', [
             'user' => DB::table('users')->where('id', $user_id)->first(),
@@ -150,14 +148,14 @@ class FacilityController extends Controller
      */
     public function update(Request $request, string $pharmacy_id, string $user_id, GeocodeAddress $geocoder, LogUserChanges $logChanges): RedirectResponse
     {
-        $this->authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
+        Gate::authorize('manage-pharmacy-facility', [$pharmacy_id, $user_id]);
         $back = redirect("facilitys/$pharmacy_id/edit/$user_id");
 
         if ($request->filled('patients_db')) {
             $patients = DB::table('users')->where('pharmacy_id', $pharmacy_id)->where('role', 'user')
                 ->whereIn('id', (array) $request->input('patients_db'))->get();
             foreach ($patients as $patient) {
-                DB::table('additional_recipients')->insert(['user_id' => $user_id, 'family_type' => 'Additional Recipient', 'family_name' => $patient->name.' '.$patient->last_name, 'family_phone' => $patient->phone]);
+                AdditionalRecipient::query()->insert(['user_id' => $user_id, 'family_type' => 'Additional Recipient', 'family_name' => $patient->name.' '.$patient->last_name, 'family_phone' => $patient->phone]);
             }
 
             return $back->with('success', 'Recipients added.');
@@ -170,7 +168,7 @@ class FacilityController extends Controller
                 'family_name2' => ['required', 'string', 'max:255'],
                 'family_phone' => ['required', 'string', 'max:20'],
             ]);
-            DB::table('additional_recipients')->insert([
+            AdditionalRecipient::query()->insert([
                 'user_id' => $user_id,
                 'family_type' => $recipient['family_type'],
                 'family_name' => $recipient['family_name'].' '.$recipient['family_name2'],
@@ -181,7 +179,7 @@ class FacilityController extends Controller
         }
 
         if ($request->input('additional_recipient_remove') > 0) {
-            DB::table('additional_recipients')->where('id', $request->input('additional_recipient_remove'))->where('user_id', $user_id)->delete();
+            AdditionalRecipient::query()->where('id', $request->input('additional_recipient_remove'))->where('user_id', $user_id)->delete();
 
             return $back->with('success', 'Recipient removed.');
         }
@@ -224,7 +222,7 @@ class FacilityController extends Controller
 
         DB::table('users')->where('id', $facilityId)->update([
             ...Arr::only($validated, ['name', 'last_name', 'phone', 'zip', 'apartment']),
-            'email' => ($validated['email'] ?? null) ?: 'facilitys'.((int) DB::table('users')->max('id') + 1).'@'.config('branding.account_email_domain'),
+            'email' => ($validated['email'] ?? null) ?: 'facilitys'.((int) User::query()->max('id') + 1).'@'.config('branding.account_email_domain'),
             'home_phone' => ($validated['home_phone'] ?? null) ?: null,
             'image' => $image,
             'address' => $geo['formatted_address'],

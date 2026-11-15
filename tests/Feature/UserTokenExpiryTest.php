@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\User;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Laravel\Passport\AccessToken;
 use Laravel\Passport\ClientRepository;

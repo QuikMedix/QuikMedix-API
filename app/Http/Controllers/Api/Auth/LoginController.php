@@ -22,7 +22,7 @@ class LoginController extends Controller
             ], 401);
         }
 
-        /** @var \App\User $user */
+        /** @var \App\Models\User $user */
         $user = $guard->user();
         $previousExpiration = Passport::personalAccessTokensExpireIn();
 

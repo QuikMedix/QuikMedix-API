@@ -2,7 +2,8 @@
 
 namespace App\Actions;
 
-use App\Notifications;
+use App\Models\Order;
+use App\Support\Notifications;
 use App\Support\HereMaps;
 use App\Support\PatientAddress;
 use Illuminate\Support\Facades\DB;
@@ -46,7 +47,7 @@ class NotifyNextPatient
             }
             // Order ETAs are kept in minutes, as the route recalculation stores them and the order pages read them.
             $minutes = ceil($duration / 60);
-            DB::table('orders')->where('id', $nextRoute->order_id)->update(['eta' => $minutes]);
+            Order::query()->where('id', $nextRoute->order_id)->update(['eta' => $minutes]);
             $message .= ' ETA: '.floor($minutes / 60).' hours '.($minutes % 60).' minutes';
         }
         // Without a route the patient is still told, but no travel time is claimed and the order keeps its ETA.

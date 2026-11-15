@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use App\Models\RouteStopLog;
+use App\Models\RouteStop;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,7 +27,7 @@ class ReturnOrderToOffice
         $firstStop = (clone $patientStops)->first();
 
         foreach ($stops as $stop) {
-            DB::table('routes_priority_logs')->insert([
+            RouteStopLog::query()->insert([
                 'id' => $stop->id, 'driver_id' => $stop->driver_id, 'order_id' => $stop->order_id,
                 'type' => $stop->type, 'type_id' => $stop->type_id, 'type_pay' => $stop->type_pay, 'pay_value' => $stop->pay_value,
             ]);
@@ -33,14 +35,14 @@ class ReturnOrderToOffice
 
         $office = DB::table('routes_priority')->where('driver_id', $order->driver_id)->where('type', 'office')->first();
         if (! empty($office)) {
-            DB::table('routes_priority')->insert([
+            RouteStop::query()->insert([
                 'driver_id' => $order->driver_id, 'order_id' => $order->id, 'type' => 'office', 'type_id' => $office->type_id,
                 'type_pay' => $office->type_pay, 'pay_value' => $office->pay_value, 'priority' => $office->priority,
             ]);
         } elseif (! empty($firstStop)) {
             // Without a patient stop to take the pay from, no return stop is added.
-            $lastPriority = DB::table('routes_priority')->where('driver_id', $order->driver_id)->max('priority');
-            DB::table('routes_priority')->insert([
+            $lastPriority = RouteStop::query()->where('driver_id', $order->driver_id)->max('priority');
+            RouteStop::query()->insert([
                 'driver_id' => $order->driver_id, 'order_id' => $order->id, 'type' => 'office', 'type_id' => self::FIRST_OFFICE,
                 'type_pay' => $firstStop->type_pay, 'pay_value' => $firstStop->pay_value, 'priority' => intval($lastPriority) + 1,
             ]);

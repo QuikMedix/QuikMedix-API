@@ -2,10 +2,11 @@
 
 namespace App\Actions;
 
-use App\ChMessage;
-use App\Notifications;
+use App\Enums\Role;
+use App\Models\ChMessage;
+use App\Support\Notifications;
 use App\Support\OrderStatus;
-use App\User;
+use App\Models\User;
 use Chatify\Facades\ChatifyMessenger as Chatify;
 use Illuminate\Support\Facades\DB;
 use stdClass;
@@ -65,7 +66,7 @@ class RequestDispatchApproval
      */
     public static function reviewerIds(): array
     {
-        return User::whereIn('role', [...User::ADMIN_ROLES, 'logist'])->where('isactive', 1)->where('isblocked', 0)
+        return User::whereIn('role', [...Role::adminValues(), Role::Logist->value])->where('isactive', 1)->where('isblocked', 0)
             ->orderBy('id')->pluck('id')->map(fn ($id): int => (int) $id)->all();
     }
 

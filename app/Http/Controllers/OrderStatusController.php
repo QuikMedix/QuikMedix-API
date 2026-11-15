@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Actions\ChangeOrderStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,16 +11,12 @@ use Illuminate\Support\Facades\Gate;
 
 class OrderStatusController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     public function update(Request $request, int $pharmacy_id, int $order_id, ChangeOrderStatus $changeOrderStatus): RedirectResponse
     {
         Gate::authorize('change-order-status');
         Gate::authorize('access-order', $order_id);
-        abort_unless(DB::table('orders')->where('id', $order_id)->where('pharmacy_id', $pharmacy_id)->exists(), 404);
+        abort_unless(Order::query()->where('id', $order_id)->where('pharmacy_id', $pharmacy_id)->exists(), 404);
 
         $validated = $request->validate([
             'statuse' => ['required', 'integer', 'exists:statuses,id'],

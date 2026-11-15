@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Note;
 use App\Actions\RecalculateDriverEta;
 use App\Actions\ReturnOrderToOffice;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
-use App\User;
+use App\Http\Controllers\Concerns\RendersPages;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use App\Support\AccessMessages;
 
 /**
  * Dispatching: the live board of drivers on shift, the dispatcher's decisions about an order's
@@ -20,22 +21,17 @@ use App\Support\AccessMessages;
  */
 class DispatchingController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     /** A decision that sends an order back clears what the driver recorded at the door. */
     private const NO_PROOF_OF_DELIVERY = ['drop_off_photo' => null, 'signature_photo' => null, 'signature_type' => null];
 
-    public function __construct()
-    {
-        $this->middleware(['auth', '2fa', 'active']);
-    }
 
     /**
      * The live board: up to thirty stops of the drivers on shift, soonest arrival first.
      */
     public function index(Request $request): View
     {
-        $this->authorizeDispatchStaff($request);
 
         $orders = User::where('users.role','driver')->where('users.work_now','1')->where('users.isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->join("orders","routes_priority.order_id","=","orders.id")->leftJoin("try_call","orders.id","=","try_call.order_id")->leftJoin("notes", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes.order_id');$leftJoin->where('notes.type', '=', 1);})->leftJoin("notes as notes2", function($leftJoin) {$leftJoin->on('orders.id', '=', 'notes2.order_id');$leftJoin->where('notes2.type', '=', 2);})->join("users as users2","orders.user_id","=","users2.id")->join("pharmacys","orders.pharmacy_id","=","pharmacys.id")->where('routes_priority.type','patient')->where('orders.actual','0')->havingRaw("max(try_call.created) < (now() - interval 10 minute) OR COUNT(try_call.id) = 0")
         ->select("users.id as driver_id","routes_priority.priority",DB::raw("CONCAT(users.name, ' ', users.last_name) as driver_name"),"users.phone as driver_phone",DB::raw("CONCAT(users2.name, ' ', users2.last_name) as patient_name"),"users2.phone as patient_phone","users2.address as patient_address","users2.location as patient_location","users2.apartment as patient_apartment","orders.eta","orders.copay","orders.special_instructions",DB::raw("GROUP_CONCAT(DISTINCT CONCAT(notes.created,'!-',notes.note) SEPARATOR ';/') as notes_dispetch"),DB::raw("GROUP_CONCAT(CONCAT(notes2.created,'!-',notes2.note) SEPARATOR ';/') as notes_cust"),DB::raw("GROUP_CONCAT(DISTINCT routes_priority.order_id SEPARATOR ',') as order_id"),"routes_priority.type_id",DB::raw("GROUP_CONCAT(DISTINCT(pharmacys.name) SEPARATOR ',') as pharmacy_name"),DB::raw("GROUP_CONCAT(DISTINCT(pharmacys.phone) SEPARATOR ',') as pharmacy_phone"),DB::raw("count(DISTINCT try_call.id)/count(DISTINCT routes_priority.order_id) as count_call"),DB::raw("case when max(try_call.created) >= now() - interval 10 minute then 1 else 0 end as call_disabled"))
@@ -59,7 +55,6 @@ class DispatchingController extends Controller
      */
     public function update(Request $request, ReturnOrderToOffice $returnToOffice): string|RedirectResponse
     {
-        $this->authorizeDispatchStaff($request);
         $orderIds = explode(',', $request->input('order_id'));
 
         if ($request->request->has('dispatcher_notes')) {
@@ -76,22 +71,22 @@ class DispatchingController extends Controller
             }
         }
         if ($request->input('confirmed') > 0) {
-            DB::table('orders')->whereIn('id', $orderIds)->update(['actual' => '1']);
+            Order::query()->whereIn('id', $orderIds)->update(['actual' => '1']);
         }
         if ($request->input('not_confirmed') > 0) {
             foreach ($orderIds as $orderId) {
                 $order = DB::table('orders')->where('id', $orderId)->first();
-                DB::table('orders')->where('id', $orderId)->update(['actual' => '2'] + self::NO_PROOF_OF_DELIVERY);
+                Order::query()->where('id', $orderId)->update(['actual' => '2'] + self::NO_PROOF_OF_DELIVERY);
                 $returnToOffice->handle($order);
-                DB::table('orders')->where('id', $orderId)->update(['not_delivered' => 1]);
+                Order::query()->where('id', $orderId)->update(['not_delivered' => 1]);
                 $this->note($request, $orderId, 'order not confirmed');
             }
         }
         if ($request->input('reschedule') > 0) {
-            DB::table('orders')->whereIn('id', $orderIds)->update(['delivery_date' => $request->input('date')]);
+            Order::query()->whereIn('id', $orderIds)->update(['delivery_date' => $request->input('date')]);
             foreach ($orderIds as $orderId) {
                 $order = DB::table('orders')->where('id', $orderId)->first();
-                DB::table('orders')->where('id', $orderId)->update(self::NO_PROOF_OF_DELIVERY);
+                Order::query()->where('id', $orderId)->update(self::NO_PROOF_OF_DELIVERY);
                 $returnToOffice->handle($order);
                 $this->note($request, $orderId, 'reschedule to '.$request->input('date'));
             }
@@ -107,7 +102,6 @@ class DispatchingController extends Controller
      */
     public function show(Request $request, $driver_id): View|array
     {
-        $this->authorizeDispatchStaff($request);
 
         $driver = DB::table('users')->where('users.id',$driver_id)->leftJoin('drivers_eta', function($query) {
             $query->on('users.id','=','drivers_eta.driver_id')
@@ -159,7 +153,6 @@ class DispatchingController extends Controller
      */
     public function recalculateEta(Request $request, $driver_id, RecalculateDriverEta $recalculateEta): ?RedirectResponse
     {
-        $this->authorizeDispatchStaff($request);
 
         if ($request->input('eta_calculate') > 0) {
             $recalculateEta->handle($driver_id);
@@ -170,13 +163,8 @@ class DispatchingController extends Controller
         return null;
     }
 
-    private function authorizeDispatchStaff(Request $request): void
-    {
-        abort_unless($request->user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist'), 403, AccessMessages::NO_PERMISSION);
-    }
-
     private function note(Request $request, string $orderId, string $text): void
     {
-        DB::table('notes')->insert(['order_id' => $orderId, 'user_id' => $request->user()->id, 'type' => '1', 'note' => addslashes($text)]);
+        Note::query()->insert(['order_id' => $orderId, 'user_id' => $request->user()->id, 'type' => '1', 'note' => addslashes($text)]);
     }
 }

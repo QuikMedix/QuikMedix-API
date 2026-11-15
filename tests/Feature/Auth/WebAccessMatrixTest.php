@@ -3,11 +3,12 @@
 namespace Tests\Feature\Auth;
 
 use App\Support\AccessMessages;
-use App\User;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\InsertsRows;
 use Tests\TestCase;
 
 /**
@@ -17,6 +18,8 @@ use Tests\TestCase;
  */
 class WebAccessMatrixTest extends TestCase
 {
+    use InsertsRows;
+
     private const ROLES = ['guest', 'superadmin', 'admin', 'dispadmin', 'logist', 'medic', 'sale', 'driver', 'user', 'facility', 'blocked'];
 
     private const FILE = __DIR__.'/web-access.json';
@@ -91,28 +94,5 @@ class WebAccessMatrixTest extends TestCase
         ksort($routes);
 
         return $routes;
-    }
-
-    /**
-     * Inserts a row, giving every required column without a default a value of its type.
-     *
-     * @param array<string, mixed> $values
-     */
-    private function row(string $table, array $values): int
-    {
-        foreach (Schema::getColumns($table) as $column) {
-            if (array_key_exists($column['name'], $values) || $column['nullable'] || $column['default'] !== null || $column['auto_increment']) {
-                continue;
-            }
-            $type = strtolower($column['type_name']);
-            $values[$column['name']] = match (true) {
-                str_contains($type, 'int'), in_array($type, ['float', 'double', 'decimal', 'numeric', 'real'], true) => 1,
-                $type === 'date' => '2026-01-05',
-                in_array($type, ['datetime', 'timestamp'], true) => '2026-01-05 10:00:00',
-                default => 'x',
-            };
-        }
-
-        return (int) DB::table($table)->insertGetId($values);
     }
 }

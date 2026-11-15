@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\ActionLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -78,7 +79,7 @@ class LogUserChanges
     private function record(array $changes, int|string $userId): void
     {
         foreach ($changes as [$type, $from, $to]) {
-            DB::table('action_log')->insert([
+            ActionLog::query()->insert([
                 'type' => $type,
                 'comment' => 'from '.$from.' to '.$to,
                 'user_id' => $userId,
