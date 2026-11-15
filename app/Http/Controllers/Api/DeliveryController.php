@@ -235,7 +235,7 @@ class DeliveryController extends Controller
                     'errors' => 'Forbidden'
                 ], 400);
             }
-        } else if(Auth::user()->role == 'user') {
+        } else if(Auth::user()->hasRole('user')) {
             $validator = Validator::make($request->all(), [
                 'image' => 'mimes:jpeg,jpg,png|max:2048',    
                 'order_id' => 'max:255',    

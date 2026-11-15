@@ -134,9 +134,14 @@ class User extends Authenticatable implements OAuthenticatable
     /**
      * Whether the user has one of the given roles.
      */
-    public function hasAnyRole(string ...$roles): bool
+    public function hasAnyRole(Role|string ...$roles): bool
     {
-        return in_array($this->role, $roles, true);
+        return in_array($this->role, array_map(fn (Role|string $role): string => $role instanceof Role ? $role->value : $role, $roles), true);
+    }
+
+    public function hasRole(Role|string $role): bool
+    {
+        return $this->hasAnyRole($role);
     }
 
     /**

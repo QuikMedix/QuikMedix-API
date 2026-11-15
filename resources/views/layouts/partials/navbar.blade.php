@@ -28,7 +28,7 @@
                                 <a href="/reports/billing"><p style="font-size: 13px;color: black;margin-bottom: 0;"> <i class="mdi mdi-cellphone-arrow-down"></i> Co-pays App: ${{Auth::user()->copay_app_today()}}</p></a>
                             </div>                      
                         @endif
-                        @if(Auth::user()->role=='medic' && Auth::user()->pharmacy_balance()<0)
+                        @if(Auth::user()->hasRole('medic') && Auth::user()->pharmacy_balance()<0)
                             <div class="total-inc d-inline-block" style="background: #930000;padding: 7px 15px 0px 15px;border-radius: 20px;">
                                 <a href="/billing/{{ Auth::user()->pharmacy_id }}"><h4 style="font-size: 13px;color: white;font-weight: 100;"> <i class="ti-alert"></i> You have unpaid bills | <span style="">Amount - ${{abs(Auth::user()->pharmacy_balance())}}</span></h4></a>
                             </div>                       
@@ -37,13 +37,13 @@
     
                     <div class="float-right">
                         <div class="d-lg-inline-block mr-4">
-                        @if(Auth::user()->role=='logist')
+                        @if(Auth::user()->hasRole('logist'))
                             <p class="role-line">Hello, Dispatcher</p>
-                        @elseif(Auth::user()->role=='medic')
+                        @elseif(Auth::user()->hasRole('medic'))
                             <p class="role-line">Hello, {{Auth::user()->pharmacy_name()}}</p>
-                        @elseif(Auth::user()->role=='user')
+                        @elseif(Auth::user()->hasRole('user'))
                             <p class="role-line">Hello, Patient</p>
-                        @elseif(Auth::user()->role=='sale')
+                        @elseif(Auth::user()->hasRole('sale'))
                             <p class="role-line">Hello, Sale Manager</p>
                         @else
                             <p class="role-line">Hello, {{ Auth::user()->role }}</p>
@@ -231,7 +231,7 @@
                                 
                             </div>
                         </div>
-                        @if(Auth::user()->role == 'driver')
+                        @if(Auth::user()->hasRole('driver'))
                         <div class="col-sm-6">
                             <div class="state-information d-none d-sm-block">
                                 <div class="state-graph float-right">
@@ -240,7 +240,7 @@
                                 </div>
                             </div>
                         </div>
-                        @elseif(Auth::user()->role == 'medic')
+                        @elseif(Auth::user()->hasRole('medic'))
                         <div class="col-sm-6">
                             <div class="page-title-box float-right">
                                 @if(config('branding.support_phone'))
@@ -252,7 +252,7 @@
                                 @endif
                             </div>
                         </div>
-                        @elseif(Auth::user()->role == 'sale')
+                        @elseif(Auth::user()->hasRole('sale'))
                         <div class="col-sm-6">
                             <div class="page-title-box float-right">
                                 <h4 style="margin-top: 12px;"><span style="font-size: 16px;">Sale Balance <b>$ 0</b></span></h4>
@@ -288,7 +288,7 @@
                                         <span>Orders</span>
                                     </a>
                                 </li>
-                                @elseif(Auth::user()->role != 'sale')
+                                @elseif(! Auth::user()->hasRole('sale'))
                                 <li class="nav-item">
                                     <a href="/orders/{{ Auth::user()->pharmacy_id }}" class="nav-link">
                                         <i class="ti-bag"></i>
@@ -296,7 +296,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if(Auth::user()->role == 'medic1')
+                                @if(Auth::user()->hasRole('medic1'))
                                     <li class="nav-item dropdown">
                                         <a class="nav-link dropdown-toggle arrow-none" href="#" id="topnav-email" role="button"
                                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -320,7 +320,7 @@
                                     </li>
                                 @endif
 
-                                @if(Auth::user()->role == 'user')
+                                @if(Auth::user()->hasRole('user'))
                                     <li class="nav-item dropdown">
                                         <a class="nav-link" href="/pharmacys/add">
                                             <i class="ti-heart"></i>Create Pharmacy
@@ -328,7 +328,7 @@
                                     </li>
                                 @endif
 
-                                @if(Auth::user()->role == 'medic')
+                                @if(Auth::user()->hasRole('medic'))
                                     <li class="nav-item">
                                         <a href="/pharmacy/{{ Auth::user()->pharmacy_id }}/users" class="nav-link">
                                             <i class="ti-heart"></i>
@@ -361,7 +361,7 @@
                                     </li>
                                 @endif
 
-                                @if(Auth::user()->role == 'driver')
+                                @if(Auth::user()->hasRole('driver'))
                                     <li class="nav-item">
                                         <a href="/drivers/{{ Auth::user()->pharmacy_id }}/payouts" class="nav-link">
                                             <i class="ti-credit-card"></i>
@@ -383,7 +383,7 @@
                                             <span>Routes</span> 
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-left" aria-labelledby="topnav-email">
-                                            @if(Auth::user()->role == 'medic')
+                                            @if(Auth::user()->hasRole('medic'))
                                             <a href="/routes-drivers" class="dropdown-item">Drivers</a>
                                             @else
                                             <a href="/routes-list" class="dropdown-item">Orders</a>
@@ -405,7 +405,7 @@
                                         </a>
                                     </li>
                                 @endif
-                                @if(Auth::user()->role == 'medic')
+                                @if(Auth::user()->hasRole('medic'))
                                     <li class="nav-item">
                                         <a href="/billing/{{ Auth::user()->pharmacy_id }}" class="nav-link">
                                             <i class="ti-credit-card"></i>
@@ -413,7 +413,7 @@
                                         </a>
                                     </li>
                                 @endif
-                                @if(Auth::user()->role == 'medic')
+                                @if(Auth::user()->hasRole('medic'))
                                 <li class="nav-item">
                                     <a href="/news" class="nav-link">
                                         @if(Auth::user()->get_unread_news()>0)
@@ -447,7 +447,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if(Auth::user()->role == 'medic')
+                                @if(Auth::user()->hasRole('medic'))
                                 <li class="nav-item">
                                     <a href="/faq" class="nav-link">
                                         <i class="ti-info-alt"></i>
@@ -461,7 +461,7 @@
                                         <span>QuikMedix Drivers</span>
                                     </a>
                                 </li> -->
-                                @if(Auth::user()->role == 'medic')
+                                @if(Auth::user()->hasRole('medic'))
                                 <li class="nav-item">
                                     <a href="/delivery-calendar" class="nav-link">
                                         <i class="ti-calendar"></i>
@@ -476,7 +476,7 @@
                                             <i class="ti-settings"></i>Settings 
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-left" aria-labelledby="topnav-email">
-                                            @if(Auth::user()->role == 'superadmin')
+                                            @if(Auth::user()->hasRole('superadmin'))
                                             <a href="/settings/admins" class="dropdown-item">Admins</a>
                                             <a href="/settings/admin_areas" class="dropdown-item">Admin Zones</a>
                                             <a href="/offices" class="dropdown-item">Offices</a>
@@ -509,7 +509,7 @@
                                         <span>Internal chat</span>
                                     </a>
                                 </li>
-                                <!-- @if(Auth::user()->role == 'medic')                           
+                                <!-- @if(Auth::user()->hasRole('medic'))                           
                                 <li class="nav-item @if(Request::is('feedback/*')){{'active'}}@endif">
                                     
                                     <a href="/feedback" class="nav-link @if(Request::is('feedback/*')){{'active'}}@endif">

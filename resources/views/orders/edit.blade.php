@@ -312,7 +312,7 @@
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Select Driver</label>
                                             <div class="col-sm-10">
-                                                <select class="" placeholder="Select Driver..." name="driver" @if($order->type_driver==2) style="display:none;" @endif @if(Auth::user()->role=="medic") disabled @endif>
+                                                <select class="" placeholder="Select Driver..." name="driver" @if($order->type_driver==2) style="display:none;" @endif @if(Auth::user()->hasRole('medic')) disabled @endif>
                                                     <option value="">Select Driver...</option>
                                                     @foreach($drivers as $driver)
                                                         @if($order->driver_id==$driver->id)

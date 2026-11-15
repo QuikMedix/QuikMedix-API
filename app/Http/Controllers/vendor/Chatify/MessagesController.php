@@ -354,7 +354,7 @@ class MessagesController extends Controller
                   ->orWhere('users.phone','LIKE','%'.$input.'%')
                   ->orWhere('users.id','=',$input);
             });
-        if(Auth::user()->role=='medic') {
+        if(Auth::user()->hasRole('medic')) {
             $records=$records->where('pharmacy_id',Auth::user()->pharmacy_id);
         } else {
             // Support staff, plus the staff of the user's own pharmacy.

@@ -27,7 +27,7 @@ class DashboardController extends Controller
     }
 
     public function root() {
-        if(Auth::user()->role == 'medic'){
+        if(Auth::user()->hasRole('medic')){
             $res_arr=self::get_cached_value(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id);
             if(!empty($res_arr)) {
                 return view('dashboard.index',$res_arr);
@@ -438,7 +438,7 @@ class DashboardController extends Controller
     }
 
     public function searchJson() {
-        abort_unless((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->can('admin'))), 403, AccessMessages::NO_PERMISSION);
+        abort_unless((Auth::user()->hasRole('medic') && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->can('admin'))), 403, AccessMessages::NO_PERMISSION);
         $search = request()->query('search', '');
         $max_res = 100;
         if(!empty($search)) {
@@ -567,7 +567,7 @@ class DashboardController extends Controller
         for ($day = 1; $day <= $days; $day++) {
             $dayOfWeek0 = $date->format('w');
             $dates["Week $week"][$dayOfWeek0]= $date->format('Y-m-d');
-            if(Auth::user()->role=='medic'){
+            if(Auth::user()->hasRole('medic')){
                 if(request()->query->has('state')) {
                     $state = request()->query('state');
                     $pol_id=0;
@@ -617,7 +617,7 @@ class DashboardController extends Controller
             }
             $date->add($oneDay);
         }
-        if(Auth::user()->role=='medic'){
+        if(Auth::user()->hasRole('medic')){
             $pharmacy_id = Auth::user()->pharmacy_id;
         } else {
             $pharmacy_id = '';

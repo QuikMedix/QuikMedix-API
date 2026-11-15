@@ -100,7 +100,7 @@ class PharmacyUserController extends Controller
      * @param int|string $user_id
      */
     public function pharmacyUsersEdit($pharmacy_id,$user_id) {
-        abort_unless(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && User::query()->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin')), 403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->hasRole('medic') && Auth::user()->pharmacy_id==$pharmacy_id && User::query()->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin')), 403, AccessMessages::NO_PERMISSION);
         $user = DB::table('users')->where('id', $user_id)->first();
         $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
         $pharmacys = DB::table('pharmacys')->get();

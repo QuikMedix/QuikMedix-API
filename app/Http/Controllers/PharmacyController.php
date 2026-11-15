@@ -84,7 +84,7 @@ class PharmacyController extends Controller
             $pharmacys = $pharmacys->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
             $res_arr = ['pages'=>$pages,'page0'=>$page,'search'=>$search,'pharmacys'=>$pharmacys,'filter'=>$filter,'title'=>'Pharmacies List','br1'=>'Pharmacy','br2'=>'List'];
             return view('pharmacy.list',$res_arr);
-        } else if(Auth::user()->role == 'sale') {
+        } else if(Auth::user()->hasRole('sale')) {
             $pharmacys = DB::table('pharmacys')->where("ref_id",Auth::user()->id);
             if(!empty(request()->query('search'))) {
                 $search = request()->query('search');
@@ -389,7 +389,7 @@ class PharmacyController extends Controller
                 }
             }
             return redirect("pharmacys");
-        } else if(Auth::user()->role == 'user') {
+        } else if(Auth::user()->hasRole('user')) {
             if($request->input('save')>0) {
                 if(!empty(DB::table('pharmacys')->where('email', $request->input('email'))->first())) {
                     $input['name']=$request->input('name');

@@ -65,7 +65,7 @@ class NewsController extends Controller
     }
 
     public function news_patientAdd() {
-        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->hasRole('medic') && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
         $input['link']='';
         $input['title']='';
         $input['text']='';
@@ -74,7 +74,7 @@ class NewsController extends Controller
     }
 
     public function news_patientAddHandler(Request $request) {
-        abort_unless(Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        abort_unless(Auth::user()->hasRole('medic') && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
         if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
             DB::table('news_patient')->insert(["user_id"=>Auth::user()->id,"pharmacy_id"=>Auth::user()->pharmacy_id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }

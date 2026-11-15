@@ -159,7 +159,7 @@ class ProfileController extends Controller
     }
 
     public function patient_home() {
-        if(Auth::user()->role == 'user') {
+        if(Auth::user()->hasRole('user')) {
             $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();
             $head_text = $wishs ? $wishs[array_rand($wishs)] : '';
             $pharmacy = DB::table('pharmacys')->where("id",Auth::user()->pharmacy_id)->first();
@@ -229,7 +229,7 @@ class ProfileController extends Controller
 
         // Optional legacy Twilio Notify binding. Never let it block saving the token.
         $isAndroid = Auth::user()->os==1;
-        $isDriver = Auth::user()->role=='driver';
+        $isDriver = Auth::user()->hasRole('driver');
         $serviceSid = config('app.twilio_notify'.($isDriver ? 'Driver' : 'Client').($isAndroid ? '' : 'IOS').'ServiceSid');
         if(config('app.twilio_sid') && config('app.twilio_auth_token') && $serviceSid) {
             try {

@@ -209,7 +209,7 @@
                                                     <option value="medic" @if($user->role=='medic') selected @endif>Medic</option>
                                                     <option value="logist" @if($user->role=='logist') selected @endif>Dispatcher</option>
                                                     <option value="sale" @if($user->role=='sale') selected @endif>Sale Manager</option>
-                                                    @if(Auth::user()->role == 'superadmin')
+                                                    @if(Auth::user()->hasRole('superadmin'))
                                                     <option value="superadmin" @if($user->role=='superadmin') selected @endif>Super Admin</option>
                                                     <option value="dispadmin" @if($user->role=='dispadmin') selected @endif>Dispatcher Admin</option>
                                                     <option value="admin" @if($user->role=='admin') selected @endif>Admin</option>

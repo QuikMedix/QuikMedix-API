@@ -190,7 +190,7 @@ class PaymentController extends Controller
         $response = Cache::lock('pay-copay:'.$order_id, 120)->get(function () use ($order_id) {
             $order = DB::table('orders')->where('id',$order_id)->first();
             if(!empty($order)) {
-                if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'user') && $order->user_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
+                if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('user')) && $order->user_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                     $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
                     if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
                         $client = new \Square\SquareClient([
@@ -266,7 +266,7 @@ class PaymentController extends Controller
     public function PayedCashCopay($order_id) {
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
-            if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'driver') && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
+            if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('driver')) && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                 $cash_log = DB::table('cash_log')->where("order_id",$order_id)->where("driver_id",Auth::user()->id)->first();
                 if(!empty($cash_log)) {
                     CashLog::query()->where('id',$cash_log->id)->update(["copay"=>$order->copay]);
@@ -320,7 +320,7 @@ class PaymentController extends Controller
     public function notPayedCashCopay($order_id) {
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
-            if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'driver') && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
+            if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('driver')) && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                 Order::query()->where('id',$order_id)->update(['statuse_copay'=>5]);
                 return response()->json([
                     'message' => 'OK'

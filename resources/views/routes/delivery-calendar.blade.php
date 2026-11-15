@@ -22,7 +22,7 @@
 <!-- end page title -->
 
 <div class="row mb-4">
-    @if(Auth::user()->role=='admin')
+    @if(Auth::user()->hasRole('admin'))
     <div class="col-xl-3">
         <div class="card">
             <div class="card-body">

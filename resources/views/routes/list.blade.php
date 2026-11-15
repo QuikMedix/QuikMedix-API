@@ -127,7 +127,7 @@
                                                             <td style="color:red;">No</td>
                                                         @endif
                                                         <td class="action">
-                                                        @if((Auth::user()->role == 'logist' || (Auth::user()->can('admin'))) && ($order->statuse_id!=4 && $order->statuse_id!=5))
+                                                        @if((Auth::user()->hasRole('logist') || (Auth::user()->can('admin'))) && ($order->statuse_id!=4 && $order->statuse_id!=5))
                                                             <a href="/routes-list/show/{{ $order->id }}"><button class="btn btn-warning">Open</button></a>
                                                         @endif
                                                         </td>

@@ -76,11 +76,11 @@ class OrderFeedbackController extends Controller
      */
     private function isMissingForPatient(Request $request, ?object $order): bool
     {
-        return $order === null && $request->user()->role == 'user';
+        return $order === null && $request->user()->hasRole('user');
     }
 
     private function isPatientOf(Request $request, ?object $order): bool
     {
-        return $request->user()->role == 'user' && $order !== null && $request->user()->id == $order->user_id;
+        return $request->user()->hasRole('user') && $order !== null && $request->user()->id == $order->user_id;
     }
 }

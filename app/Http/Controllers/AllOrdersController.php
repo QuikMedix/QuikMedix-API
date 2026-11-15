@@ -19,7 +19,7 @@ class AllOrdersController extends Controller
 
     public function index() {
         $orders = DB::table('orders')->leftJoin('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.*')->orderBy('orders.id','desc');
-        if(Auth::user()->role == 'driver' && Auth::user()->pharmacy_id > 0) {
+        if(Auth::user()->hasRole('driver') && Auth::user()->pharmacy_id > 0) {
             $orders = $orders->where('orders.pharmacy_id', Auth::user()->pharmacy_id);
         }
         $filter = [];

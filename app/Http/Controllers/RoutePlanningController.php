@@ -194,7 +194,7 @@ class RoutePlanningController extends Controller
      * @param int|string $driver_id
      */
     public function showDriver($driver_id) {
-        if(Auth::user()->role == 'medic') {
+        if(Auth::user()->hasRole('medic')) {
             Gate::authorize('manage-pharmacy-driver', [Auth::user()->pharmacy_id, $driver_id]);
         }
         abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
@@ -335,7 +335,7 @@ class RoutePlanningController extends Controller
      * @param int|string $driver_id
      */
     public function updateDriver(Request $request,$driver_id) {
-        if(Auth::user()->role == 'medic') {
+        if(Auth::user()->hasRole('medic')) {
             // Pharmacy users route only their own drivers and their own pharmacy's orders.
             Gate::authorize('manage-pharmacy-driver', [Auth::user()->pharmacy_id, $driver_id]);
             $orderIds = array_filter(array_merge([$request->input('confirm_order_id')], ...array_map(fn ($ids) => explode(',', (string) $ids), (array) $request->input('order_id'))));
