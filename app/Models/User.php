@@ -8,6 +8,8 @@ use Laravel\Passport\HasApiTokens;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +85,50 @@ class User extends Authenticatable implements OAuthenticatable
                 ->whereKey($token->oauth_access_token_id)
                 ->update(['expires_at' => now()->addDays(7)]);
         }
+    }
+
+    public function pharmacy(): BelongsTo
+    {
+        return $this->belongsTo(Pharmacy::class, 'pharmacy_id');
+    }
+
+    public function office(): BelongsTo
+    {
+        return $this->belongsTo(Office::class, 'office_id');
+    }
+
+    /**
+     * Orders this person receives as a patient.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'user_id');
+    }
+
+    /**
+     * Orders this person carries as a driver.
+     */
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(Order::class, 'driver_id');
+    }
+
+    /**
+     * The stops on this driver's current route.
+     */
+    public function routeStops(): HasMany
+    {
+        return $this->hasMany(RouteStop::class, 'driver_id');
+    }
+
+    public function familyMembers(): HasMany
+    {
+        return $this->hasMany(FamilyMember::class, 'user_id');
+    }
+
+    public function additionalRecipients(): HasMany
+    {
+        return $this->hasMany(AdditionalRecipient::class, 'user_id');
     }
 
     /**
