@@ -28,6 +28,15 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
 
+        RateLimiter::for('password-reset', function (Request $request): array {
+            $phone = $request->input('phone');
+
+            return [
+                Limit::perMinutes(10, 10)->by($request->ip()),
+                Limit::perMinutes(10, 3)->by('phone|'.(is_string($phone) ? $phone : '')),
+            ];
+        });
+
         RateLimiter::for('login', function (Request $request): array {
             $phone = $request->input('phone');
 

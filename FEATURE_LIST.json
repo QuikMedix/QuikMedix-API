@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-14",
+  "last_updated": "2026-11-15",
   "features": [
     {
       "id": "orders-qr-status",
@@ -370,6 +370,26 @@
         "2026-11-14 final: composer test 547 tests / 2561 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; config, route and view caching OK; class names all resolve. Moved code keeps the trailing whitespace it already had (git am reports 36 such lines)."
       ],
       "notes": "Branch refactor/modularize-phase-4 on top of refactor/framework-middleware-defaults (dbcea05). Not verified: browser, MySQL, PHP 8.5, Vite build. Left as is: 906 DB::table reads that return rows (converting them changes what the views receive and needs page checks on MySQL); validation was not moved to form requests because the web controllers do not call validate() and new rules would be new behavior; OrderController (797 lines) and the two views with 31 and 61 Blade expressions inside their scripts; LexaAdminApiNoAuth. Removed tests: seven driver-app variants of NotifyNextPatientTest whose subject, the next_patient_push wrapper, is gone. Deploy: composer dump-autoload and php artisan optimize:clear; jobs queued before the deploy that carry App\\User would not load. Follow-up: Schema::defaultStringLength(191) removed after the owner confirmed MySQL 8."
+    },
+    {
+      "id": "open-api-routes-and-tariff-action",
+      "priority": 14,
+      "area": "security and maintainability",
+      "title": "Close the open chat endpoints, limit password resets by text message, one tariff calculation, MySQL migration job in CI",
+      "user_visible_behavior": "api/chat-token, api/users/get and api/chats/new_message answer only a caller with a bearer token or the signature the chat page carries, and only for that person; anyone else gets 401 or 403. api/user/reset answers 429 after three resets for one phone or ten from one address within ten minutes. Delivery prices are calculated as before.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests for the three chat endpoints: no credentials, wrong or expired signature, someone else's identity, a non-member of the chat, a bearer token; and for the reset limit.",
+        "Check that the four copies of the tariff calculation are identical line for line before replacing them; test the action for each area, delivery window and surcharge.",
+        "composer test.",
+        "In a browser against the owner's local app on MySQL, signed in as the test superadmin, open every parameterless GET page and a set of detail pages of the phase 4 branch and look for server errors; load the driver route page and check its moved scripts."
+      ],
+      "evidence": [
+        "2026-11-15 ChatAccessTest: 6 tests, 33 assertions. CalculateOrderTariffTest: 7 tests. The four tariff blocks were identical (77 lines each) and read only $order.",
+        "2026-11-15 composer test: 560 tests / 2608 assertions, 45 routing and 69 tariff checks.",
+        "2026-11-15 browser, built-in browser pane, http://127.0.0.1:8000 on refactor/modularize-phase-4 with MySQL: 51 list and form pages and 33 detail pages fetched, all 200 with their own titles, no SQL or PHP error text in any. /routes-list/driver/6 loaded both moved scripts, window.driverRoutePage was set, reload_priority, updateOfficeId and initMap were defined and the trash drop target was initialised; no script errors in the console. Only GET requests were made; nothing was submitted, dragged or saved."
+      ],
+      "notes": "The chat page (resources/views/chats/chat_api.blade.php) now sends viewer and signature with its five calls; twiliochat-api.js is at ?v=23. If a mobile app calls these three endpoints natively without its bearer token it will get 401 until it sends the token. Not changed, for the owner: the Zadarma webhook is not signature-checked; api/pharmacy-list and api/driver-create are public by design (driver sign-up). The CI job mysql-schema has not been run; CI is on manual dispatch. The browser check covered pages before the three commits of this entry were applied to the owner's folder, and did not cover form submissions or the chat page inside the mobile web view."
     }
   ]
 }

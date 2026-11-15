@@ -10,6 +10,8 @@ class TokenController extends Controller
     public function generate(Request $request, AccessToken $accessToken, ChatGrant $chatGrant)
     {
         $identity = $request->input("identity");
+        // A chat token lets its holder read and write as that identity, so it is only issued to that person.
+        abort_unless((string) $identity === $request->attributes->get('chat_viewer'), 403, 'This chat identity is not yours.');
 
         $TWILIO_CHAT_SERVICE_SID = config()->string('app.twilio_chatServiceSid');
 

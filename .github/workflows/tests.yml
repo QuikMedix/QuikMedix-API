@@ -47,3 +47,46 @@ jobs:
       - run: node tests/smoke/table-navigation.js
       - run: node tests/smoke/tariff-area-editor.js
       - run: composer audit
+
+  mysql-schema:
+    # The suite runs on SQLite. This job proves the migrations, the schema baseline included,
+    # also build on MySQL 8, the database the application runs on.
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_DATABASE: quikmedix_ci
+          MYSQL_ROOT_PASSWORD: ci-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: quikmedix_ci
+      DB_USERNAME: root
+      DB_PASSWORD: ci-only
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+      LOG_CHANNEL: stderr
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, curl, dom, gd, intl, mbstring, pdo_mysql, simplexml, sodium, xml, zip
+          coverage: none
+          tools: composer:v2
+      - run: make prepare-storage
+      - run: composer install --no-interaction --prefer-dist
+      - run: php artisan migrate --force --no-interaction
+      - run: php artisan migrate:status --no-interaction

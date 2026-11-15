@@ -508,3 +508,15 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Commit status: eleven commits plus this record on `refactor/modularize-phase-4`, added to the owner's fork checkout. Not pushed by the session, not deployed.
 - Next action: browser check on MySQL; convert the row-returning reads to models area by area with page checks; OrderController; the remaining inline scripts; review the open API routes; decide on `defaultStringLength` once the MySQL version is known.
 - Follow-up, same day: the owner confirmed MySQL 8, so `Schema::defaultStringLength(191)` is removed. Existing columns are untouched; string columns created from now on default to 255.
+
+## Session log — 2026-11-15: open API routes, tariff action, browser check
+
+- Goal: the owner asked to continue down the list: open API routes, models, big controllers, policies, validation, scripts, MySQL tests.
+- Done: `chat.viewer` middleware and `App\Support\ChatViewer` signature on api/chat-token, api/users/get and api/chats/new_message; `password-reset` rate limiter on api/user/reset; `App\Actions\CalculateOrderTariff` replaces four identical copies; `mysql-schema` CI job.
+- Browser check (first one in this work): the owner supplied a test superadmin for the local app; 84 GET pages of the phase 4 branch answered 200 without error text on MySQL, and the driver route page's moved scripts load and define their functions. Read-only: no submissions.
+- Not done, and why: converting the row-returning reads to models (a mechanical swap changes what views receive without using relationships; it should be rewritten page by page); policies for the 124 role comparisons; form requests (new rejections are a product decision per form); the remaining inline scripts and the Vite build (package installs are blocked in the session); OrderController.
+- Verification: see FEATURE_LIST.json `open-api-routes-and-tariff-action`.
+- Not verified: form submissions in a browser; the chat page inside the mobile apps; PHP 8.5; the new CI job.
+- Commit status: three commits plus this record on `refactor/modularize-phase-4`, added to the owner's fork checkout. Not pushed by the session.
+- Next action: owner to confirm how the mobile apps call the chat endpoints; then models page by page, starting with orders.
+
