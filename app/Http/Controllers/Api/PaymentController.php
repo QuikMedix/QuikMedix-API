@@ -19,7 +19,7 @@ class PaymentController extends Controller
 {
     public function cards() {
         if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
-            $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+            $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
             if(!empty($payment_account)) {
                 return response()->json([
                     'card' => "XXXX".substr($payment_account->card,-4)
@@ -59,7 +59,7 @@ class PaymentController extends Controller
                     $user_address[3]="NY";
                 }
                 $amount = 1;
-                $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+                $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
                 $client = new \Square\SquareClient([
                     'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
                     'environment' => config('app.SQUARE_ENVIRONMENT'),
@@ -84,7 +84,7 @@ class PaymentController extends Controller
                     if ($api_response->isSuccess()) {
                         $result = $api_response->getResult();
                         PaymentAccount::query()->insert(['user_id'=>Auth::user()->id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
-                        $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+                        $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
                     } else {
                         $error = json_encode($api_response->getErrors());
                         return response()->json([
@@ -188,10 +188,10 @@ class PaymentController extends Controller
     public function payCopay($order_id) {
         // One attempt per order at a time, so a double tap cannot charge the card twice.
         $response = Cache::lock('pay-copay:'.$order_id, 120)->get(function () use ($order_id) {
-            $order = DB::table('orders')->where('id',$order_id)->first();
+            $order = Order::query()->where('id',$order_id)->first();
             if(!empty($order)) {
                 if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('user')) && $order->user_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
-                    $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
+                    $payment_account = PaymentAccount::query()->where('user_id',$order->user_id)->first();
                     if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
                         $client = new \Square\SquareClient([
                             'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
@@ -264,10 +264,10 @@ class PaymentController extends Controller
      * @param int|string $order_id
      */
     public function PayedCashCopay($order_id) {
-        $order = DB::table('orders')->where('id',$order_id)->first();
+        $order = Order::query()->where('id',$order_id)->first();
         if(!empty($order)) {
             if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('driver')) && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
-                $cash_log = DB::table('cash_log')->where("order_id",$order_id)->where("driver_id",Auth::user()->id)->first();
+                $cash_log = CashLog::query()->where("order_id",$order_id)->where("driver_id",Auth::user()->id)->first();
                 if(!empty($cash_log)) {
                     CashLog::query()->where('id',$cash_log->id)->update(["copay"=>$order->copay]);
                 } else {
@@ -275,23 +275,23 @@ class PaymentController extends Controller
                 }
                 Order::query()->where('id',$order_id)->update(['statuse_copay'=>4]);
                 if(empty(Auth::user()->pharmacy_id)) {
-                    $next_office = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->where('type','office')->first();
+                    $next_office = RouteStop::query()->where('driver_id',Auth::user()->id)->where('type','office')->first();
                     if(!empty($next_office)) {
                         RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
                     } else {
                         $last_route = RouteStop::query()->where('driver_id',Auth::user()->id)->max('priority');
-                        $route0=DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->first();
+                        $route0=RouteStop::query()->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->first();
                         if(!empty($route0)) {
                             RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>1,'type_pay'=>$route0->type_pay,'pay_value'=>$route0->pay_value,'priority'=>(intval($last_route)+1)]);
                         }
                     }
                 } else {
-                    $next_office = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id)->first();
+                    $next_office = RouteStop::query()->where('driver_id',Auth::user()->id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id)->first();
                     if(!empty($next_office)) {
                         RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
                     } else {
                         $last_route = RouteStop::query()->where('driver_id',Auth::user()->id)->max('priority');
-                        $route0=DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->first();
+                        $route0=RouteStop::query()->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->first();
                         if(!empty($route0)) {
                             RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>Auth::user()->pharmacy_id,'type_pay'=>$route0->type_pay,'pay_value'=>$route0->pay_value,'priority'=>(intval($last_route)+1)]);
                         }
@@ -318,7 +318,7 @@ class PaymentController extends Controller
      * @param int|string $order_id
      */
     public function notPayedCashCopay($order_id) {
-        $order = DB::table('orders')->where('id',$order_id)->first();
+        $order = Order::query()->where('id',$order_id)->first();
         if(!empty($order)) {
             if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('driver')) && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                 Order::query()->where('id',$order_id)->update(['statuse_copay'=>5]);

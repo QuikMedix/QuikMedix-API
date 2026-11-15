@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\RouteStop;
+use App\Models\Location;
+use App\Models\Pharmacy;
+use App\Models\Office;
 use App\Http\Controllers\Controller;
 use App\Models\PackageTransition;
 use App\Support\Notifications;
@@ -123,16 +127,16 @@ class RouteController extends Controller
      */
     public function routesShow($route_id) {
         if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
-            $route = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id")->havingRaw('min(id) = ?', [$route_id])->orderBy("priority","asc")->first();
+            $route = RouteStop::query()->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id")->havingRaw('min(id) = ?', [$route_id])->orderBy("priority","asc")->first();
             if(empty($route) || empty($route->id)) {
                 return response()->json([
                     'message' => 'Route not found',
                     'errors' => 'Not Found'
                 ], 404);
             }
-            $driver= DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',Auth::user()->id)->first();
+            $driver= Location::query()->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',Auth::user()->id)->first();
             if($route->type=='pharmacy') {
-                $pharmacy = DB::table('pharmacys')->where('id',$route->type_id)->first();
+                $pharmacy = Pharmacy::query()->where('id',$route->type_id)->first();
                 $pharmacy->google_maps_route = "https://www.google.com/maps/dir/".str_replace(' ','',$driver->location)."/".str_replace(' ','',$pharmacy->location)."/";
                 return response()->json([
                     'route' => $route,
@@ -171,8 +175,8 @@ class RouteController extends Controller
                 ], 200);
             }
             if($route->type=='office') {
-                $route = DB::table('routes_priority')->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id", "priority")->havingRaw('min(id) = ?', [$route_id])->orderBy("priority","asc")->get();
-                $office = DB::table('offices')->where('id',$route->type_id)->first();
+                $route = RouteStop::query()->select(DB::raw("min(id) as id"), "driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', Auth::user()->id)->groupBy("type","type_id","driver_id", "priority")->havingRaw('min(id) = ?', [$route_id])->orderBy("priority","asc")->get();
+                $office = Office::query()->where('id',$route->type_id)->first();
                 $office->google_maps_route = "https://www.google.com/maps/dir/".str_replace(' ','',$driver->location)."/".str_replace(' ','',$office->location)."/";
                 return response()->json([
                     'route' => $route,
@@ -259,7 +263,7 @@ class RouteController extends Controller
     public function startRoute() {
         if(Auth::user()->hasAnyRole('admin', 'driver')) {
             DB::table('users')->where('id', Auth::user()->id)->update(['route_status'=>'started']);
-            $routes = DB::table('routes_priority')->where('driver_id', Auth::user()->id)->orderBy("priority","asc")->get();
+            $routes = RouteStop::query()->where('driver_id', Auth::user()->id)->orderBy("priority","asc")->get();
             foreach($routes as $value) {
                 if($value->type=='patient') {
                     //Notifications::send_push(DB::table('orders')->where('id', $value->order_id)->first()->user_id,"QuikMedix","Your orders are out for delivery today");

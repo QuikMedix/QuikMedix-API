@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminArea;
 use App\Models\Pharmacy;
 use App\Models\ActionLog;
 use App\Actions\LogUserChanges;
@@ -183,9 +184,9 @@ class UserSettingsController extends Controller
     public function settingsUsersedit($user_id) {
         Gate::authorize('manage-account', [$user_id]);
         $user = DB::table('users')->where('id', $user_id)->first();
-        $pharmacys = DB::table('pharmacys')->get();
-        $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
-        $admin_areas = DB::table('admin_areas')->get();
+        $pharmacys = Pharmacy::query()->get();
+        $user_actions = ActionLog::query()->where('user_id', $user_id)->get();
+        $admin_areas = AdminArea::query()->get();
         $res_view = view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas, 'user_actions'=>$user_actions, 'pharmacys'=>$pharmacys, 'title'=>'User Edit','br1'=>'Settings','br2'=>'Users','br3'=>'User Edit','alert'=>'']);
         return $this->page(request(), $res_view);
     }
@@ -303,7 +304,7 @@ class UserSettingsController extends Controller
                 $input['zip']=$request->input('zip');
                 $input['apartment']=$request->input('apartment');
                 $input['pharmacy']=$request->input('pharmacy');
-                $pharmacys = DB::table('pharmacys')->get();
+                $pharmacys = Pharmacy::query()->get();
                 return view('settings.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Settings','br2'=>'Users','br3'=>'User Add','alert'=>'User with this email already exists','input'=>$input]);
             } else {
                 if(!empty(DB::table('users')->where('phone', $request->input('phone'))->where('pharmacy_id', $request->input('pharmacy'))->first())) {
@@ -317,7 +318,7 @@ class UserSettingsController extends Controller
                     $input['zip']=$request->input('zip');
                     $input['apartment']=$request->input('apartment');
                     $input['pharmacy']=$request->input('pharmacy');
-                    $pharmacys = DB::table('pharmacys')->get();
+                    $pharmacys = Pharmacy::query()->get();
                     return view('settings.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Settings','br2'=>'Users','br3'=>'User Add','alert'=>'User with this phone already exists','input'=>$input]);
                 } else {
                     if($request->hasFile('image')) {

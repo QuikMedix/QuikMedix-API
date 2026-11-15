@@ -57,7 +57,7 @@ class PaymentController extends Controller
             // Set the transaction's refId
             $refId = 'ref' . time();
             // Set credit card information for payment profile
-            $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+            $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
             if(!empty($payment_account)) {
                 $request = new AnetAPI\UpdateCustomerPaymentProfileRequest();
                 $request->setMerchantAuthentication($merchantAuthentication);
@@ -164,7 +164,7 @@ class PaymentController extends Controller
         } else {
             $error='All card input is required.';
         }
-        $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+        $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
         return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
     }
 
@@ -188,7 +188,7 @@ class PaymentController extends Controller
      * @param int|string $pharmacy_id
      */
     public function cardPharmacyAddHandler($pharmacy_id,Request $request) {
-        $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
+        $pharmacy = Pharmacy::query()->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
             abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
             $success='';
@@ -213,7 +213,7 @@ class PaymentController extends Controller
                     $user_address[3]="NY";
                 }
                 $amount = 1;
-                $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+                $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
                 $client = new \Square\SquareClient([
                     'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
                     'environment' => config('app.SQUARE_ENVIRONMENT'),
@@ -238,7 +238,7 @@ class PaymentController extends Controller
                     if ($api_response->isSuccess()) {
                         $result = $api_response->getResult();
                         PharmacyPaymentAccount::query()->insert(['pharmacy_id'=>$pharmacy_id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
-                        $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+                        $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
                     } else {
                         $error = json_encode($api_response->getErrors());
                         return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
@@ -307,7 +307,7 @@ class PaymentController extends Controller
             } else {
                 $error='All Payment Method input is required.';
             }
-            $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+            $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
             return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
         } else {
             return abort(404, "Not found pharmacy");
@@ -318,10 +318,10 @@ class PaymentController extends Controller
      * @param int|string $pharmacy_id
      */
     public function refillPharmacyBalance($pharmacy_id) {
-        $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
+        $pharmacy = Pharmacy::query()->where("id",$pharmacy_id)->first();
         abort_unless(!empty($pharmacy), 403, AccessMessages::NO_PERMISSION);
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-        $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+        $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
         $success='';
         $error='';
         return view('card_pharmacy.pay',['payment_account'=>$payment_account,'pharmacy'=>$pharmacy,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
@@ -331,10 +331,10 @@ class PaymentController extends Controller
      * @param int|string $pharmacy_id
      */
     public function refillPharmacyBalanceHandler(Request $request, $pharmacy_id) {
-        $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
+        $pharmacy = Pharmacy::query()->where("id",$pharmacy_id)->first();
         abort_unless(!empty($pharmacy), 403, AccessMessages::NO_PERMISSION);
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-        $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+        $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
         $success='';
         $error='';
         $amount = round(floatval($request->input('amount')),2);
@@ -397,10 +397,10 @@ class PaymentController extends Controller
      * @param int|string $order_id
      */
     public function payCopay($order_id) {
-        $order = DB::table('orders')->where('id',$order_id)->first();
+        $order = Order::query()->where('id',$order_id)->first();
         abort_unless(!empty($order), 403, AccessMessages::NO_PERMISSION);
         abort_unless(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->can('admin')) || Auth::user()->hasRole('logist')) && $order->copay>0, 403, AccessMessages::NO_PERMISSION);
-        $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
+        $payment_account = PaymentAccount::query()->where('user_id',$order->user_id)->first();
         $success='';
         $error='';
         $res_view = view('card.pay-copay',['payment_account'=>$payment_account,'order'=>$order,'success'=>$success,'error'=>$error,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
@@ -411,11 +411,11 @@ class PaymentController extends Controller
      * @param int|string $order_id
      */
     public function payCopayHandler(Request $request, $order_id) {
-        $order = DB::table('orders')->where('id',$order_id)->first();
+        $order = Order::query()->where('id',$order_id)->first();
         abort_unless(!empty($order), 403, AccessMessages::NO_PERMISSION);
         $user = DB::table('users')->where('id',$order->user_id)->first();
         abort_unless(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->can('admin')) || Auth::user()->hasRole('logist')) && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0, 403, AccessMessages::NO_PERMISSION);
-        $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
+        $payment_account = PaymentAccount::query()->where('user_id',$order->user_id)->first();
         $success='';
         $error='';
         if(!empty($request->input('pay')) && !empty($payment_account)) {
@@ -598,7 +598,7 @@ class PaymentController extends Controller
                 }
             }
         }
-        $payment_account = DB::table('payment_accounts')->where('user_id',$order->user_id)->first();
+        $payment_account = PaymentAccount::query()->where('user_id',$order->user_id)->first();
         return view('card.pay-copay',['payment_account'=>$payment_account,'order'=>$order,'success'=>$success,'error'=>$error,'title'=>'Billing','br1'=>'Billings','br2'=>'List']);
     }
 }

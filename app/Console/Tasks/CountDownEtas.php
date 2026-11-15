@@ -2,6 +2,7 @@
 
 namespace App\Console\Tasks;
 
+use App\Models\DriverEta;
 use App\Models\User;
 use App\Support\HereMaps;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ class CountDownEtas
                     continue;
                 }
                 $driver_loc = HereMaps::roundLocation($driver_location);
-                $eta = DB::table('drivers_eta')->where('driver_id',$driver->id)->first();
+                $eta = DriverEta::query()->where('driver_id',$driver->id)->first();
                 $access=TRUE;
                 if(!empty($eta)) {
                     if($eta->last_location==$driver_loc) {

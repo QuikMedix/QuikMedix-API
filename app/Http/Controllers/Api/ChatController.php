@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Pharmacy;
 use App\Http\Controllers\Controller;
 use App\Support\Notifications;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,7 @@ class ChatController extends Controller
             $last_message_date=$chat->last_message_date;
             $last_message_body=$chat->last_message_body;
             $user = DB::table('users')->where('id', $user_id)->first();
-            $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
+            $user_pharmacy = Pharmacy::query()->where('id', $user->pharmacy_id)->first();
             if(empty($user_pharmacy)) {
                 $user_pharmacy='';
             } else {
@@ -45,8 +46,8 @@ class ChatController extends Controller
      */
     public function chatUser($user_id) {
         $user = DB::table('users')->where('id', $user_id)->first();
-        $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
-        $user_pharmacy2 = DB::table('pharmacys')->where('id', Auth::user()->pharmacy_id)->first();
+        $user_pharmacy = Pharmacy::query()->where('id', $user->pharmacy_id)->first();
+        $user_pharmacy2 = Pharmacy::query()->where('id', Auth::user()->pharmacy_id)->first();
         if(empty($user_pharmacy)) {
             $user_pharmacy='';
         } else {

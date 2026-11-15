@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
 use App\Models\ActionLog;
 use Illuminate\Http\Request;
 use App\Support\Notifications;
@@ -113,7 +114,7 @@ class LexaAdminApiNoAuth extends Controller
     }
 
     public static function pharmacyList() {
-        $pharmacys = DB::table('pharmacys')->select('id','name','address')->get();
+        $pharmacys = Pharmacy::query()->select('id','name','address')->get();
         return response()->json([
             'pharmacys' => $pharmacys
         ], 200);
@@ -232,7 +233,7 @@ class LexaAdminApiNoAuth extends Controller
                         'errors' => 'Not Found'
                     ], 404);
                 }
-                $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
+                $user_pharmacy = Pharmacy::query()->where('id', $user->pharmacy_id)->first();
                 if(empty($user_pharmacy)) {
                     $user_pharmacy='';
                 } else {
@@ -254,7 +255,7 @@ class LexaAdminApiNoAuth extends Controller
                         'errors' => 'Not Found'
                     ], 404);
                 }
-                $user_pharmacy = DB::table('pharmacys')->where('id', $user->pharmacy_id)->first();
+                $user_pharmacy = Pharmacy::query()->where('id', $user->pharmacy_id)->first();
                 if(empty($user_pharmacy)) {
                     $user_pharmacy='';
                 } else {

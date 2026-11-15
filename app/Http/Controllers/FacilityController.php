@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
+use App\Models\Pharmacy;
 use App\Models\AdditionalRecipient;
 use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
@@ -134,9 +136,9 @@ class FacilityController extends Controller
 
         return $this->page($request, view('facilitys.user_edit', [
             'user' => DB::table('users')->where('id', $user_id)->first(),
-            'user_actions' => DB::table('action_log')->where('user_id', $user_id)->get(),
-            'pharmacys' => DB::table('pharmacys')->get(),
-            'additional_recipients' => DB::table('additional_recipients')->where('user_id', $user_id)->get(),
+            'user_actions' => ActionLog::query()->where('user_id', $user_id)->get(),
+            'pharmacys' => Pharmacy::query()->get(),
+            'additional_recipients' => AdditionalRecipient::query()->where('user_id', $user_id)->get(),
             'patients' => DB::table('users')->where('pharmacy_id', $pharmacy_id)->where('role', 'user')->get(),
             'title' => 'Patients Edit', 'br1' => 'Patients', 'br2' => 'Patients Edit',
             'alert' => '',

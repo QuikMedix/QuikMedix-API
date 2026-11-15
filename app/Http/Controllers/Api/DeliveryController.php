@@ -31,7 +31,7 @@ class DeliveryController extends Controller
                     'errors' => 'Bad Request'
                 ], 400);
             }
-            $order=DB::table('orders')->where('id',$order_id)->where('driver_id',Auth::user()->id)->first();
+            $order=Order::query()->where('id',$order_id)->where('driver_id',Auth::user()->id)->first();
             if(!empty($order)) {
                 if (in_array((int) $order->statuse_id, [OrderStatus::READY_FOR_PICKUP, 2, 6, OrderStatus::HUB], true)) {
                     Order::query()->where('id',$order_id)->update(['statuse_id'=>OrderStatus::ON_THE_WAY]);
@@ -337,7 +337,7 @@ class DeliveryController extends Controller
      */
     private function recordPatientScan($order_id, $bag, bool $codeMatchesOrder = true)
     {
-        $order = DB::table('orders')->where('id',$order_id)->where('driver_id', Auth::user()->id)->first();
+        $order = Order::query()->where('id',$order_id)->where('driver_id', Auth::user()->id)->first();
         if(isset($order) && $codeMatchesOrder) {
             $count_added = PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
             if(1+$count_added>$order->count_bags) {

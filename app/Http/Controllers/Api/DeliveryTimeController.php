@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\DeliveryTime;
 use App\Models\Order;
 use App\Http\Controllers\Concerns\RespondsWithApiErrors;
 use App\Http\Controllers\Controller;
@@ -20,7 +21,7 @@ class DeliveryTimeController extends Controller
 
     public function index(): JsonResponse
     {
-        return response()->json(['delivery_times' => DB::table('delivery_times')->get()]);
+        return response()->json(['delivery_times' => DeliveryTime::query()->get()]);
     }
 
     public function update(Request $request): JsonResponse
@@ -32,7 +33,7 @@ class DeliveryTimeController extends Controller
             return $this->forbidden('Fields is not be empty.');
         }
 
-        $order = DB::table('orders')->where('id', $request->input('order_id'))->first();
+        $order = Order::query()->where('id', $request->input('order_id'))->first();
         if (empty($order) || $order->user_id != $request->user()->id) {
             return $this->notFound('Order not found');
         }

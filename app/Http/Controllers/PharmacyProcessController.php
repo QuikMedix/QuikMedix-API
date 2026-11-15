@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Location;
+use App\Models\RouteStop;
 use App\Models\DriverEta;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
@@ -70,8 +72,8 @@ class PharmacyProcessController extends Controller
             array_push($patients_locations,array('id'=>$row->user_id,'order_id'=>$row->id,'location'=>$row->userlocation));
             array_push($pharmacy_locations,array('id'=>$row->pharmacy_id,'location'=>$row->pharmacylocation));
         }
-        $locations = DB::table('locations')->where('user_id', $driver_id)->orderBy("id","desc")->first();
-        $routes_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","asc")->get();
+        $locations = Location::query()->where('user_id', $driver_id)->orderBy("id","desc")->first();
+        $routes_priority = RouteStop::query()->where('driver_id', $driver_id)->orderBy("priority","asc")->get();
         $patient_routes_priority=array();
         $pharmacy_routes_priority=array();
         foreach($routes_priority as $row) {
@@ -84,8 +86,8 @@ class PharmacyProcessController extends Controller
         }
         $patients_locations=array_unique($patients_locations,SORT_REGULAR);
         $pharmacy_locations=array_unique($pharmacy_locations,SORT_REGULAR);
-        $routes_priority1 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver_id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
-        $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver_id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
+        $routes_priority1 = RouteStop::query()->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", DB::raw("min(priority) as priority"))->where('driver_id', $driver_id)->where('type', '!=', 'office')->groupBy("type","type_id","driver_id")->orderBy("priority","asc")->get();
+        $routes_priority0 = RouteStop::query()->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $driver_id)->where('type', 'office')->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->get();
         $routes_priority = array();
         foreach ($routes_priority1 as $value) {
             array_push($routes_priority,$value);

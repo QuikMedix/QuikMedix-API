@@ -249,7 +249,7 @@ class ProfileController extends Controller
     }
 
     public function profileFamily_members() {
-        $family_members = DB::table('family_members')->where('user_id', Auth::user()->id)->get();
+        $family_members = FamilyMember::query()->where('user_id', Auth::user()->id)->get();
         return response()->json([
             'family_members' => $family_members
         ], 200);
@@ -283,7 +283,7 @@ class ProfileController extends Controller
     }
 
     public function profileFamily_membersRemoveHandler(Request $request) {
-        $family_member = DB::table('family_members')->where('id',$request->input('family_member_id'))->first();
+        $family_member = FamilyMember::query()->where('id',$request->input('family_member_id'))->first();
         if(!empty($family_member)) {
             if($family_member->user_id==Auth::user()->id) {
                 FamilyMember::query()->where('id',$request->input('family_member_id'))->delete();
