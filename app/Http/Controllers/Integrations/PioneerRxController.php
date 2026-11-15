@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Integrations;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use DB;
 
-class PioneerrxApi extends Controller
+class PioneerRxController extends Controller
 {
     public function IsAuthenticated(Request $request) {
         $pharmacy_auth = $this->checkAuth($request);

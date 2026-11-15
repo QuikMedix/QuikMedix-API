@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Integrations;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\Rx;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-class MerchantApi extends Controller
+class MicroMerchantController extends Controller
 {
     /**
      * @param int|string $pharmacy_id

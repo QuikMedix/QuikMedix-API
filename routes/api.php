@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\DeleteAccountController;
 use App\Http\Controllers\Api\DeliveryTimeController;
 use App\Http\Controllers\Api\DriverShiftController;
 use App\Http\Controllers\Api\OrderFeedbackController;
-use App\Http\Controllers\BestRxApi;
+use App\Http\Controllers\Integrations\BestRxController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\DeliveryController;
@@ -15,8 +15,8 @@ use App\Http\Controllers\Api\RouteController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\LexaAdminApiNoAuth;
-use App\Http\Controllers\MerchantApi;
-use App\Http\Controllers\PioneerrxApi;
+use App\Http\Controllers\Integrations\MicroMerchantController;
+use App\Http\Controllers\Integrations\PioneerRxController;
 use App\Http\Controllers\TokenController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,30 +51,30 @@ Route::post('/user/reset/', [LexaAdminApiNoAuth::class, 'reSendAuthMessage']);
 Route::post('/telegram/auth/', [LexaAdminApiNoAuth::class, 'telegramAuth']);
 
 Route::group(['prefix' => 'bestrx'], function () {
-    Route::get('/Store', [BestRxApi::class, 'getpharmacyinfo']);
-    Route::post('/Order/CreateOrder', [BestRxApi::class, 'orderAdd']);
-    Route::post('/Address/ValidateAddress', [BestRxApi::class, 'validateAddress']);
-    Route::post('/Order/CancelOrder', [BestRxApi::class, 'orderDelete']);
-    Route::get('/orders/ticket', [BestRxApi::class, 'ordersTicket']);
-    Route::get('/orders/ticket/print', [BestRxApi::class, 'ordersTicketPrintPdf']);
-    Route::any('{any}', [BestRxApi::class, 'NotFound'])->where('any', '.*');
+    Route::get('/Store', [BestRxController::class, 'getpharmacyinfo']);
+    Route::post('/Order/CreateOrder', [BestRxController::class, 'orderAdd']);
+    Route::post('/Address/ValidateAddress', [BestRxController::class, 'validateAddress']);
+    Route::post('/Order/CancelOrder', [BestRxController::class, 'orderDelete']);
+    Route::get('/orders/ticket', [BestRxController::class, 'ordersTicket']);
+    Route::get('/orders/ticket/print', [BestRxController::class, 'ordersTicketPrintPdf']);
+    Route::any('{any}', [BestRxController::class, 'NotFound'])->where('any', '.*');
 });
 
 Route::group(['prefix' => 'merchant'], function () {
-    Route::get('/getpharmacyinfo/{pharmacy_id}', [MerchantApi::class, 'getpharmacyinfo']);
-    Route::post('/orders', [MerchantApi::class, 'orderAdd']);
-    Route::post('/orders/status', [MerchantApi::class, 'orderStatus']);
-    Route::post('/orders/{order_id}/prescriptions', [MerchantApi::class, 'orderRxAdd']);
-    Route::delete('/orders/{order_id}/prescriptions/{rx_number}', [MerchantApi::class, 'orderRxDelete']);
-    Route::delete('/orders/{order_id}', [MerchantApi::class, 'orderDelete']);
-    Route::get('/orders/ticket', [MerchantApi::class, 'ordersTicket']);
-    Route::get('/orders/ticket/print', [MerchantApi::class, 'ordersTicketPrintPdf']);
-    Route::any('{any}', [MerchantApi::class, 'NotFound'])->where('any', '.*');
+    Route::get('/getpharmacyinfo/{pharmacy_id}', [MicroMerchantController::class, 'getpharmacyinfo']);
+    Route::post('/orders', [MicroMerchantController::class, 'orderAdd']);
+    Route::post('/orders/status', [MicroMerchantController::class, 'orderStatus']);
+    Route::post('/orders/{order_id}/prescriptions', [MicroMerchantController::class, 'orderRxAdd']);
+    Route::delete('/orders/{order_id}/prescriptions/{rx_number}', [MicroMerchantController::class, 'orderRxDelete']);
+    Route::delete('/orders/{order_id}', [MicroMerchantController::class, 'orderDelete']);
+    Route::get('/orders/ticket', [MicroMerchantController::class, 'ordersTicket']);
+    Route::get('/orders/ticket/print', [MicroMerchantController::class, 'ordersTicketPrintPdf']);
+    Route::any('{any}', [MicroMerchantController::class, 'NotFound'])->where('any', '.*');
 });
 
 Route::group(['prefix' => 'enterprise'], function () {
-    Route::post('/IsAuthenticated', [PioneerrxApi::class, 'IsAuthenticated']);
-    Route::any('{any}', [PioneerrxApi::class, 'NotFound'])->where('any', '.*');
+    Route::post('/IsAuthenticated', [PioneerRxController::class, 'IsAuthenticated']);
+    Route::any('{any}', [PioneerRxController::class, 'NotFound'])->where('any', '.*');
 });
 
 // Signed in with a token, on an account that is neither blocked nor waiting for approval.
