@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Area;
 use App\Models\AreaZip;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,13 +16,8 @@ use Illuminate\Support\Facades\DB;
  */
 class DeliveryAreaController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function settingsStates() {
         $countOnPage=20;

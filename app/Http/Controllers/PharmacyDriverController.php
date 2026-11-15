@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Http\Requests\PharmacyDriverRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +19,7 @@ use Illuminate\View\View;
  */
 class PharmacyDriverController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     private const PER_PAGE = 30;
 

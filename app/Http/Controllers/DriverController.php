@@ -9,7 +9,7 @@ use App\Models\RouteStopLog;
 use App\Models\DriverPayout;
 use App\Actions\LogUserChanges;
 use App\Actions\ScanPackage;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\Notifications;
 use App\Support\PageLinks;
 use App\Models\User;
@@ -24,13 +24,8 @@ use App\Actions\NotifyNextPatient;
  */
 class DriverController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     /**
      * @param int|string $driver_id

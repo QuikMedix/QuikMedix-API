@@ -6,7 +6,7 @@ use App\Models\Order;
 use App\Models\Note;
 use App\Actions\RecalculateDriverEta;
 use App\Actions\ReturnOrderToOffice;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +21,7 @@ use Illuminate\View\View;
  */
 class DispatchingController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     /** A decision that sends an order back clears what the driver recorded at the door. */
     private const NO_PROOF_OF_DELIVERY = ['drop_off_photo' => null, 'signature_photo' => null, 'signature_type' => null];

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Http\Controllers\Concerns\LoadsOrderLookups;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -18,14 +18,9 @@ use App\Support\AccessMessages;
  */
 class DashboardController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
     use LoadsOrderLookups;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function home() {
         return redirect()->route('home');

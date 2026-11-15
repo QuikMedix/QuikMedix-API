@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AdminArea;
 use App\Models\AdminAreaZone;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,13 +15,8 @@ use Illuminate\Support\Facades\DB;
  */
 class AdminAreaController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function settingsAdminAreas() {
         $admin_areas = DB::table('admin_areas')->get();

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActionLog;
 use App\Actions\LogUserChanges;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,13 +16,8 @@ use App\Support\AccessMessages;
  */
 class ProfileController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function profile() {
         $pharmacys = DB::table('pharmacys')->get();

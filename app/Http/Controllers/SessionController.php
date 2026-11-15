@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActionLog;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -16,7 +16,7 @@ use App\Support\AccessMessages;
  */
 class SessionController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
 
     public function logout()

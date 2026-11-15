@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
 use App\Actions\SendWelcomeSms;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Http\Requests\StorePatientRequest;
 use App\Support\GeoPoint;
 use App\Models\User;
@@ -27,7 +27,7 @@ use Illuminate\View\View;
  */
 class PatientController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     private const PER_PAGE = 30;
 

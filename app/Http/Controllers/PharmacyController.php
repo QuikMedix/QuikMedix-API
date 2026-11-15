@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pharmacy;
 use App\Models\PharmacyArea;
 use App\Actions\GeocodeAddress;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,13 +18,8 @@ use App\Support\AccessMessages;
  */
 class PharmacyController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function pharmacysList() {
         if((Auth::user()->can('admin'))) {

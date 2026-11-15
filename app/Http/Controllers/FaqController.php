@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Faq;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +16,7 @@ use Illuminate\View\View;
  */
 class FaqController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
     private const PER_PAGE = 20;
 

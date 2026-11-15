@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\LogUserChanges;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -19,13 +19,8 @@ use App\Support\AccessMessages;
  */
 class PharmacyUserController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     /**
      * @param int|string $pharmacy_id

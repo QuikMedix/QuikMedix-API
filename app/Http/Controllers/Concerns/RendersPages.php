@@ -8,9 +8,9 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\View\View;
 
 /**
- * Conventions the existing dashboard views rely on: AJAX section loading, page links and public uploads.
+ * How the dashboard pages are served: AJAX section loading, page links and public uploads.
  */
-trait RendersLegacyPages
+trait RendersPages
 {
     /**
      * Pages are also loaded into the dashboard over AJAX, which wants only the sections.

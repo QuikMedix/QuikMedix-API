@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,13 +15,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ReportController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function reports() {
         $res_view = view('reports.index',['alert'=>'','title'=>'Reports','br1'=>'Reports','br2'=>'Index']);

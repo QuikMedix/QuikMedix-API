@@ -7,7 +7,7 @@ use App\Models\Pharmacy;
 use App\Models\PharmacyPayment;
 use App\Models\Order;
 use App\Models\InvoiceExclusion;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -20,13 +20,8 @@ use App\Support\AccessMessages;
  */
 class BillingController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     /**
      * @param int|string $pharmacy_id

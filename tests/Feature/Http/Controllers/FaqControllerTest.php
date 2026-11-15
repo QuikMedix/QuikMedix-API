@@ -169,7 +169,7 @@ class FaqControllerTest extends TestCase
         $this->createFaqs(1);
         $this->actingAs($this->account('medic'));
 
-        $this->get('/faq/add')->assertForbidden()->assertSee('Permision error.');
+        $this->get('/faq/add')->assertForbidden()->assertSee('Permission error.');
         $this->post('/faq/add', ['save' => 1, 'title' => 'Question', 'text' => 'Answer'])->assertForbidden();
         $this->post('/faq', ['remove' => 1, 'faq_id' => 1])->assertForbidden();
 

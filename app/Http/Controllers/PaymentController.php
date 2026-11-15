@@ -7,7 +7,7 @@ use App\Models\PharmacyPaymentAccount;
 use App\Models\Pharmacy;
 use App\Models\PharmacyPayment;
 use App\Models\Order;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,13 +21,8 @@ use App\Support\AccessMessages;
  */
 class PaymentController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // Kept from LexaAdmin, whose pages load whole result sets at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function cardAdd() {
         $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();

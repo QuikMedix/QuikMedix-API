@@ -10,6 +10,7 @@ use App\Http\Controllers\FaqController;
 use App\Http\Controllers\LexaAdminApiNoAuth;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TwoFAController;
+use App\Http\Middleware\LiftMemoryLimit;
 use Illuminate\Support\Facades\Route;
 
 // Called by outside services, which have no session.
@@ -48,7 +49,7 @@ Route::middleware(['auth', '2fa'])->group(function () {
 });
 
 // Everything else needs a signed-in, active account. A route adds role: or allowed: where only some roles may enter.
-Route::middleware(['auth', '2fa', 'active'])->group(function () {
+Route::middleware(['auth', '2fa', 'active', LiftMemoryLimit::class])->group(function () {
     require __DIR__.'/web/dashboard.php';
     require __DIR__.'/web/pharmacies.php';
     require __DIR__.'/web/people.php';

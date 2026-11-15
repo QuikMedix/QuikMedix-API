@@ -6,7 +6,7 @@ use App\Models\Order;
 use App\Models\RouteStop;
 use App\Models\DriverPayout;
 use App\Models\Office;
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\Notifications;
 use App\Support\PageLinks;
 use App\Models\User;
@@ -25,13 +25,8 @@ use App\Actions\RecalculateDriverEta;
  */
 class RoutePlanningController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
-    public function __construct()
-    {
-        // The route pages load every open order of a driver or pharmacy at once.
-        ini_set('memory_limit', '-1');
-    }
 
     public function orders() {
         $orders = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created' , 'orders.statuse_id', 'orders.pharmacy_id', 'orders.driver_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.pharmacy_id', 'orders.driver_id', 'delivery_methods.name', 'delivery_times.name', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','users.last_name')->orderBy('orders.id','desc');

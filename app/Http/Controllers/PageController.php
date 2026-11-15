@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\RendersLegacyPages;
+use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Gate;
  */
 class PageController extends Controller
 {
-    use RendersLegacyPages;
+    use RendersPages;
 
 
     public function feedback() {
