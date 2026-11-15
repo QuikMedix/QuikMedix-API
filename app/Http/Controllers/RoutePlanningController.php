@@ -415,7 +415,7 @@ class RoutePlanningController extends Controller
                             $record['pay_value'] = $count_priority->pay_value;
                         }
                     }
-                    $data_array[] = $record;  
+                    $data_array[] = $record;
                 }
                 DB::table('routes_priority')->insert($data_array);
                 Notifications::send_push($driver_id,"QuikMedix","New route has added to your shift (or schedule)");
@@ -481,7 +481,7 @@ class RoutePlanningController extends Controller
                                     array_push($routesL,$routes_priorit);
                                 }
                             }
-                        } 
+                        }
                         if($routes_priorit->type=='office') {
                             $dot = DB::table('offices')->where("id",$routes_priorit->type_id)->first();
                             if(!empty($dot) && !empty($dot->location)) {
@@ -529,11 +529,11 @@ class RoutePlanningController extends Controller
                         $used_keys = [];
                         $next_key = 0;
                         while(count($used_keys)<count($routesL)) {
-                            $min_val = null; $min_key = null; 
+                            $min_val = null; $min_key = null;
                             array_push($used_keys,$next_key);
                             foreach($distances[$next_key] as $key => $val) {
-                                if(($val < $min_val || $min_val===null) && !in_array($key,$used_keys)) { 
-                                    $min_val = $val; 
+                                if(($val < $min_val || $min_val===null) && !in_array($key,$used_keys)) {
+                                    $min_val = $val;
                                     $min_key = $key;
                                 }
                                 if($type_route=="first" && $next_key==0) {
@@ -552,7 +552,7 @@ class RoutePlanningController extends Controller
                         }
                         LexaAdmin::eta_calculate($driver_id,TRUE);
                         return redirect()->back()->with('success', "Successfully the route is automatically built.");
-                    }    
+                    }
                 }
             } else if($request->input('eta_calculate')>0) {
                 LexaAdmin::eta_calculate($driver_id,TRUE);
