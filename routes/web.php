@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\BillingController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\PharmacyProcessController;
 use App\Http\Controllers\PharmacyUserController;
@@ -97,10 +100,10 @@ Route::post('/drivers/{pharmacy_id}/users/edit/{user_id}', [PharmacyDriverContro
 Route::get('/drivers/{pharmacy_id}/users/add', [PharmacyDriverController::class, 'create']);
 Route::post('/drivers/{pharmacy_id}/users/add', [PharmacyDriverController::class, 'store']);
 
-Route::get('/drivers/{driver_id}/profile', [LexaAdmin::class, 'driversProfile']);
-Route::post('/drivers/{driver_id}/profile', [LexaAdmin::class, 'driversProfileHandler']);
+Route::get('/drivers/{driver_id}/profile', [DriverController::class, 'driversProfile']);
+Route::post('/drivers/{driver_id}/profile', [DriverController::class, 'driversProfileHandler']);
 
-Route::get('/drivers/{driver_id}/payouts', [LexaAdmin::class, 'driversPayouts']);
+Route::get('/drivers/{driver_id}/payouts', [DriverController::class, 'driversPayouts']);
 
 Route::get('/patients/{pharmacy_id}', [PatientController::class, 'index']);
 Route::post('/patients/{pharmacy_id}', [PatientController::class, 'updateStatus']);
@@ -133,8 +136,8 @@ Route::get('/routes-pharmacys', [RoutePlanningController::class, 'pharmacies']);
 
 Route::post('/orders/{pharmacy_id}/ready', [OrderController::class, 'markReady']);
 
-Route::get('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopay']);
-Route::post('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopayHandler']);
+Route::get('/pay/copay/{order_id}', [PaymentController::class, 'payCopay']);
+Route::post('/pay/copay/{order_id}', [PaymentController::class, 'payCopayHandler']);
 
 Route::get('/routes-list/show/{order_id}', [RoutePlanningController::class, 'showOrder']);
 Route::post('/routes-list/show/{order_id}', [RoutePlanningController::class, 'assignOrder']);
@@ -151,19 +154,19 @@ Route::post('/orders/{pharmacy_id}', [OrderController::class, 'updateStatus'])->
 
 Route::get('/search/json', [LexaAdmin::class, 'searchJson']);
 
-Route::get('/billing-old/{pharmacy_id}', [LexaAdmin::class, 'billing2']);
+Route::get('/billing-old/{pharmacy_id}', [BillingController::class, 'billing2']);
 
-Route::get('/billing/{pharmacy_id}', [LexaAdmin::class, 'billing']);
-Route::get('/billing/{pharmacy_id}/orders/{invoice_id}', [LexaAdmin::class, 'billingOrders']);
-Route::get('/billing/{pharmacy_id}/print/{invoice_id}', [LexaAdmin::class, 'billingPrint']);
-Route::get('/billing/{pharmacy_id}/print_report/{invoice_id}', [LexaAdmin::class, 'billingPrintReport']);
-Route::post('/billing/{pharmacy_id}', [LexaAdmin::class, 'billingHandler']);
+Route::get('/billing/{pharmacy_id}', [BillingController::class, 'billing']);
+Route::get('/billing/{pharmacy_id}/orders/{invoice_id}', [BillingController::class, 'billingOrders']);
+Route::get('/billing/{pharmacy_id}/print/{invoice_id}', [BillingController::class, 'billingPrint']);
+Route::get('/billing/{pharmacy_id}/print_report/{invoice_id}', [BillingController::class, 'billingPrintReport']);
+Route::post('/billing/{pharmacy_id}', [BillingController::class, 'billingHandler']);
 
-Route::get('/billing/{pharmacy_id}/invoice/add', [LexaAdmin::class, 'billingInvoiceAdd']);
-Route::post('/billing/{pharmacy_id}/invoice/add', [LexaAdmin::class, 'billingInvoiceAddHandler']);
+Route::get('/billing/{pharmacy_id}/invoice/add', [BillingController::class, 'billingInvoiceAdd']);
+Route::post('/billing/{pharmacy_id}/invoice/add', [BillingController::class, 'billingInvoiceAddHandler']);
 
-Route::get('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [LexaAdmin::class, 'billingInvoiceEdit']);
-Route::post('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [LexaAdmin::class, 'billingInvoiceEditHandler']);
+Route::get('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [BillingController::class, 'billingInvoiceEdit']);
+Route::post('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [BillingController::class, 'billingInvoiceEditHandler']);
 
 Route::get('/process/{pharmacy_id}', [PharmacyProcessController::class, 'process']);
 Route::get('/process/{pharmacy_id}/show/{driver_id}', [PharmacyProcessController::class, 'processShow']);
@@ -231,23 +234,23 @@ Route::post('/settings/users/edit/{user_id}', [LexaAdmin::class, 'settingsUserse
 Route::get('/settings/users/add', [LexaAdmin::class, 'settingsUsersAdd']);
 Route::post('/settings/users/add', [LexaAdmin::class, 'settingsUsersAddHandler']);
 
-Route::get('/cards', [LexaAdmin::class, 'cardAdd']);
-Route::post('/cards', [LexaAdmin::class, 'cardAddHandler']);
+Route::get('/cards', [PaymentController::class, 'cardAdd']);
+Route::post('/cards', [PaymentController::class, 'cardAddHandler']);
 
-Route::get('/payment-method/{pharmacy_id}', [LexaAdmin::class, 'cardPharmacyAdd']);
-Route::post('/payment-method/{pharmacy_id}', [LexaAdmin::class, 'cardPharmacyAddHandler']);
+Route::get('/payment-method/{pharmacy_id}', [PaymentController::class, 'cardPharmacyAdd']);
+Route::post('/payment-method/{pharmacy_id}', [PaymentController::class, 'cardPharmacyAddHandler']);
 
-Route::get('/payment-method/{pharmacy_id}/refill', [LexaAdmin::class, 'refillPharmacyBalance']);
-Route::post('/payment-method/{pharmacy_id}/refill', [LexaAdmin::class, 'refillPharmacyBalanceHandler']);
+Route::get('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalance']);
+Route::post('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalanceHandler']);
 
 Route::get('/notifications', [LexaAdmin::class, 'notifications']);
 
-Route::post('/drivers/qr', [LexaAdmin::class, 'driversQr']);
+Route::post('/drivers/qr', [DriverController::class, 'driversQr']);
 
-Route::get('/drivers/{user_id}/packages', [LexaAdmin::class, 'driversPackages']);
-Route::post('/drivers/{user_id}/packages', [LexaAdmin::class, 'driversPackagesHandler']);
+Route::get('/drivers/{user_id}/packages', [DriverController::class, 'driversPackages']);
+Route::post('/drivers/{user_id}/packages', [DriverController::class, 'driversPackagesHandler']);
 
-Route::post('/drivers/qr_order', [LexaAdmin::class, 'driversQrOrder']);
+Route::post('/drivers/qr_order', [DriverController::class, 'driversQrOrder']);
 
 Route::post('/patients/{user_id}/resend', [LexaAdmin::class, 'reSendAuthMessage']);
 
