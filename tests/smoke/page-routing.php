@@ -2,7 +2,7 @@
 
 // Run with: php tests/smoke/page-routing.php
 // Uses only an in-memory SQLite database and a temporary layout/compiled views.
-use App\User;
+use App\Models\User;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

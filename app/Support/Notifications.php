@@ -1,13 +1,12 @@
 <?php
 
-namespace App;
+namespace App\Support;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Twilio\Rest\Client;
 use Pusher\PushNotifications\PushNotifications;
 
-class Notifications extends Model
+class Notifications
 {
     /**
      * @param int|string $user_id
@@ -16,15 +15,15 @@ class Notifications extends Model
      */
     public static function send_push($user_id,$title,$body) {
         $user = DB::table('users')->where('id',$user_id)->first();
-        if(!empty($user) && !empty($user->device_token) && \App\Support\FirebaseMessaging::isConfigured()) {
+        if(!empty($user) && !empty($user->device_token) && FirebaseMessaging::isConfigured()) {
             if($user->role=='user' && !empty($user->pharmacy_id)) {
                 $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
                 if(!empty($pharmacy) && !empty($pharmacy->name)) {
                     $title = $pharmacy->name;
                 }
             }
-            $result = \App\Support\FirebaseMessaging::send($user->device_token, $title, $body);
-            if($result === \App\Support\FirebaseMessaging::RESULT_INVALID_TOKEN) {
+            $result = FirebaseMessaging::send($user->device_token, $title, $body);
+            if($result === FirebaseMessaging::RESULT_INVALID_TOKEN) {
                 // The app was removed from this device; stop sending to the dead token.
                 DB::table('users')->where('id',$user->id)->update(['device_token'=>NULL]);
             }

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Actions\ChangeOrderStatus;
-use App\Notifications;
+use App\Support\Notifications;
 use App\Support\OrderStatus;
-use App\User;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;

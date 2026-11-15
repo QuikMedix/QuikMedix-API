@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Twilio\Rest\Client;
-use App\Notifications;
+use App\Support\Notifications;
 use Illuminate\Support\Facades\Hash;
 use DB;
 use Barryvdh\DomPDF\Facade\Pdf;

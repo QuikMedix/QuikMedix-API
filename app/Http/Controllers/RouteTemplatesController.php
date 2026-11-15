@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
-use App\Notifications; // Assuming this is used in LexaAdmin
+use App\Support\Notifications; // Assuming this is used in LexaAdmin
 
 class RouteTemplatesController extends Controller
 {

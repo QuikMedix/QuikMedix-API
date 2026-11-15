@@ -9,7 +9,7 @@ use App\Actions\SendWelcomeSms;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Http\Requests\StorePatientRequest;
 use App\Support\GeoPoint;
-use App\User;
+use App\Models\User;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

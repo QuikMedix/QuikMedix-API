@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Actions\LogUserChanges;
 use App\Actions\NotifyNextPatient;
 use App\Actions\RequestDispatchApproval;
-use App\Notifications;
+use App\Support\Notifications;
 use App\Support\OrderStatus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

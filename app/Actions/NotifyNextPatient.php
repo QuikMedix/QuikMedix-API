@@ -2,7 +2,7 @@
 
 namespace App\Actions;
 
-use App\Notifications;
+use App\Support\Notifications;
 use App\Support\HereMaps;
 use App\Support\PatientAddress;
 use Illuminate\Support\Facades\DB;

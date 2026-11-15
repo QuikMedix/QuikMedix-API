@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Actions;
 
-use App\User;
+use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\ConnectionException;

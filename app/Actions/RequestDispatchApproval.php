@@ -3,10 +3,10 @@
 namespace App\Actions;
 
 use App\Enums\Role;
-use App\ChMessage;
-use App\Notifications;
+use App\Models\ChMessage;
+use App\Support\Notifications;
 use App\Support\OrderStatus;
-use App\User;
+use App\Models\User;
 use Chatify\Facades\ChatifyMessenger as Chatify;
 use Illuminate\Support\Facades\DB;
 use stdClass;

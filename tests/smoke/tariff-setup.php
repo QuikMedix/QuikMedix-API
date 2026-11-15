@@ -3,7 +3,7 @@
 // Run: php tests/smoke/tariff-setup.php
 // Isolated SQLite data and a fake geocoder; no real records or external requests.
 namespace {
-    use App\User;
+    use App\Models\User;
     use Illuminate\Http\Request;
     use Illuminate\Support\Facades\Auth;
     use Illuminate\Support\Facades\DB;

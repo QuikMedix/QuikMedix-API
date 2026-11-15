@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers\Api\Auth;
 
-use App\User;
+use App\Models\User;
 use Laravel\Passport\ClientRepository;
 use Tests\Support\CreatesAuthenticationSchema;
 use Tests\TestCase;

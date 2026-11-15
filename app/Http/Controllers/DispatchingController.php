@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\RecalculateDriverEta;
 use App\Actions\ReturnOrderToOffice;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
-use App\User;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

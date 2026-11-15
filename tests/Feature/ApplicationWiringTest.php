@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Providers\AppServiceProvider;
-use App\User;
+use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Http\Kernel;

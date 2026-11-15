@@ -3,7 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Support\AccessMessages;
-use App\User;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;

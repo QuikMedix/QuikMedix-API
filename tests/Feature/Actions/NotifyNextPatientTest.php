@@ -4,7 +4,7 @@ namespace Tests\Feature\Actions;
 
 use App\Actions\NotifyNextPatient;
 use App\Http\Controllers\LexaAdminApi;
-use App\User;
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\DB;

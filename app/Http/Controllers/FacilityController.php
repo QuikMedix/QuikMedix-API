@@ -8,7 +8,7 @@ use App\Actions\LogUserChanges;
 use App\Actions\SendWelcomeSms;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Http\Requests\StoreFacilityRequest;
-use App\User;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;

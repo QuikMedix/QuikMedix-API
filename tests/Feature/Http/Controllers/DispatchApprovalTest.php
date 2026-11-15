@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\User;
+use App\Models\User;
 use Chatify\Facades\ChatifyMessenger as Chatify;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\FinalizeFailedDelivery;
 use App\Actions\RequestDispatchApproval;
-use App\Notifications;
+use App\Support\Notifications;
 use App\Support\OrderStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

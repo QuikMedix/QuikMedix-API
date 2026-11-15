@@ -2,7 +2,7 @@
 
 namespace App\Actions;
 
-use App\Notifications;
+use App\Support\Notifications;
 use App\Support\GeoPoint;
 use App\Support\OrderStatus;
 use Illuminate\Support\Facades\DB;

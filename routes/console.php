@@ -1,9 +1,9 @@
 <?php
 
 use App\Actions\RecalculateDriverEta;
-use App\Notifications;
+use App\Support\Notifications;
 use App\Support\HereMaps;
-use App\User;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -40,7 +40,7 @@ Artisan::command('push:test {user_id? : Send a test notification to this user\'s
 
         return 1;
     }
-    $result = \App\Notifications::send_push($userId, 'QuikMedix', 'Test notification');
+    $result = \App\Support\Notifications::send_push($userId, 'QuikMedix', 'Test notification');
     $this->line("Result: {$result}");
 
     return $result === \App\Support\FirebaseMessaging::RESULT_SENT ? 0 : 1;
