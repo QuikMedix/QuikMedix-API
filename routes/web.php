@@ -1,6 +1,13 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\SessionController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\QuickbookController;
+use App\Http\Controllers\ImportController;
+use App\Http\Controllers\NewsController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\WishController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\DeliveryAreaController;
@@ -49,7 +56,7 @@ Route::get('zadarma', [LexaAdminApiNoAuth::class, 'zadarma_get']);
 Route::post('zadarma', [LexaAdminApiNoAuth::class, 'zadarma_post']);
 
 Auth::routes();
-Route::get('/logout', [LexaAdmin::class, 'logout']);
+Route::get('/logout', [SessionController::class, 'logout']);
 Route::get('2fa', [TwoFAController::class, 'index'])->name('2fa.index');
 Route::post('2fa', [TwoFAController::class, 'store'])->name('2fa.post');
 Route::get('2fa/reset', [TwoFAController::class, 'resend'])->name('2fa.resend');
@@ -57,13 +64,13 @@ Route::get('2fa/reset', [TwoFAController::class, 'resend'])->name('2fa.resend');
 // Render perticular view file by foldername and filename and all passed in only one controller at a time
 
 // when render first time project redirect
-Route::get('/home', [LexaAdmin::class, 'home']);
+Route::get('/home', [DashboardController::class, 'home']);
 
 Route::get('/keep-live', [LexaAdmin::class, 'live']);
 
 // when render first time project redirect
-Route::get('/', [LexaAdmin::class, 'root'])->name('home');
-Route::post('/back-to-superadmin-user', [LexaAdmin::class, 'back_to_superadmin_user'])->name('back_to_superadmin_user');
+Route::get('/', [DashboardController::class, 'root'])->name('home');
+Route::post('/back-to-superadmin-user', [SessionController::class, 'back_to_superadmin_user'])->name('back_to_superadmin_user');
 
 Route::get('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsers']);
 Route::post('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsersHandler']);
@@ -126,8 +133,8 @@ Route::post('/facilitys/{pharmacy_id}/add', [FacilityController::class, 'store']
 Route::get('/facilitys/{pharmacy_id}/edit/{user_id}', [FacilityController::class, 'edit']);
 Route::post('/facilitys/{pharmacy_id}/edit/{user_id}', [FacilityController::class, 'update']);
 
-Route::get('/patients/{pharmacy_id}/import', [LexaAdmin::class, 'patientsImport']);
-Route::post('/patients/{pharmacy_id}/import', [LexaAdmin::class, 'patientsImportHandler']);
+Route::get('/patients/{pharmacy_id}/import', [ImportController::class, 'patientsImport']);
+Route::post('/patients/{pharmacy_id}/import', [ImportController::class, 'patientsImportHandler']);
 
 Route::get('/patients/{pharmacy_id}/removed', [PatientController::class, 'removed']);
 
@@ -158,7 +165,7 @@ Route::get('/orders/facilitys_add', [OrderCreationController::class, 'createFaci
 Route::get('/orders/{pharmacy_id}', [OrderController::class, 'index'])->whereNumber('pharmacy_id');
 Route::post('/orders/{pharmacy_id}', [OrderController::class, 'updateStatus'])->whereNumber('pharmacy_id');
 
-Route::get('/search/json', [LexaAdmin::class, 'searchJson']);
+Route::get('/search/json', [DashboardController::class, 'searchJson']);
 
 Route::get('/billing-old/{pharmacy_id}', [BillingController::class, 'billing2']);
 
@@ -177,8 +184,8 @@ Route::post('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [BillingControll
 Route::get('/process/{pharmacy_id}', [PharmacyProcessController::class, 'process']);
 Route::get('/process/{pharmacy_id}/show/{driver_id}', [PharmacyProcessController::class, 'processShow']);
 
-Route::get('/import/{pharmacy_id}/order', [LexaAdmin::class, 'import_order']);
-Route::post('/import/{pharmacy_id}/order', [LexaAdmin::class, 'import_orderHandler']);
+Route::get('/import/{pharmacy_id}/order', [ImportController::class, 'import_order']);
+Route::post('/import/{pharmacy_id}/order', [ImportController::class, 'import_orderHandler']);
 
 Route::get('/orders', [AllOrdersController::class, 'index']);
 Route::post('/orders', [AllOrdersController::class, 'updateStatus']);
@@ -249,7 +256,7 @@ Route::post('/payment-method/{pharmacy_id}', [PaymentController::class, 'cardPha
 Route::get('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalance']);
 Route::post('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalanceHandler']);
 
-Route::get('/notifications', [LexaAdmin::class, 'notifications']);
+Route::get('/notifications', [DashboardController::class, 'notifications']);
 
 Route::post('/drivers/qr', [DriverController::class, 'driversQr']);
 
@@ -258,20 +265,20 @@ Route::post('/drivers/{user_id}/packages', [DriverController::class, 'driversPac
 
 Route::post('/drivers/qr_order', [DriverController::class, 'driversQrOrder']);
 
-Route::post('/patients/{user_id}/resend', [LexaAdmin::class, 'reSendAuthMessage']);
+Route::post('/patients/{user_id}/resend', [SessionController::class, 'reSendAuthMessage']);
 
 Route::get('/patients/{user_id}/family', [PatientController::class, 'familyOptions']);
 Route::get('/patients/{user_id}/additional_recipients', [PatientController::class, 'additionalRecipientOptions']);
 
 Route::get('/pusher/beams-auth', [LexaAdminApiNoAuth::class, 'pusher_auth']);
 
-Route::get('/news', [LexaAdmin::class, 'news']);
-Route::get('/news/add', [LexaAdmin::class, 'newsAdd']);
-Route::post('/news/add', [LexaAdmin::class, 'newsAddHandler']);
+Route::get('/news', [NewsController::class, 'news']);
+Route::get('/news/add', [NewsController::class, 'newsAdd']);
+Route::post('/news/add', [NewsController::class, 'newsAddHandler']);
 
-Route::get('/news_patient', [LexaAdmin::class, 'news_patient']);
-Route::get('/news_patient/add', [LexaAdmin::class, 'news_patientAdd']);
-Route::post('/news_patient/add', [LexaAdmin::class, 'news_patientAddHandler']);
+Route::get('/news_patient', [NewsController::class, 'news_patient']);
+Route::get('/news_patient/add', [NewsController::class, 'news_patientAdd']);
+Route::post('/news_patient/add', [NewsController::class, 'news_patientAddHandler']);
 
 Route::get('/settings/wishes', [WishController::class, 'settingsWishesCategory']);
 Route::post('/settings/wishes', [WishController::class, 'settingsWishesCategoryHandler']);
@@ -303,11 +310,11 @@ Route::post('/settings/plans/add', [PlanController::class, 'settingsPlansAddHand
 Route::get('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEdit']);
 Route::post('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEditHandler']);
 
-Route::get('/delivery-calendar', [LexaAdmin::class, 'deliveryCalendar']);
+Route::get('/delivery-calendar', [DashboardController::class, 'deliveryCalendar']);
 
-Route::get('/ads', [LexaAdmin::class, 'ads']);
+Route::get('/ads', [PageController::class, 'ads']);
 
-Route::get('/payroll', [LexaAdmin::class, 'payroll']);
+Route::get('/payroll', [PageController::class, 'payroll']);
 
 Route::get('test', [LexaAdmin::class, 'test']);
 
@@ -315,17 +322,17 @@ Route::get('test', [LexaAdmin::class, 'test']);
 
 Route::get('/orders/get_records/{order_id}', [OrderController::class, 'callRecordings']);
 
-Route::get('/support-chat', [LexaAdmin::class, 'supportChat']);
+Route::get('/support-chat', [PageController::class, 'supportChat']);
 
-Route::get('/reports', [LexaAdmin::class, 'reports']);
-Route::get('/reports/billing', [LexaAdmin::class, 'reportsBilling']);
-Route::get('/reports/apps', [LexaAdmin::class, 'reportsApps']);
-Route::get('/reports/drivers', [LexaAdmin::class, 'reportsDrivers']);
-Route::get('/reports/pharmacies', [LexaAdmin::class, 'reportsPharmacies']);
-Route::get('/reports/invoices', [LexaAdmin::class, 'reportsInvoices']);
-Route::get('/reports/map', [LexaAdmin::class, 'reportsMap']);
-Route::post('/reports/map', [LexaAdmin::class, 'reportsMapHandler']);
-Route::get('/reports/customers', [LexaAdmin::class, 'reportsCustomers']);
+Route::get('/reports', [ReportController::class, 'reports']);
+Route::get('/reports/billing', [ReportController::class, 'reportsBilling']);
+Route::get('/reports/apps', [ReportController::class, 'reportsApps']);
+Route::get('/reports/drivers', [ReportController::class, 'reportsDrivers']);
+Route::get('/reports/pharmacies', [ReportController::class, 'reportsPharmacies']);
+Route::get('/reports/invoices', [ReportController::class, 'reportsInvoices']);
+Route::get('/reports/map', [ReportController::class, 'reportsMap']);
+Route::post('/reports/map', [ReportController::class, 'reportsMapHandler']);
+Route::get('/reports/customers', [ReportController::class, 'reportsCustomers']);
 Route::get('/dispatching', [DispatchingController::class, 'index']);
 Route::post('/dispatching', [DispatchingController::class, 'update']);
 Route::get('/dispatching/show/{driver_id}', [DispatchingController::class, 'show']);
@@ -337,14 +344,14 @@ Route::post('/faq/add', [FaqController::class, 'store']);
 
 Route::get('/drivers', [LexaAdmin::class, 'drivers']);
 
-Route::post('/ready_call', [LexaAdmin::class, 'ready_call']);
+Route::post('/ready_call', [DashboardController::class, 'ready_call']);
 
-Route::get('/quickbook', [LexaAdmin::class, 'quickbook']);
-Route::get('/quickbook_callback', [LexaAdmin::class, 'quickbookCallback']);
+Route::get('/quickbook', [QuickbookController::class, 'quickbook']);
+Route::get('/quickbook_callback', [QuickbookController::class, 'quickbookCallback']);
 
-Route::get('/feedback', [LexaAdmin::class, 'feedback']);
+Route::get('/feedback', [PageController::class, 'feedback']);
 
-Route::get('/happy-holidays', [LexaAdmin::class, 'happyHolidays']);
+Route::get('/happy-holidays', [PageController::class, 'happyHolidays']);
 
 // Route Templates
 Route::resource('route-templates', RouteTemplatesController::class)->only(['index', 'store', 'show', 'destroy']);
