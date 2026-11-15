@@ -65,19 +65,6 @@ class LexaAdmin extends Controller
         return redirect()->route('home');
     }
 
-    /**
-     * @param string $folderName
-     * @param string $fileName
-     */
-    public function index($folderName, $fileName) {
-        // Render perticular view file by foldername and filename
-        if (view()->exists($folderName . "." . $fileName)) {
-            $res_view = view($folderName . "." . $fileName);
-            return self::renderPage($res_view);
-        }
-        return abort(404);
-    }
-
     public function back_to_superadmin_user() {
         if(!empty(session('login_superadmin'))) {
             Auth::loginUsingId(session('login_superadmin'));
