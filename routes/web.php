@@ -1,6 +1,12 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\WishController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\DeliveryAreaController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AdminAreaController;
+use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DriverController;
@@ -204,35 +210,35 @@ Route::post('/orders/{pharmacy_id}/facilitys_add', [FacilityOrderController::cla
 Route::get('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statistic']);
 Route::post('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statisticForDate']);
 
-Route::get('/profile', [LexaAdmin::class, 'profile']);
-Route::post('/profile', [LexaAdmin::class, 'profileHandler']);
+Route::get('/profile', [ProfileController::class, 'profile']);
+Route::post('/profile', [ProfileController::class, 'profileHandler']);
 
-Route::get('/settings/users', [LexaAdmin::class, 'settingsUsers']);
-Route::post('/settings/users', [LexaAdmin::class, 'settingsUsersHandler']);
+Route::get('/settings/users', [UserSettingsController::class, 'settingsUsers']);
+Route::post('/settings/users', [UserSettingsController::class, 'settingsUsersHandler']);
 
-Route::get('/settings/admins', [LexaAdmin::class, 'settingsAdmins']);
-Route::post('/settings/admins', [LexaAdmin::class, 'settingsAdminsHandler']);
+Route::get('/settings/admins', [UserSettingsController::class, 'settingsAdmins']);
+Route::post('/settings/admins', [UserSettingsController::class, 'settingsAdminsHandler']);
 
-Route::get('/settings/admin_areas', [LexaAdmin::class, 'settingsAdminAreas']);
-Route::get('/settings/admin_areas/add', [LexaAdmin::class, 'settingsAdminAreasAdd']);
-Route::post('/settings/admin_areas/add', [LexaAdmin::class, 'settingsAdminAreasAddHandler']);
-Route::get('/settings/admin_areas/edit/{admin_area_id}', [LexaAdmin::class, 'settingsAdminAreasEdit']);
-Route::post('/settings/admin_areas/edit/{admin_area_id}', [LexaAdmin::class, 'settingsAdminAreasEditHandler']);
+Route::get('/settings/admin_areas', [AdminAreaController::class, 'settingsAdminAreas']);
+Route::get('/settings/admin_areas/add', [AdminAreaController::class, 'settingsAdminAreasAdd']);
+Route::post('/settings/admin_areas/add', [AdminAreaController::class, 'settingsAdminAreasAddHandler']);
+Route::get('/settings/admin_areas/edit/{admin_area_id}', [AdminAreaController::class, 'settingsAdminAreasEdit']);
+Route::post('/settings/admin_areas/edit/{admin_area_id}', [AdminAreaController::class, 'settingsAdminAreasEditHandler']);
 
-Route::get('/settings/medics', [LexaAdmin::class, 'settingsMedics']);
-Route::post('/settings/medics', [LexaAdmin::class, 'settingsMedicsHandler']);
+Route::get('/settings/medics', [UserSettingsController::class, 'settingsMedics']);
+Route::post('/settings/medics', [UserSettingsController::class, 'settingsMedicsHandler']);
 
-Route::get('/settings/drivers', [LexaAdmin::class, 'settingsDrivers']);
-Route::post('/settings/drivers', [LexaAdmin::class, 'settingsDriversHandler']);
+Route::get('/settings/drivers', [UserSettingsController::class, 'settingsDrivers']);
+Route::post('/settings/drivers', [UserSettingsController::class, 'settingsDriversHandler']);
 
-Route::get('/settings/logists', [LexaAdmin::class, 'settingsLogists']);
-Route::post('/settings/logists', [LexaAdmin::class, 'settingsLogistsHandler']);
+Route::get('/settings/logists', [UserSettingsController::class, 'settingsLogists']);
+Route::post('/settings/logists', [UserSettingsController::class, 'settingsLogistsHandler']);
 
-Route::get('/settings/users/edit/{user_id}', [LexaAdmin::class, 'settingsUsersedit']);
-Route::post('/settings/users/edit/{user_id}', [LexaAdmin::class, 'settingsUserseditHandler']);
+Route::get('/settings/users/edit/{user_id}', [UserSettingsController::class, 'settingsUsersedit']);
+Route::post('/settings/users/edit/{user_id}', [UserSettingsController::class, 'settingsUserseditHandler']);
 
-Route::get('/settings/users/add', [LexaAdmin::class, 'settingsUsersAdd']);
-Route::post('/settings/users/add', [LexaAdmin::class, 'settingsUsersAddHandler']);
+Route::get('/settings/users/add', [UserSettingsController::class, 'settingsUsersAdd']);
+Route::post('/settings/users/add', [UserSettingsController::class, 'settingsUsersAddHandler']);
 
 Route::get('/cards', [PaymentController::class, 'cardAdd']);
 Route::post('/cards', [PaymentController::class, 'cardAddHandler']);
@@ -267,35 +273,35 @@ Route::get('/news_patient', [LexaAdmin::class, 'news_patient']);
 Route::get('/news_patient/add', [LexaAdmin::class, 'news_patientAdd']);
 Route::post('/news_patient/add', [LexaAdmin::class, 'news_patientAddHandler']);
 
-Route::get('/settings/wishes', [LexaAdmin::class, 'settingsWishesCategory']);
-Route::post('/settings/wishes', [LexaAdmin::class, 'settingsWishesCategoryHandler']);
+Route::get('/settings/wishes', [WishController::class, 'settingsWishesCategory']);
+Route::post('/settings/wishes', [WishController::class, 'settingsWishesCategoryHandler']);
 
-Route::get('/settings/wishes/add', [LexaAdmin::class, 'settingsWishesCategoryAdd']);
-Route::post('/settings/wishes/add', [LexaAdmin::class, 'settingsWishesCategoryAddHandler']);
+Route::get('/settings/wishes/add', [WishController::class, 'settingsWishesCategoryAdd']);
+Route::post('/settings/wishes/add', [WishController::class, 'settingsWishesCategoryAddHandler']);
 
-Route::get('/settings/area', [LexaAdmin::class, 'settingsStates']);
-Route::post('/settings/area', [LexaAdmin::class, 'settingsStatesHandler']);
+Route::get('/settings/area', [DeliveryAreaController::class, 'settingsStates']);
+Route::post('/settings/area', [DeliveryAreaController::class, 'settingsStatesHandler']);
 
-Route::get('/settings/area/add', [LexaAdmin::class, 'settingsStatesAdd']);
-Route::post('/settings/area/add', [LexaAdmin::class, 'settingsStatesAddHandler']);
+Route::get('/settings/area/add', [DeliveryAreaController::class, 'settingsStatesAdd']);
+Route::post('/settings/area/add', [DeliveryAreaController::class, 'settingsStatesAddHandler']);
 
-Route::get('/settings/area/{area_id}/edit', [LexaAdmin::class, 'settingsStatesEdit']);
-Route::post('/settings/area/{area_id}/edit', [LexaAdmin::class, 'settingsStatesEditHandler']);
+Route::get('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEdit']);
+Route::post('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEditHandler']);
 
-Route::get('/settings/wishes/{wish_id}/list', [LexaAdmin::class, 'settingsWishes']);
-Route::post('/settings/wishes/{wish_id}/list', [LexaAdmin::class, 'settingsWishesHandler']);
+Route::get('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishes']);
+Route::post('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishesHandler']);
 
-Route::get('/settings/wishes/{wish_id}/add', [LexaAdmin::class, 'settingsWishesAdd']);
-Route::post('/settings/wishes/{wish_id}/add', [LexaAdmin::class, 'settingsWishesAddHandler']);
+Route::get('/settings/wishes/{wish_id}/add', [WishController::class, 'settingsWishesAdd']);
+Route::post('/settings/wishes/{wish_id}/add', [WishController::class, 'settingsWishesAddHandler']);
 
-Route::get('/settings/plans', [LexaAdmin::class, 'settingsPlans']);
-Route::post('/settings/plans', [LexaAdmin::class, 'settingsPlansHandler']);
+Route::get('/settings/plans', [PlanController::class, 'settingsPlans']);
+Route::post('/settings/plans', [PlanController::class, 'settingsPlansHandler']);
 
-Route::get('/settings/plans/add', [LexaAdmin::class, 'settingsPlansAdd']);
-Route::post('/settings/plans/add', [LexaAdmin::class, 'settingsPlansAddHandler']);
+Route::get('/settings/plans/add', [PlanController::class, 'settingsPlansAdd']);
+Route::post('/settings/plans/add', [PlanController::class, 'settingsPlansAddHandler']);
 
-Route::get('/settings/plans/{plan_id}/edit', [LexaAdmin::class, 'settingsPlansEdit']);
-Route::post('/settings/plans/{plan_id}/edit', [LexaAdmin::class, 'settingsPlansEditHandler']);
+Route::get('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEdit']);
+Route::post('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEditHandler']);
 
 Route::get('/delivery-calendar', [LexaAdmin::class, 'deliveryCalendar']);
 
