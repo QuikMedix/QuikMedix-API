@@ -296,18 +296,6 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if(Auth::user()->hasRole('medic1'))
-                                    <li class="nav-item dropdown">
-                                        <a class="nav-link dropdown-toggle arrow-none" href="#" id="topnav-email" role="button"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="ti-location-pin"></i>Pharmacy 
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-left" aria-labelledby="topnav-email">
-                                            <a href="/pharmacy/{{ Auth::user()->pharmacy_id }}/users/" class="dropdown-item">Pharmacists</a>
-                                            <a href="/billing/{{ Auth::user()->pharmacy_id }}" class="dropdown-item">Invoices</a>
-                                        </div>
-                                    </li>
-                                @endif
 
                                 @if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'sale'))
                                     <li class="nav-item dropdown">
