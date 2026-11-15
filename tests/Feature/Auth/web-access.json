@@ -1,0 +1,977 @@
+{
+    "DELETE /route-templates/1": {
+        "login": "guest",
+        "blocked account": "blocked"
+    },
+    "GET /": {
+        "login": "guest",
+        "blocked account": "blocked"
+    },
+    "GET /2fa": [],
+    "GET /2fa/reset": [],
+    "GET /ads": {
+        "login": "guest"
+    },
+    "GET /billing-old/1": {
+        "login": "guest",
+        "no permission": "logist sale facility",
+        "blocked account": "blocked"
+    },
+    "GET /billing/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /billing/1/invoice/1/edit": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /billing/1/invoice/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /billing/1/orders/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /billing/1/print/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /billing/1/print_report/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /cards": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /chat": {
+        "login": "guest"
+    },
+    "GET /chat/1": {
+        "login": "guest"
+    },
+    "GET /chat/download/1": {
+        "login": "guest"
+    },
+    "GET /chat/getContacts": {
+        "login": "guest"
+    },
+    "GET /chat/group/1": {
+        "login": "guest"
+    },
+    "GET /chat/search": {
+        "login": "guest"
+    },
+    "GET /delivery-calendar": {
+        "login": "guest"
+    },
+    "GET /dispatching": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /dispatching/show/1": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /drivers/1/packages": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /drivers/1/payouts": {
+        "login": "guest",
+        "no permission": "logist medic sale user facility",
+        "blocked account": "blocked"
+    },
+    "GET /drivers/1/profile": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /drivers/1/users": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /drivers/1/users/add": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /drivers/1/users/edit/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /facilitys/1": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /facilitys/1/add": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /facilitys/1/edit/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /faq": {
+        "login": "guest"
+    },
+    "GET /faq/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /feedback": {
+        "login": "guest"
+    },
+    "GET /happy-holidays": {
+        "login": "guest"
+    },
+    "GET /home": {
+        "login": "guest"
+    },
+    "GET /import/1/order": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /login": [],
+    "GET /news": {
+        "login": "guest"
+    },
+    "GET /news/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /news_patient": {
+        "login": "guest"
+    },
+    "GET /news_patient/add": {
+        "login": "guest",
+        "no permission": "superadmin admin dispadmin logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /notifications": {
+        "login": "guest"
+    },
+    "GET /offices": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /offices/add": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /offices/edit/1": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders": {
+        "login": "guest",
+        "no permission": "medic sale user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/1/add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/1/edit/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/1/facilitys_add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/1/facilitys_edit/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/1/show/1": {
+        "login": "guest",
+        "refused": "medic",
+        "blocked account": "blocked"
+    },
+    "GET /orders/1/statistic": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/day/print": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/facilitys_add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/get_records/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/preview/1": {
+        "login": "guest",
+        "blocked account": "blocked"
+    },
+    "GET /orders/ticket/print": {
+        "login": "guest",
+        "no permission": "sale user facility",
+        "blocked account": "blocked"
+    },
+    "GET /orders/tickets/print": {
+        "login": "guest",
+        "no permission": "sale user facility",
+        "blocked account": "blocked"
+    },
+    "GET /password/confirm": {
+        "login": "guest"
+    },
+    "GET /password/reset": [],
+    "GET /password/reset/1": [],
+    "GET /patients/1": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /patients/1/add": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /patients/1/additional_recipients": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /patients/1/edit/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /patients/1/family": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /patients/1/import": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /patients/1/removed": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /pay/copay/1": {
+        "login": "guest",
+        "no permission": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /payment-method/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /payment-method/1/refill": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /payroll": {
+        "login": "guest",
+        "refused": "logist medic sale driver user facility"
+    },
+    "GET /pharmacy/1/users": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /pharmacy/1/users/add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /pharmacy/1/users/edit/1": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /pharmacys": {
+        "login": "guest",
+        "no permission": "logist medic driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /pharmacys/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver facility",
+        "blocked account": "blocked"
+    },
+    "GET /pharmacys/edit/1": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /pharmacys/integrations": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /pharmacys/tariff_map/1": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /process/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /process/1/show/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /profile": {
+        "login": "guest",
+        "blocked account": "blocked"
+    },
+    "GET /pusher/beams-auth": [],
+    "GET /quickbook": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /quickbook_callback": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /register": [],
+    "GET /reports": {
+        "login": "guest"
+    },
+    "GET /reports/apps": {
+        "login": "guest"
+    },
+    "GET /reports/billing": {
+        "login": "guest"
+    },
+    "GET /reports/customers": {
+        "login": "guest"
+    },
+    "GET /reports/drivers": {
+        "login": "guest"
+    },
+    "GET /reports/invoices": {
+        "login": "guest"
+    },
+    "GET /reports/map": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /reports/pharmacies": {
+        "login": "guest"
+    },
+    "GET /route-templates": {
+        "login": "guest",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /route-templates/1": {
+        "login": "guest",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /routes-drivers": {
+        "login": "guest",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /routes-list": {
+        "login": "guest",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /routes-list/driver/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /routes-list/show/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /routes-pharmacys": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /search/json": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/admin_areas": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/admin_areas/add": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/admin_areas/edit/1": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/admins": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/area": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/area/1/edit": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/area/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/drivers": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/logists": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/medics": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/plans": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/plans/1/edit": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/plans/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/users": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/users/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/users/edit/1": {
+        "login": "guest",
+        "refused": "admin dispadmin",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/wishes": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/wishes/1/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/wishes/1/list": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /settings/wishes/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "GET /support-chat": {
+        "login": "guest"
+    },
+    "GET /zadarma": [],
+    "POST /2fa": [],
+    "POST /back-to-superadmin-user": {
+        "login": "guest superadmin admin dispadmin logist medic sale driver user facility blocked"
+    },
+    "POST /billing/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /billing/1/invoice/1/edit": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /billing/1/invoice/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /cards": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /chat/chat/auth": {
+        "login": "guest"
+    },
+    "POST /chat/deleteConversation": {
+        "login": "guest"
+    },
+    "POST /chat/deleteMessage": {
+        "login": "guest"
+    },
+    "POST /chat/favorites": {
+        "login": "guest"
+    },
+    "POST /chat/fetchMessages": {
+        "login": "guest"
+    },
+    "POST /chat/idInfo": {
+        "login": "guest"
+    },
+    "POST /chat/makeSeen": {
+        "login": "guest"
+    },
+    "POST /chat/sendMessage": {
+        "login": "guest"
+    },
+    "POST /chat/setActiveStatus": {
+        "login": "guest"
+    },
+    "POST /chat/shared": {
+        "login": "guest"
+    },
+    "POST /chat/star": {
+        "login": "guest"
+    },
+    "POST /chat/updateContacts": {
+        "login": "guest"
+    },
+    "POST /chat/updateSettings": {
+        "login": "guest"
+    },
+    "POST /dispatching": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /dispatching/show/1": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /drivers/1/packages": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /drivers/1/profile": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /drivers/1/users": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /drivers/1/users/add": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /drivers/1/users/edit/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /drivers/qr": {
+        "login": "guest"
+    },
+    "POST /drivers/qr_order": {
+        "login": "guest"
+    },
+    "POST /facilitys/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /facilitys/1/add": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /facilitys/1/edit/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /faq": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /faq/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /import/1/order": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /login": [],
+    "POST /news/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /news_patient/add": {
+        "login": "guest",
+        "no permission": "superadmin admin dispadmin logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /offices": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /offices/add": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /offices/edit/1": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/edit/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/exceptions/1/1/approve": {
+        "login": "guest",
+        "refused": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/exceptions/1/1/reject": {
+        "login": "guest",
+        "refused": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/facilitys_add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/facilitys_edit/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/ready": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/show/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/statistic": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /orders/1/status/1": {
+        "login": "guest",
+        "refused": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /password/confirm": {
+        "login": "guest"
+    },
+    "POST /password/email": [],
+    "POST /password/reset": [],
+    "POST /patients/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /patients/1/add": {
+        "login": "guest",
+        "refused": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /patients/1/edit/1": {
+        "login": "guest",
+        "refused": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /patients/1/import": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /patients/1/resend": {
+        "login": "guest",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /pay/copay/1": {
+        "login": "guest",
+        "no permission": "superadmin admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /payment-method/1": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /payment-method/1/refill": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /pharmacy/1/users": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /pharmacy/1/users/add": {
+        "login": "guest",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /pharmacy/1/users/edit/1": {
+        "login": "guest",
+        "refused": "admin dispadmin medic",
+        "no permission": "logist sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /pharmacys": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /pharmacys/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver facility",
+        "blocked account": "blocked"
+    },
+    "POST /pharmacys/edit/1": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /pharmacys/integrations": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /profile": {
+        "login": "guest",
+        "blocked account": "blocked"
+    },
+    "POST /ready_call": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility"
+    },
+    "POST /register": [],
+    "POST /reports/map": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /route-templates": {
+        "login": "guest"
+    },
+    "POST /route-templates/1/assign": {
+        "login": "guest"
+    },
+    "POST /route-templates/1/items": {
+        "login": "guest"
+    },
+    "POST /routes-list/driver/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /routes-list/show/1": {
+        "login": "guest",
+        "refused": "medic",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/admin_areas/add": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/admin_areas/edit/1": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/admins": {
+        "login": "guest",
+        "no permission": "admin dispadmin logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/area": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/area/1/edit": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/area/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/drivers": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/logists": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/medics": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/plans": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/plans/1/edit": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/plans/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/users": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/users/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/users/edit/1": {
+        "login": "guest",
+        "refused": "admin dispadmin",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/wishes": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/wishes/1/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/wishes/1/list": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /settings/wishes/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility"
+    },
+    "POST /zadarma": []
+}
