@@ -32,9 +32,6 @@ class ImportController extends Controller
      * @param int|string $pharmacy_id
      */
     public function patientsImport($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $res_view = view('patients.import',['step'=>"1",'title'=>'Patients Import','br1'=>'Patients','br2'=>'Patient Import','alert'=>'']);
             return $this->page(request(), $res_view);
@@ -47,9 +44,6 @@ class ImportController extends Controller
      * @param int|string $pharmacy_id
      */
     public function patientsImportHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->input('step')==1) {
                 $delimiter = $request->input('delimiter');
@@ -184,9 +178,6 @@ class ImportController extends Controller
      * @param int|string $pharmacy_id
      */
     public function import_order($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->pharmacy_balance_ban()) {
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }
@@ -201,9 +192,6 @@ class ImportController extends Controller
      * @param int|string $pharmacy_id
      */
     public function import_orderHandler($pharmacy_id,Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->pharmacy_balance_ban()) {
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }

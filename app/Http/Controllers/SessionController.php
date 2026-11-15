@@ -44,9 +44,6 @@ class SessionController extends Controller
      * @param int|string $user_id
      */
     public function reSendAuthMessage($user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $user = DB::table('users')->where('id',$user_id)->first();
         if(!empty($user)) {
             if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic')) {

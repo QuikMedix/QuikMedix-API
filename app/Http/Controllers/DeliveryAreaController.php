@@ -26,122 +26,98 @@ class DeliveryAreaController extends Controller
     }
 
     public function settingsStates() {
-        if((Auth::user()->can('admin'))) {
-            $countOnPage=20;
-            $max_pages=ceil(DB::table('area')->count()/$countOnPage);
-            $page = $this->currentPage(request());
-            $pages = PageLinks::around($page, $max_pages);
-            $areas = DB::table('area')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-            $res_view = view('area.list',['areas'=>$areas,'pages'=>$pages,'title'=>'Area Tariff List','br1'=>'Area','br2'=>'Tariff List']);
-            return $this->page(request(), $res_view);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
-        }
+        $countOnPage=20;
+        $max_pages=ceil(DB::table('area')->count()/$countOnPage);
+        $page = $this->currentPage(request());
+        $pages = PageLinks::around($page, $max_pages);
+        $areas = DB::table('area')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $res_view = view('area.list',['areas'=>$areas,'pages'=>$pages,'title'=>'Area Tariff List','br1'=>'Area','br2'=>'Tariff List']);
+        return $this->page(request(), $res_view);
     }
 
     public function settingsStatesHandler(Request $request) {
-        if((Auth::user()->can('admin'))) {
-            if($request->input('remove')>0) {
-                DB::table('area')->where('id', $request->input('area_id'))->delete();
-                DB::table('area_zip')->where("area_id",$request->input('area_id'))->delete();
-            }
-            return redirect("settings/area");
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+        if($request->input('remove')>0) {
+            DB::table('area')->where('id', $request->input('area_id'))->delete();
+            DB::table('area_zip')->where("area_id",$request->input('area_id'))->delete();
         }
+        return redirect("settings/area");
     }
 
     public function settingsStatesAdd() {
-        if((Auth::user()->can('admin'))) {
-            $area = new \stdClass();
-            $area->name="";
-            $area->state="";
-            $polygon="";
-            $states=[];
-            $states_list = DB::table('states')->get();
-            $polygons = DB::table('area')->select('name',DB::raw('ST_AsText(polygon) as polygon'))->get();
-            foreach($polygons as $key=>$pol) {
-                if(!empty($pol->polygon)) {
-                    $polygons[$key]->polygon = $this->encodePolygon($pol->polygon);
-                } else {
-                    $polygons[$key]->polygon = "";
-                }
+        $area = new \stdClass();
+        $area->name="";
+        $area->state="";
+        $polygon="";
+        $states=[];
+        $states_list = DB::table('states')->get();
+        $polygons = DB::table('area')->select('name',DB::raw('ST_AsText(polygon) as polygon'))->get();
+        foreach($polygons as $key=>$pol) {
+            if(!empty($pol->polygon)) {
+                $polygons[$key]->polygon = $this->encodePolygon($pol->polygon);
+            } else {
+                $polygons[$key]->polygon = "";
             }
-            $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Add','br1'=>'Area','br2'=>'Tariff Add']);
-            return $this->page(request(), $res_view);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
         }
+        $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Add','br1'=>'Area','br2'=>'Tariff Add']);
+        return $this->page(request(), $res_view);
     }
 
     public function settingsStatesAddHandler(Request $request) {
-        if((Auth::user()->can('admin'))) {
-            if($request->input('save')>0) {
-                $area_id = DB::table('area')->insertGetId($this->tariffAreaData($request));
-                if(!empty($request->input('zip'))){
-                    $zips = array_filter(explode("\n",$request->input('zip')));
-                    foreach($zips as $zip){
-                        if(!empty($zip)){
-                            DB::table('area_zip')->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
-                        }
+        if($request->input('save')>0) {
+            $area_id = DB::table('area')->insertGetId($this->tariffAreaData($request));
+            if(!empty($request->input('zip'))){
+                $zips = array_filter(explode("\n",$request->input('zip')));
+                foreach($zips as $zip){
+                    if(!empty($zip)){
+                        DB::table('area_zip')->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
                     }
                 }
             }
-            return redirect("settings/area");
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
         }
+        return redirect("settings/area");
     }
 
     /**
      * @param int|string $area_id
      */
     public function settingsStatesEdit($area_id) {
-        if((Auth::user()->can('admin'))) {
-            $area = DB::table('area')->where('id', $area_id)->select('id','name','state','tariff',DB::raw('ST_AsText(polygon) as polygon'))->first();
-            if(!empty($area->polygon)) {
-                $polygon = $this->encodePolygon($area->polygon);
-            } else {
-                $polygon = "";
-            }
-            $polygons = DB::table('area')->where('id', '!=', $area_id)->where('state',$area->state)->select('name',DB::raw('ST_AsText(polygon) as polygon'))->get();
-            foreach($polygons as $key=>$pol) {
-                if(!empty($pol->polygon)) {
-                    $polygons[$key]->polygon = $this->encodePolygon($pol->polygon);
-                } else {
-                    $polygons[$key]->polygon = "";
-                }
-            }
-            $states = DB::table('area_zip')->where('area_id', $area_id)->get();
-            $states_list = DB::table('states')->get();
-            $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Edit','br1'=>'Area','br2'=>'Tariff Edit']);
-            return $this->page(request(), $res_view);
+        $area = DB::table('area')->where('id', $area_id)->select('id','name','state','tariff',DB::raw('ST_AsText(polygon) as polygon'))->first();
+        if(!empty($area->polygon)) {
+            $polygon = $this->encodePolygon($area->polygon);
         } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+            $polygon = "";
         }
+        $polygons = DB::table('area')->where('id', '!=', $area_id)->where('state',$area->state)->select('name',DB::raw('ST_AsText(polygon) as polygon'))->get();
+        foreach($polygons as $key=>$pol) {
+            if(!empty($pol->polygon)) {
+                $polygons[$key]->polygon = $this->encodePolygon($pol->polygon);
+            } else {
+                $polygons[$key]->polygon = "";
+            }
+        }
+        $states = DB::table('area_zip')->where('area_id', $area_id)->get();
+        $states_list = DB::table('states')->get();
+        $res_view = view('area.form',['area'=>$area,'polygon'=>$polygon,'polygons'=>$polygons,'states'=>$states,'states_list'=>$states_list,'alert'=>'','title'=>'Area Tariff Edit','br1'=>'Area','br2'=>'Tariff Edit']);
+        return $this->page(request(), $res_view);
     }
 
     /**
      * @param int|string $area_id
      */
     public function settingsStatesEditHandler($area_id, Request $request) {
-        if((Auth::user()->can('admin'))) {
-            if($request->input('save')>0) {
-                DB::table('area')->where("id",$area_id)->update($this->tariffAreaData($request));
-                //DB::table('area_zip')->where("area_id",$area_id)->delete();
-                if(!empty($request->input('zip'))){
-                    $zips = array_filter(explode("\r\n",$request->input('zip')));
-                    foreach($zips as $zip){
-                        if(!empty($zip)){
-                            DB::table('area_zip')->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
-                        }
+        if($request->input('save')>0) {
+            DB::table('area')->where("id",$area_id)->update($this->tariffAreaData($request));
+            //DB::table('area_zip')->where("area_id",$area_id)->delete();
+            if(!empty($request->input('zip'))){
+                $zips = array_filter(explode("\r\n",$request->input('zip')));
+                foreach($zips as $zip){
+                    if(!empty($zip)){
+                        DB::table('area_zip')->insert(['area_id' => $area_id,'zip' => preg_replace('/\s+/', '', $zip)]);
                     }
                 }
             }
-            return redirect("settings/area");
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
         }
+        return redirect("settings/area");
     }
 
     private function tariffAreaData(Request $request) {

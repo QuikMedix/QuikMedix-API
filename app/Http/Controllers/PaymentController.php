@@ -27,170 +27,153 @@ class PaymentController extends Controller
     }
 
     public function cardAdd() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
-            $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
-            $success='';
-            $error='';
-            return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
-        }
+        $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+        $success='';
+        $error='';
+        return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
     }
 
     public function cardAddHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
-            $success='';
-            $error='';
-            if(!empty($request->input('ncard')) && !empty($request->input('name')) && !empty($request->input('expire')) && !empty($request->input('ccv')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
-                $ncard=str_replace(' ','',$request->input('ncard'));
-                $name=explode(' ',$request->input('name'));
-                if(count($name)==1) {
-                    $name[1]="";
-                }
-                $expire=explode('/',str_replace(' ','',$request->input('expire')));
-                $ccv=$request->input('ccv');
-                $zip=$request->input('zip');
-                $user_address = explode(',',$request->input('address'));
-                if(count($user_address)==1) {
-                    $user_address[1]="";
-                    $user_address[2]="";
-                }
-                if(count($user_address)==2) {
-                    $user_address[2]="";
-                }
-                $merchantAuthentication = new AnetAPI\MerchantAuthenticationType();
-                $merchantAuthentication->setName(config('app.MERCHANT_LOGIN_ID'));
-                $merchantAuthentication->setTransactionKey(config('app.MERCHANT_TRANSACTION_KEY'));
-                // Set the transaction's refId
-                $refId = 'ref' . time();
-                // Set credit card information for payment profile
-                $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
-                if(!empty($payment_account)) {
-                    $request = new AnetAPI\UpdateCustomerPaymentProfileRequest();
-                    $request->setMerchantAuthentication($merchantAuthentication);
-                    $request->setCustomerProfileId($payment_account->profile_id);
-                    $controller = new AnetController\GetCustomerProfileController($request);
-                    $creditCard = new AnetAPI\CreditCardType();
-                    $creditCard->setCardNumber($ncard);
-                    $creditCard->setExpirationDate($expire[1].'-'.$expire[0]);
-                    $creditCard->setCardCode($ccv);
-                    $paymentCreditCard = new AnetAPI\PaymentType();
-                    $paymentCreditCard->setCreditCard($creditCard);
-                    $billTo = new AnetAPI\CustomerAddressType();
-                    $billTo->setFirstName($name[0]);
-                    $billTo->setLastName($name[1]);
-                    $billTo->setCompany("QuikMedix");
-                    $billTo->setAddress($user_address[0]);
-                    $billTo->setCity($user_address[1]);
-                    $billTo->setState($user_address[2]);
-                    $billTo->setZip($zip);
-                    $billTo->setCountry("USA");
-                    $billTo->setPhoneNumber(Auth::user()->phone);
-                    $billTo->setfaxNumber("999-999-9999");
-                    $paymentprofile = new AnetAPI\CustomerPaymentProfileExType();
-                    $paymentprofile->setCustomerPaymentProfileId($payment_account->payment_profile_id);
-                    $paymentprofile->setBillTo($billTo);
-                    $paymentprofile->setPayment($paymentCreditCard);
-                    // Submit a UpdatePaymentProfileRequest
-                    $request->setPaymentProfile($paymentprofile);
-                    $controller = new AnetController\UpdateCustomerPaymentProfileController($request);
-                    /** @var AnetAPI\UpdateCustomerPaymentProfileResponse $response */
-                    $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
-                    if (($response != null) && ($response->getMessages()->getResultCode() == "Ok") )
-                    {
-                        $success= "New Card successfully added!";
-                        DB::table('payment_accounts')->where('user_id',Auth::user()->id)->update(['card'=>$ncard]);
-                    } else if ($response != null) {
-                        $errorMessages = $response->getMessages()->getMessage();
-                        $error=$errorMessages[0]->getText();
-                    }
-                } else {
-                    $creditCard = new AnetAPI\CreditCardType();
-                    $creditCard->setCardNumber($ncard);
-                    $creditCard->setExpirationDate($expire[1].'-'.$expire[0]);
-                    $creditCard->setCardCode($ccv);
-                    $paymentCreditCard = new AnetAPI\PaymentType();
-                    $paymentCreditCard->setCreditCard($creditCard);
-                    // Create the Bill To info for new payment type
-                    $billTo = new AnetAPI\CustomerAddressType();
-                    $billTo->setFirstName($name[0]);
-                    $billTo->setLastName($name[1]);
-                    $billTo->setCompany("QuikMedix");
-                    $billTo->setAddress($user_address[0]);
-                    $billTo->setCity($user_address[1]);
-                    $billTo->setState($user_address[2]);
-                    $billTo->setZip($zip);
-                    $billTo->setCountry("USA");
-                    $billTo->setPhoneNumber(Auth::user()->phone);
-                    $billTo->setfaxNumber("999-999-9999");
-                    // Create a customer shipping address
-                    $customerShippingAddress = new AnetAPI\CustomerAddressType();
-                    $customerShippingAddress->setFirstName($name[0]);
-                    $customerShippingAddress->setLastName($name[1]);
-                    $customerShippingAddress->setCompany("QuikMedix");
-                    $customerShippingAddress->setAddress($user_address[0]);
-                    $customerShippingAddress->setCity($user_address[1]);
-                    $customerShippingAddress->setState($user_address[2]);
-                    $customerShippingAddress->setZip($zip);
-                    $customerShippingAddress->setCountry("USA");
-                    $customerShippingAddress->setPhoneNumber(Auth::user()->phone);
-                    $customerShippingAddress->setFaxNumber("999-999-9999");
-                    // Create an array of any shipping addresses
-                    $shippingProfiles[] = $customerShippingAddress;
-                    // Create a new CustomerPaymentProfile object
-                    $paymentProfile = new AnetAPI\CustomerPaymentProfileType();
-                    $paymentProfile->setCustomerType('individual');
-                    $paymentProfile->setBillTo($billTo);
-                    $paymentProfile->setPayment($paymentCreditCard);
-                    $paymentProfiles[] = $paymentProfile;
-                    // Create a new CustomerProfileType and add the payment profile object
-                    $customerProfile = new AnetAPI\CustomerProfileType();
-                    $customerProfile->setDescription("Customer ".Auth::user()->id);
-                    $customerProfile->setMerchantCustomerId(Auth::user()->id);
-                    $customerProfile->setEmail(Auth::user()->email);
-                    $customerProfile->setpaymentProfiles($paymentProfiles);
-                    $customerProfile->setShipToList($shippingProfiles);
-                    // Assemble the complete transaction request
-                    $request = new AnetAPI\CreateCustomerProfileRequest();
-                    $request->setMerchantAuthentication($merchantAuthentication);
-                    $request->setRefId($refId);
-                    $request->setProfile($customerProfile);
-                    // Create the controller and get the response
-                    $controller = new AnetController\CreateCustomerProfileController($request);
-                    /** @var AnetAPI\CreateCustomerProfileResponse $response */
-                    $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
-                    if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
-                        $paymentProfiles = $response->getCustomerPaymentProfileIdList();
-                        DB::table('payment_accounts')->insert(['user_id'=>Auth::user()->id,'profile_id'=>$response->getCustomerProfileId(),'payment_profile_id'=>$paymentProfiles[0],'card'=>$ncard]);
-                        $success="Card successfully added!";
-                    } else {
-                        $errorMessages = $response->getMessages()->getMessage();
-                        $error=$errorMessages[0]->getText();
-                    }
+        $success='';
+        $error='';
+        if(!empty($request->input('ncard')) && !empty($request->input('name')) && !empty($request->input('expire')) && !empty($request->input('ccv')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
+            $ncard=str_replace(' ','',$request->input('ncard'));
+            $name=explode(' ',$request->input('name'));
+            if(count($name)==1) {
+                $name[1]="";
+            }
+            $expire=explode('/',str_replace(' ','',$request->input('expire')));
+            $ccv=$request->input('ccv');
+            $zip=$request->input('zip');
+            $user_address = explode(',',$request->input('address'));
+            if(count($user_address)==1) {
+                $user_address[1]="";
+                $user_address[2]="";
+            }
+            if(count($user_address)==2) {
+                $user_address[2]="";
+            }
+            $merchantAuthentication = new AnetAPI\MerchantAuthenticationType();
+            $merchantAuthentication->setName(config('app.MERCHANT_LOGIN_ID'));
+            $merchantAuthentication->setTransactionKey(config('app.MERCHANT_TRANSACTION_KEY'));
+            // Set the transaction's refId
+            $refId = 'ref' . time();
+            // Set credit card information for payment profile
+            $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+            if(!empty($payment_account)) {
+                $request = new AnetAPI\UpdateCustomerPaymentProfileRequest();
+                $request->setMerchantAuthentication($merchantAuthentication);
+                $request->setCustomerProfileId($payment_account->profile_id);
+                $controller = new AnetController\GetCustomerProfileController($request);
+                $creditCard = new AnetAPI\CreditCardType();
+                $creditCard->setCardNumber($ncard);
+                $creditCard->setExpirationDate($expire[1].'-'.$expire[0]);
+                $creditCard->setCardCode($ccv);
+                $paymentCreditCard = new AnetAPI\PaymentType();
+                $paymentCreditCard->setCreditCard($creditCard);
+                $billTo = new AnetAPI\CustomerAddressType();
+                $billTo->setFirstName($name[0]);
+                $billTo->setLastName($name[1]);
+                $billTo->setCompany("QuikMedix");
+                $billTo->setAddress($user_address[0]);
+                $billTo->setCity($user_address[1]);
+                $billTo->setState($user_address[2]);
+                $billTo->setZip($zip);
+                $billTo->setCountry("USA");
+                $billTo->setPhoneNumber(Auth::user()->phone);
+                $billTo->setfaxNumber("999-999-9999");
+                $paymentprofile = new AnetAPI\CustomerPaymentProfileExType();
+                $paymentprofile->setCustomerPaymentProfileId($payment_account->payment_profile_id);
+                $paymentprofile->setBillTo($billTo);
+                $paymentprofile->setPayment($paymentCreditCard);
+                // Submit a UpdatePaymentProfileRequest
+                $request->setPaymentProfile($paymentprofile);
+                $controller = new AnetController\UpdateCustomerPaymentProfileController($request);
+                /** @var AnetAPI\UpdateCustomerPaymentProfileResponse $response */
+                $response = $controller->executeWithApiResponse( \net\authorize\api\constants\ANetEnvironment::PRODUCTION);
+                if (($response != null) && ($response->getMessages()->getResultCode() == "Ok") )
+                {
+                    $success= "New Card successfully added!";
+                    DB::table('payment_accounts')->where('user_id',Auth::user()->id)->update(['card'=>$ncard]);
+                } else if ($response != null) {
+                    $errorMessages = $response->getMessages()->getMessage();
+                    $error=$errorMessages[0]->getText();
                 }
             } else {
-                $error='All card input is required.';
+                $creditCard = new AnetAPI\CreditCardType();
+                $creditCard->setCardNumber($ncard);
+                $creditCard->setExpirationDate($expire[1].'-'.$expire[0]);
+                $creditCard->setCardCode($ccv);
+                $paymentCreditCard = new AnetAPI\PaymentType();
+                $paymentCreditCard->setCreditCard($creditCard);
+                // Create the Bill To info for new payment type
+                $billTo = new AnetAPI\CustomerAddressType();
+                $billTo->setFirstName($name[0]);
+                $billTo->setLastName($name[1]);
+                $billTo->setCompany("QuikMedix");
+                $billTo->setAddress($user_address[0]);
+                $billTo->setCity($user_address[1]);
+                $billTo->setState($user_address[2]);
+                $billTo->setZip($zip);
+                $billTo->setCountry("USA");
+                $billTo->setPhoneNumber(Auth::user()->phone);
+                $billTo->setfaxNumber("999-999-9999");
+                // Create a customer shipping address
+                $customerShippingAddress = new AnetAPI\CustomerAddressType();
+                $customerShippingAddress->setFirstName($name[0]);
+                $customerShippingAddress->setLastName($name[1]);
+                $customerShippingAddress->setCompany("QuikMedix");
+                $customerShippingAddress->setAddress($user_address[0]);
+                $customerShippingAddress->setCity($user_address[1]);
+                $customerShippingAddress->setState($user_address[2]);
+                $customerShippingAddress->setZip($zip);
+                $customerShippingAddress->setCountry("USA");
+                $customerShippingAddress->setPhoneNumber(Auth::user()->phone);
+                $customerShippingAddress->setFaxNumber("999-999-9999");
+                // Create an array of any shipping addresses
+                $shippingProfiles[] = $customerShippingAddress;
+                // Create a new CustomerPaymentProfile object
+                $paymentProfile = new AnetAPI\CustomerPaymentProfileType();
+                $paymentProfile->setCustomerType('individual');
+                $paymentProfile->setBillTo($billTo);
+                $paymentProfile->setPayment($paymentCreditCard);
+                $paymentProfiles[] = $paymentProfile;
+                // Create a new CustomerProfileType and add the payment profile object
+                $customerProfile = new AnetAPI\CustomerProfileType();
+                $customerProfile->setDescription("Customer ".Auth::user()->id);
+                $customerProfile->setMerchantCustomerId(Auth::user()->id);
+                $customerProfile->setEmail(Auth::user()->email);
+                $customerProfile->setpaymentProfiles($paymentProfiles);
+                $customerProfile->setShipToList($shippingProfiles);
+                // Assemble the complete transaction request
+                $request = new AnetAPI\CreateCustomerProfileRequest();
+                $request->setMerchantAuthentication($merchantAuthentication);
+                $request->setRefId($refId);
+                $request->setProfile($customerProfile);
+                // Create the controller and get the response
+                $controller = new AnetController\CreateCustomerProfileController($request);
+                /** @var AnetAPI\CreateCustomerProfileResponse $response */
+                $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
+                if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
+                    $paymentProfiles = $response->getCustomerPaymentProfileIdList();
+                    DB::table('payment_accounts')->insert(['user_id'=>Auth::user()->id,'profile_id'=>$response->getCustomerProfileId(),'payment_profile_id'=>$paymentProfiles[0],'card'=>$ncard]);
+                    $success="Card successfully added!";
+                } else {
+                    $errorMessages = $response->getMessages()->getMessage();
+                    $error=$errorMessages[0]->getText();
+                }
             }
-            $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
-            return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
         } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+            $error='All card input is required.';
         }
+        $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+        return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
     }
 
     /**
      * @param int|string $pharmacy_id
      */
     public function cardPharmacyAdd($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
             if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
@@ -210,9 +193,6 @@ class PaymentController extends Controller
      * @param int|string $pharmacy_id
      */
     public function cardPharmacyAddHandler($pharmacy_id,Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
             if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
@@ -346,9 +326,6 @@ class PaymentController extends Controller
      * @param int|string $pharmacy_id
      */
     public function refillPharmacyBalance($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
             if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
@@ -368,9 +345,6 @@ class PaymentController extends Controller
      * @param int|string $pharmacy_id
      */
     public function refillPharmacyBalanceHandler(Request $request, $pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
             if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
@@ -443,9 +417,6 @@ class PaymentController extends Controller
      * @param int|string $order_id
      */
     public function payCopay($order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
             if(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->can('admin')) || Auth::user()->role == 'logist') && $order->copay>0) {
@@ -466,9 +437,6 @@ class PaymentController extends Controller
      * @param int|string $order_id
      */
     public function payCopayHandler(Request $request, $order_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
             $user = DB::table('users')->where('id',$order->user_id)->first();

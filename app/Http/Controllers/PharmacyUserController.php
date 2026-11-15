@@ -33,9 +33,6 @@ class PharmacyUserController extends Controller
      * @param int|string $pharmacy_id
      */
     public function pharmacyUsers($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $users = User::where('role','medic')->where('pharmacy_id',$pharmacy_id);
             if(!empty(request()->query('search'))) {
@@ -64,9 +61,6 @@ class PharmacyUserController extends Controller
      * @param int|string $pharmacy_id
      */
     public function pharmacyUsersHandler(Request $request, $pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->filled('user_id')) {
                 Gate::authorize('manage-account', [$request->input('user_id'), $pharmacy_id]);
@@ -119,9 +113,6 @@ class PharmacyUserController extends Controller
      * @param int|string $user_id
      */
     public function pharmacyUsersEdit($pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id && DB::table('users')->where('id', $user_id)->where('pharmacy_id', $pharmacy_id)->exists()  || (Auth::user()->can('admin'))) {
             $user = DB::table('users')->where('id', $user_id)->first();
             $user_actions = DB::table('action_log')->where('user_id', $user_id)->get();
@@ -138,9 +129,6 @@ class PharmacyUserController extends Controller
      * @param int|string $user_id
      */
     public function pharmacyUsersEditHandler(Request $request,$pharmacy_id,$user_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             Gate::authorize('manage-account', [$user_id, $pharmacy_id]);
             if($request->input('save')>0) {
@@ -176,9 +164,6 @@ class PharmacyUserController extends Controller
      * @param int|string $pharmacy_id
      */
     public function pharmacyUsersAdd($pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             $input['name']='';
             $input['last_name']='';
@@ -203,9 +188,6 @@ class PharmacyUserController extends Controller
      * @param int|string $pharmacy_id
      */
     public function pharmacyUsersAddHandler(Request $request,$pharmacy_id) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->can('manage-pharmacy', $pharmacy_id)) {
             if($request->input('save')>0) {
                 if(!empty(DB::table('users')->where('email', $request->input('email'))->first())) {

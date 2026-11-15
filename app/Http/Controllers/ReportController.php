@@ -89,57 +89,43 @@ class ReportController extends Controller
     }
 
     public function reportsMap() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
-        if((Auth::user()->can('admin'))) {
-            $date = date('Y-m-d');
-            $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
-            foreach($polygons as $key=>$pol) {
-                if(!empty($pol->polygon)) {
-                    $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
-                    $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
-                        $join->on('area.polygon','!=','orders.id');
-                        $join->where('area.id',$pol->id);
-                    })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
-                    $polygons[$key]->count=$polygons[$key]->count->whereDate('created', $date);
-                    $polygons[$key]->count=$polygons[$key]->count->get()->count();
-                } else {
-                    $polygons[$key]->polygon = "";
-                    $polygons[$key]->count = "0";
-                }
+        $date = date('Y-m-d');
+        $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
+        foreach($polygons as $key=>$pol) {
+            if(!empty($pol->polygon)) {
+                $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
+                $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
+                    $join->on('area.polygon','!=','orders.id');
+                    $join->where('area.id',$pol->id);
+                })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
+                $polygons[$key]->count=$polygons[$key]->count->whereDate('created', $date);
+                $polygons[$key]->count=$polygons[$key]->count->get()->count();
+            } else {
+                $polygons[$key]->polygon = "";
+                $polygons[$key]->count = "0";
             }
-            return view('reports.map',['date'=>$date,'polygons'=>$polygons,'alert'=>'','title'=>'Reports Map','br1'=>'Reports','br2'=>'Map']);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
         }
+        return view('reports.map',['date'=>$date,'polygons'=>$polygons,'alert'=>'','title'=>'Reports Map','br1'=>'Reports','br2'=>'Map']);
     }
 
     public function reportsMapHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
-        if((Auth::user()->can('admin'))) {
-            $date = date('Y-m-d',strtotime($request->input('date')));
-            $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
-            foreach($polygons as $key=>$pol) {
-                if(!empty($pol->polygon)) {
-                    $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
-                    $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
-                        $join->on('area.polygon','!=','orders.id');
-                        $join->where('area.id',$pol->id);
-                    })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
-                    $polygons[$key]->count=$polygons[$key]->count->whereDate('created', $date);
-                    $polygons[$key]->count=$polygons[$key]->count->get()->count();
-                } else {
-                    $polygons[$key]->polygon = "";
-                    $polygons[$key]->count = "0";
-                }
+        $date = date('Y-m-d',strtotime($request->input('date')));
+        $polygons = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
+        foreach($polygons as $key=>$pol) {
+            if(!empty($pol->polygon)) {
+                $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
+                $polygons[$key]->count = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('area', function($join) use($pol) {
+                    $join->on('area.polygon','!=','orders.id');
+                    $join->where('area.id',$pol->id);
+                })->select('orders.id')->whereRaw("ST_CONTAINS(area.polygon, POINT(SUBSTRING_INDEX(users.location,',',1),SUBSTRING_INDEX(users.location,',',-1)))");
+                $polygons[$key]->count=$polygons[$key]->count->whereDate('created', $date);
+                $polygons[$key]->count=$polygons[$key]->count->get()->count();
+            } else {
+                $polygons[$key]->polygon = "";
+                $polygons[$key]->count = "0";
             }
-            return view('reports.map',['date'=>$date,'polygons'=>$polygons,'alert'=>'','title'=>'Reports Map','br1'=>'Reports','br2'=>'Map']);
-        } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
         }
+        return view('reports.map',['date'=>$date,'polygons'=>$polygons,'alert'=>'','title'=>'Reports Map','br1'=>'Reports','br2'=>'Map']);
     }
 
     public function reportsCustomers() {

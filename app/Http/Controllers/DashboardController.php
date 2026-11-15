@@ -33,9 +33,6 @@ class DashboardController extends Controller
     }
 
     public function root() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if(Auth::user()->role == 'medic'){
             $res_arr=self::get_cached_value(request()->getHttpHost().':medic_dash:'.Auth::user()->pharmacy_id);
             if(!empty($res_arr)) {
@@ -447,9 +444,6 @@ class DashboardController extends Controller
     }
 
     public function searchJson() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         if((Auth::user()->role == 'medic' && !empty(Auth::user()->pharmacy_id)) || ((Auth::user()->can('admin')))) {
             $search = request()->query('search', '');
             $max_res = 100;
@@ -643,17 +637,13 @@ class DashboardController extends Controller
     }
 
     public function ready_call() {
-        if(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist')) {
-            $user = Auth::user();
-            if($user->call_ready=='1') {
-                $user->call_ready='0';
-            } else {
-                $user->call_ready='1';
-            }
-            $user->save();
-            return redirect()->back();
+        $user = Auth::user();
+        if($user->call_ready=='1') {
+            $user->call_ready='0';
         } else {
-            return abort(403, AccessMessages::NO_PERMISSION);
+            $user->call_ready='1';
         }
+        $user->save();
+        return redirect()->back();
     }
 }

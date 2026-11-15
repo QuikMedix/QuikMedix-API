@@ -67,40 +67,40 @@ Route::get('/home', [DashboardController::class, 'home']);
 
 
 // when render first time project redirect
-Route::get('/', [DashboardController::class, 'root'])->name('home');
+Route::get('/', [DashboardController::class, 'root'])->name('home')->middleware(['auth', '2fa', 'active']);
 Route::post('/back-to-superadmin-user', [SessionController::class, 'back_to_superadmin_user'])->name('back_to_superadmin_user');
 
-Route::get('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsers']);
-Route::post('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsersHandler']);
+Route::get('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsers'])->middleware(['auth', '2fa', 'active']);
+Route::post('/pharmacy/{pharmacy_id}/users', [PharmacyUserController::class, 'pharmacyUsersHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [PharmacyUserController::class, 'pharmacyUsersEdit']);
-Route::post('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [PharmacyUserController::class, 'pharmacyUsersEditHandler']);
+Route::get('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [PharmacyUserController::class, 'pharmacyUsersEdit'])->middleware(['auth', '2fa', 'active']);
+Route::post('/pharmacy/{pharmacy_id}/users/edit/{user_id}', [PharmacyUserController::class, 'pharmacyUsersEditHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/pharmacy/{pharmacy_id}/users/add', [PharmacyUserController::class, 'pharmacyUsersAdd']);
-Route::post('/pharmacy/{pharmacy_id}/users/add', [PharmacyUserController::class, 'pharmacyUsersAddHandler']);
+Route::get('/pharmacy/{pharmacy_id}/users/add', [PharmacyUserController::class, 'pharmacyUsersAdd'])->middleware(['auth', '2fa', 'active']);
+Route::post('/pharmacy/{pharmacy_id}/users/add', [PharmacyUserController::class, 'pharmacyUsersAddHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/pharmacys', [PharmacyController::class, 'pharmacysList']);
-Route::post('/pharmacys', [PharmacyController::class, 'pharmacysListHandler']);
+Route::get('/pharmacys', [PharmacyController::class, 'pharmacysList'])->middleware(['auth', '2fa', 'active']);
+Route::post('/pharmacys', [PharmacyController::class, 'pharmacysListHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/pharmacys/integrations', [PharmacyController::class, 'pharmacysIntegrations']);
-Route::post('/pharmacys/integrations', [PharmacyController::class, 'pharmacysIntegrationsHandler']);
+Route::get('/pharmacys/integrations', [PharmacyController::class, 'pharmacysIntegrations'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/pharmacys/integrations', [PharmacyController::class, 'pharmacysIntegrationsHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/pharmacys/edit/{pharmacy_id}', [PharmacyController::class, 'pharmacysListEdit']);
-Route::post('/pharmacys/edit/{pharmacy_id}', [PharmacyController::class, 'pharmacysListEditHandler']);
+Route::get('/pharmacys/edit/{pharmacy_id}', [PharmacyController::class, 'pharmacysListEdit'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/pharmacys/edit/{pharmacy_id}', [PharmacyController::class, 'pharmacysListEditHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/pharmacys/tariff_map/{pharmacy_id}', [PharmacyController::class, 'pharmacysTariffMap']);
+Route::get('/pharmacys/tariff_map/{pharmacy_id}', [PharmacyController::class, 'pharmacysTariffMap'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
 Route::get('/pharmacys/add', [PharmacyController::class, 'pharmacysListAdd']);
-Route::post('/pharmacys/add', [PharmacyController::class, 'pharmacysListAddHandler']);
+Route::post('/pharmacys/add', [PharmacyController::class, 'pharmacysListAddHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/offices', [OfficeController::class, 'officesList']);
-Route::post('/offices', [OfficeController::class, 'officesListHandler']);
+Route::get('/offices', [OfficeController::class, 'officesList'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::post('/offices', [OfficeController::class, 'officesListHandler'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
 
-Route::get('/offices/edit/{office_id}', [OfficeController::class, 'officesListEdit']);
-Route::post('/offices/edit/{office_id}', [OfficeController::class, 'officesListEditHandler']);
+Route::get('/offices/edit/{office_id}', [OfficeController::class, 'officesListEdit'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::post('/offices/edit/{office_id}', [OfficeController::class, 'officesListEditHandler'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
 
-Route::get('/offices/add', [OfficeController::class, 'officesListAdd']);
-Route::post('/offices/add', [OfficeController::class, 'officesListAddHandler']);
+Route::get('/offices/add', [OfficeController::class, 'officesListAdd'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::post('/offices/add', [OfficeController::class, 'officesListAddHandler'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
 
 Route::get('/drivers/{pharmacy_id}/users', [PharmacyDriverController::class, 'index']);
 Route::post('/drivers/{pharmacy_id}/users', [PharmacyDriverController::class, 'updateStatus']);
@@ -111,10 +111,10 @@ Route::post('/drivers/{pharmacy_id}/users/edit/{user_id}', [PharmacyDriverContro
 Route::get('/drivers/{pharmacy_id}/users/add', [PharmacyDriverController::class, 'create']);
 Route::post('/drivers/{pharmacy_id}/users/add', [PharmacyDriverController::class, 'store']);
 
-Route::get('/drivers/{driver_id}/profile', [DriverController::class, 'driversProfile']);
-Route::post('/drivers/{driver_id}/profile', [DriverController::class, 'driversProfileHandler']);
+Route::get('/drivers/{driver_id}/profile', [DriverController::class, 'driversProfile'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/drivers/{driver_id}/profile', [DriverController::class, 'driversProfileHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/drivers/{driver_id}/payouts', [DriverController::class, 'driversPayouts']);
+Route::get('/drivers/{driver_id}/payouts', [DriverController::class, 'driversPayouts'])->middleware(['auth', '2fa', 'active', 'role:superadmin,admin,dispadmin,driver']);
 
 Route::get('/patients/{pharmacy_id}', [PatientController::class, 'index']);
 Route::post('/patients/{pharmacy_id}', [PatientController::class, 'updateStatus']);
@@ -131,24 +131,24 @@ Route::post('/facilitys/{pharmacy_id}/add', [FacilityController::class, 'store']
 Route::get('/facilitys/{pharmacy_id}/edit/{user_id}', [FacilityController::class, 'edit']);
 Route::post('/facilitys/{pharmacy_id}/edit/{user_id}', [FacilityController::class, 'update']);
 
-Route::get('/patients/{pharmacy_id}/import', [ImportController::class, 'patientsImport']);
-Route::post('/patients/{pharmacy_id}/import', [ImportController::class, 'patientsImportHandler']);
+Route::get('/patients/{pharmacy_id}/import', [ImportController::class, 'patientsImport'])->middleware(['auth', '2fa', 'active']);
+Route::post('/patients/{pharmacy_id}/import', [ImportController::class, 'patientsImportHandler'])->middleware(['auth', '2fa', 'active']);
 
 Route::get('/patients/{pharmacy_id}/removed', [PatientController::class, 'removed']);
 
 Route::get('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'edit']);
 Route::post('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'update']);
 
-Route::get('/routes-list', [RoutePlanningController::class, 'orders']);
+Route::get('/routes-list', [RoutePlanningController::class, 'orders'])->middleware(['auth', '2fa', 'active', 'role:superadmin,admin,dispadmin,logist,medic']);
 
-Route::get('/routes-drivers', [RoutePlanningController::class, 'drivers']);
+Route::get('/routes-drivers', [RoutePlanningController::class, 'drivers'])->middleware(['auth', '2fa', 'active', 'role:superadmin,admin,dispadmin,logist,medic']);
 
-Route::get('/routes-pharmacys', [RoutePlanningController::class, 'pharmacies']);
+Route::get('/routes-pharmacys', [RoutePlanningController::class, 'pharmacies'])->middleware(['auth', '2fa', 'active', 'role:superadmin,admin,dispadmin,logist']);
 
 Route::post('/orders/{pharmacy_id}/ready', [OrderController::class, 'markReady']);
 
-Route::get('/pay/copay/{order_id}', [PaymentController::class, 'payCopay']);
-Route::post('/pay/copay/{order_id}', [PaymentController::class, 'payCopayHandler']);
+Route::get('/pay/copay/{order_id}', [PaymentController::class, 'payCopay'])->middleware(['auth', '2fa', 'active']);
+Route::post('/pay/copay/{order_id}', [PaymentController::class, 'payCopayHandler'])->middleware(['auth', '2fa', 'active']);
 
 Route::get('/routes-list/show/{order_id}', [RoutePlanningController::class, 'showOrder']);
 Route::post('/routes-list/show/{order_id}', [RoutePlanningController::class, 'assignOrder']);
@@ -163,27 +163,27 @@ Route::get('/orders/facilitys_add', [OrderCreationController::class, 'createFaci
 Route::get('/orders/{pharmacy_id}', [OrderController::class, 'index'])->whereNumber('pharmacy_id');
 Route::post('/orders/{pharmacy_id}', [OrderController::class, 'updateStatus'])->whereNumber('pharmacy_id');
 
-Route::get('/search/json', [DashboardController::class, 'searchJson']);
+Route::get('/search/json', [DashboardController::class, 'searchJson'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/billing-old/{pharmacy_id}', [BillingController::class, 'billing2']);
+Route::get('/billing-old/{pharmacy_id}', [BillingController::class, 'billing2'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/billing/{pharmacy_id}', [BillingController::class, 'billing']);
-Route::get('/billing/{pharmacy_id}/orders/{invoice_id}', [BillingController::class, 'billingOrders']);
-Route::get('/billing/{pharmacy_id}/print/{invoice_id}', [BillingController::class, 'billingPrint']);
-Route::get('/billing/{pharmacy_id}/print_report/{invoice_id}', [BillingController::class, 'billingPrintReport']);
-Route::post('/billing/{pharmacy_id}', [BillingController::class, 'billingHandler']);
+Route::get('/billing/{pharmacy_id}', [BillingController::class, 'billing'])->middleware(['auth', '2fa', 'active']);
+Route::get('/billing/{pharmacy_id}/orders/{invoice_id}', [BillingController::class, 'billingOrders'])->middleware(['auth', '2fa', 'active']);
+Route::get('/billing/{pharmacy_id}/print/{invoice_id}', [BillingController::class, 'billingPrint'])->middleware(['auth', '2fa', 'active']);
+Route::get('/billing/{pharmacy_id}/print_report/{invoice_id}', [BillingController::class, 'billingPrintReport'])->middleware(['auth', '2fa', 'active']);
+Route::post('/billing/{pharmacy_id}', [BillingController::class, 'billingHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/billing/{pharmacy_id}/invoice/add', [BillingController::class, 'billingInvoiceAdd']);
-Route::post('/billing/{pharmacy_id}/invoice/add', [BillingController::class, 'billingInvoiceAddHandler']);
+Route::get('/billing/{pharmacy_id}/invoice/add', [BillingController::class, 'billingInvoiceAdd'])->middleware(['auth', '2fa', 'active']);
+Route::post('/billing/{pharmacy_id}/invoice/add', [BillingController::class, 'billingInvoiceAddHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [BillingController::class, 'billingInvoiceEdit']);
-Route::post('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [BillingController::class, 'billingInvoiceEditHandler']);
+Route::get('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [BillingController::class, 'billingInvoiceEdit'])->middleware(['auth', '2fa', 'active']);
+Route::post('/billing/{pharmacy_id}/invoice/{invoice_id}/edit', [BillingController::class, 'billingInvoiceEditHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/process/{pharmacy_id}', [PharmacyProcessController::class, 'process']);
-Route::get('/process/{pharmacy_id}/show/{driver_id}', [PharmacyProcessController::class, 'processShow']);
+Route::get('/process/{pharmacy_id}', [PharmacyProcessController::class, 'process'])->middleware(['auth', '2fa', 'active']);
+Route::get('/process/{pharmacy_id}/show/{driver_id}', [PharmacyProcessController::class, 'processShow'])->middleware(['auth', '2fa', 'active', 'role:superadmin,admin,dispadmin,medic']);
 
-Route::get('/import/{pharmacy_id}/order', [ImportController::class, 'import_order']);
-Route::post('/import/{pharmacy_id}/order', [ImportController::class, 'import_orderHandler']);
+Route::get('/import/{pharmacy_id}/order', [ImportController::class, 'import_order'])->middleware(['auth', '2fa', 'active']);
+Route::post('/import/{pharmacy_id}/order', [ImportController::class, 'import_orderHandler'])->middleware(['auth', '2fa', 'active']);
 
 Route::get('/orders', [AllOrdersController::class, 'index']);
 Route::post('/orders', [AllOrdersController::class, 'updateStatus']);
@@ -215,55 +215,55 @@ Route::post('/orders/{pharmacy_id}/facilitys_add', [FacilityOrderController::cla
 Route::get('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statistic']);
 Route::post('/orders/{pharmacy_id}/statistic', [OrderController::class, 'statisticForDate']);
 
-Route::get('/profile', [ProfileController::class, 'profile']);
-Route::post('/profile', [ProfileController::class, 'profileHandler']);
+Route::get('/profile', [ProfileController::class, 'profile'])->middleware(['auth', '2fa', 'active']);
+Route::post('/profile', [ProfileController::class, 'profileHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/settings/users', [UserSettingsController::class, 'settingsUsers']);
-Route::post('/settings/users', [UserSettingsController::class, 'settingsUsersHandler']);
+Route::get('/settings/users', [UserSettingsController::class, 'settingsUsers'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/settings/users', [UserSettingsController::class, 'settingsUsersHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/settings/admins', [UserSettingsController::class, 'settingsAdmins']);
-Route::post('/settings/admins', [UserSettingsController::class, 'settingsAdminsHandler']);
+Route::get('/settings/admins', [UserSettingsController::class, 'settingsAdmins'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::post('/settings/admins', [UserSettingsController::class, 'settingsAdminsHandler'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
 
-Route::get('/settings/admin_areas', [AdminAreaController::class, 'settingsAdminAreas']);
-Route::get('/settings/admin_areas/add', [AdminAreaController::class, 'settingsAdminAreasAdd']);
-Route::post('/settings/admin_areas/add', [AdminAreaController::class, 'settingsAdminAreasAddHandler']);
-Route::get('/settings/admin_areas/edit/{admin_area_id}', [AdminAreaController::class, 'settingsAdminAreasEdit']);
-Route::post('/settings/admin_areas/edit/{admin_area_id}', [AdminAreaController::class, 'settingsAdminAreasEditHandler']);
+Route::get('/settings/admin_areas', [AdminAreaController::class, 'settingsAdminAreas'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::get('/settings/admin_areas/add', [AdminAreaController::class, 'settingsAdminAreasAdd'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::post('/settings/admin_areas/add', [AdminAreaController::class, 'settingsAdminAreasAddHandler'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::get('/settings/admin_areas/edit/{admin_area_id}', [AdminAreaController::class, 'settingsAdminAreasEdit'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
+Route::post('/settings/admin_areas/edit/{admin_area_id}', [AdminAreaController::class, 'settingsAdminAreasEditHandler'])->middleware(['auth', '2fa', 'active', 'role:superadmin']);
 
-Route::get('/settings/medics', [UserSettingsController::class, 'settingsMedics']);
-Route::post('/settings/medics', [UserSettingsController::class, 'settingsMedicsHandler']);
+Route::get('/settings/medics', [UserSettingsController::class, 'settingsMedics'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/settings/medics', [UserSettingsController::class, 'settingsMedicsHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/settings/drivers', [UserSettingsController::class, 'settingsDrivers']);
-Route::post('/settings/drivers', [UserSettingsController::class, 'settingsDriversHandler']);
+Route::get('/settings/drivers', [UserSettingsController::class, 'settingsDrivers'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/settings/drivers', [UserSettingsController::class, 'settingsDriversHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/settings/logists', [UserSettingsController::class, 'settingsLogists']);
-Route::post('/settings/logists', [UserSettingsController::class, 'settingsLogistsHandler']);
+Route::get('/settings/logists', [UserSettingsController::class, 'settingsLogists'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/settings/logists', [UserSettingsController::class, 'settingsLogistsHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/settings/users/edit/{user_id}', [UserSettingsController::class, 'settingsUsersedit']);
-Route::post('/settings/users/edit/{user_id}', [UserSettingsController::class, 'settingsUserseditHandler']);
+Route::get('/settings/users/edit/{user_id}', [UserSettingsController::class, 'settingsUsersedit'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/settings/users/edit/{user_id}', [UserSettingsController::class, 'settingsUserseditHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/settings/users/add', [UserSettingsController::class, 'settingsUsersAdd']);
-Route::post('/settings/users/add', [UserSettingsController::class, 'settingsUsersAddHandler']);
+Route::get('/settings/users/add', [UserSettingsController::class, 'settingsUsersAdd'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/settings/users/add', [UserSettingsController::class, 'settingsUsersAddHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
-Route::get('/cards', [PaymentController::class, 'cardAdd']);
-Route::post('/cards', [PaymentController::class, 'cardAddHandler']);
+Route::get('/cards', [PaymentController::class, 'cardAdd'])->middleware(['auth', '2fa', 'active', 'role:superadmin,admin,dispadmin,logist']);
+Route::post('/cards', [PaymentController::class, 'cardAddHandler'])->middleware(['auth', '2fa', 'active', 'role:superadmin,admin,dispadmin,logist']);
 
-Route::get('/payment-method/{pharmacy_id}', [PaymentController::class, 'cardPharmacyAdd']);
-Route::post('/payment-method/{pharmacy_id}', [PaymentController::class, 'cardPharmacyAddHandler']);
+Route::get('/payment-method/{pharmacy_id}', [PaymentController::class, 'cardPharmacyAdd'])->middleware(['auth', '2fa', 'active']);
+Route::post('/payment-method/{pharmacy_id}', [PaymentController::class, 'cardPharmacyAddHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalance']);
-Route::post('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalanceHandler']);
+Route::get('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalance'])->middleware(['auth', '2fa', 'active']);
+Route::post('/payment-method/{pharmacy_id}/refill', [PaymentController::class, 'refillPharmacyBalanceHandler'])->middleware(['auth', '2fa', 'active']);
 
 Route::get('/notifications', [DashboardController::class, 'notifications']);
 
 Route::post('/drivers/qr', [DriverController::class, 'driversQr']);
 
-Route::get('/drivers/{user_id}/packages', [DriverController::class, 'driversPackages']);
-Route::post('/drivers/{user_id}/packages', [DriverController::class, 'driversPackagesHandler']);
+Route::get('/drivers/{user_id}/packages', [DriverController::class, 'driversPackages'])->middleware(['auth', '2fa', 'active', 'role:medic,superadmin,admin,dispadmin']);
+Route::post('/drivers/{user_id}/packages', [DriverController::class, 'driversPackagesHandler'])->middleware(['auth', '2fa', 'active', 'role:medic,superadmin,admin,dispadmin']);
 
 Route::post('/drivers/qr_order', [DriverController::class, 'driversQrOrder']);
 
-Route::post('/patients/{user_id}/resend', [SessionController::class, 'reSendAuthMessage']);
+Route::post('/patients/{user_id}/resend', [SessionController::class, 'reSendAuthMessage'])->middleware(['auth', '2fa', 'active']);
 
 Route::get('/patients/{user_id}/family', [PatientController::class, 'familyOptions']);
 Route::get('/patients/{user_id}/additional_recipients', [PatientController::class, 'additionalRecipientOptions']);
@@ -271,42 +271,42 @@ Route::get('/patients/{user_id}/additional_recipients', [PatientController::clas
 Route::get('/pusher/beams-auth', [LexaAdminApiNoAuth::class, 'pusher_auth']);
 
 Route::get('/news', [NewsController::class, 'news']);
-Route::get('/news/add', [NewsController::class, 'newsAdd']);
-Route::post('/news/add', [NewsController::class, 'newsAddHandler']);
+Route::get('/news/add', [NewsController::class, 'newsAdd'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/news/add', [NewsController::class, 'newsAddHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
 Route::get('/news_patient', [NewsController::class, 'news_patient']);
-Route::get('/news_patient/add', [NewsController::class, 'news_patientAdd']);
-Route::post('/news_patient/add', [NewsController::class, 'news_patientAddHandler']);
+Route::get('/news_patient/add', [NewsController::class, 'news_patientAdd'])->middleware(['auth', '2fa', 'active']);
+Route::post('/news_patient/add', [NewsController::class, 'news_patientAddHandler'])->middleware(['auth', '2fa', 'active']);
 
-Route::get('/settings/wishes', [WishController::class, 'settingsWishesCategory']);
-Route::post('/settings/wishes', [WishController::class, 'settingsWishesCategoryHandler']);
+Route::get('/settings/wishes', [WishController::class, 'settingsWishesCategory'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/wishes', [WishController::class, 'settingsWishesCategoryHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/wishes/add', [WishController::class, 'settingsWishesCategoryAdd']);
-Route::post('/settings/wishes/add', [WishController::class, 'settingsWishesCategoryAddHandler']);
+Route::get('/settings/wishes/add', [WishController::class, 'settingsWishesCategoryAdd'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/wishes/add', [WishController::class, 'settingsWishesCategoryAddHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/area', [DeliveryAreaController::class, 'settingsStates']);
-Route::post('/settings/area', [DeliveryAreaController::class, 'settingsStatesHandler']);
+Route::get('/settings/area', [DeliveryAreaController::class, 'settingsStates'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/area', [DeliveryAreaController::class, 'settingsStatesHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/area/add', [DeliveryAreaController::class, 'settingsStatesAdd']);
-Route::post('/settings/area/add', [DeliveryAreaController::class, 'settingsStatesAddHandler']);
+Route::get('/settings/area/add', [DeliveryAreaController::class, 'settingsStatesAdd'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/area/add', [DeliveryAreaController::class, 'settingsStatesAddHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEdit']);
-Route::post('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEditHandler']);
+Route::get('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEdit'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEditHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishes']);
-Route::post('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishesHandler']);
+Route::get('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishes'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishesHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/wishes/{wish_id}/add', [WishController::class, 'settingsWishesAdd']);
-Route::post('/settings/wishes/{wish_id}/add', [WishController::class, 'settingsWishesAddHandler']);
+Route::get('/settings/wishes/{wish_id}/add', [WishController::class, 'settingsWishesAdd'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/wishes/{wish_id}/add', [WishController::class, 'settingsWishesAddHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/plans', [PlanController::class, 'settingsPlans']);
-Route::post('/settings/plans', [PlanController::class, 'settingsPlansHandler']);
+Route::get('/settings/plans', [PlanController::class, 'settingsPlans'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/plans', [PlanController::class, 'settingsPlansHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/plans/add', [PlanController::class, 'settingsPlansAdd']);
-Route::post('/settings/plans/add', [PlanController::class, 'settingsPlansAddHandler']);
+Route::get('/settings/plans/add', [PlanController::class, 'settingsPlansAdd'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/plans/add', [PlanController::class, 'settingsPlansAddHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
-Route::get('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEdit']);
-Route::post('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEditHandler']);
+Route::get('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEdit'])->middleware(['auth', '2fa', 'allowed:admin']);
+Route::post('/settings/plans/{plan_id}/edit', [PlanController::class, 'settingsPlansEditHandler'])->middleware(['auth', '2fa', 'allowed:admin']);
 
 Route::get('/delivery-calendar', [DashboardController::class, 'deliveryCalendar']);
 
@@ -327,8 +327,8 @@ Route::get('/reports/apps', [ReportController::class, 'reportsApps']);
 Route::get('/reports/drivers', [ReportController::class, 'reportsDrivers']);
 Route::get('/reports/pharmacies', [ReportController::class, 'reportsPharmacies']);
 Route::get('/reports/invoices', [ReportController::class, 'reportsInvoices']);
-Route::get('/reports/map', [ReportController::class, 'reportsMap']);
-Route::post('/reports/map', [ReportController::class, 'reportsMapHandler']);
+Route::get('/reports/map', [ReportController::class, 'reportsMap'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::post('/reports/map', [ReportController::class, 'reportsMapHandler'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 Route::get('/reports/customers', [ReportController::class, 'reportsCustomers']);
 Route::get('/dispatching', [DispatchingController::class, 'index']);
 Route::post('/dispatching', [DispatchingController::class, 'update']);
@@ -340,10 +340,10 @@ Route::get('/faq/add', [FaqController::class, 'create']);
 Route::post('/faq/add', [FaqController::class, 'store']);
 
 
-Route::post('/ready_call', [DashboardController::class, 'ready_call']);
+Route::post('/ready_call', [DashboardController::class, 'ready_call'])->middleware(['auth', '2fa', 'role:superadmin,admin,dispadmin,logist']);
 
-Route::get('/quickbook', [QuickbookController::class, 'quickbook']);
-Route::get('/quickbook_callback', [QuickbookController::class, 'quickbookCallback']);
+Route::get('/quickbook', [QuickbookController::class, 'quickbook'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
+Route::get('/quickbook_callback', [QuickbookController::class, 'quickbookCallback'])->middleware(['auth', '2fa', 'active', 'allowed:admin']);
 
 Route::get('/feedback', [PageController::class, 'feedback']);
 

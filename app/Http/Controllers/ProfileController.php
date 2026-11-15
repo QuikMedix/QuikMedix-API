@@ -26,9 +26,6 @@ class ProfileController extends Controller
     }
 
     public function profile() {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $pharmacys = DB::table('pharmacys')->get();
         $user = Auth::user();
         $admin_areas = DB::table('admin_areas')->get();
@@ -37,9 +34,6 @@ class ProfileController extends Controller
     }
 
     public function profileHandler(Request $request) {
-        if(Auth::user()->isblocked_or_isactive()) {
-            return abort(403, AccessMessages::ACCOUNT_INACTIVE);
-        }
         $user_id = Auth::user()->id;
         if($user_id) {
             if($request->input('save')>0) {

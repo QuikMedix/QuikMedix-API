@@ -65,5 +65,7 @@ class Kernel extends HttpKernel
         '2fa' => \App\Http\Middleware\Check2FA::class,
         'active' => \App\Http\Middleware\EnsureUserIsActive::class,
         'active.api' => \App\Http\Middleware\EnsureApiAccountIsActive::class,
+        'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+        'allowed' => \App\Http\Middleware\EnsureUserIsAllowed::class,
     ];
 }
