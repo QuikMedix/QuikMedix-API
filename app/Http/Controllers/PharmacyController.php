@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SavePharmacyRequest;
 use App\Models\Plan;
 use App\Models\Area;
 use App\Models\Pharmacy;
@@ -153,7 +154,7 @@ class PharmacyController extends Controller
     /**
      * @param int|string $pharmacy_id
      */
-    public function pharmacysListEditHandler(Request $request,$pharmacy_id) {
+    public function pharmacysListEditHandler(SavePharmacyRequest $request,$pharmacy_id) {
         if($request->input('save')>0) {
             $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
             if($request->hasFile('image')) {
@@ -323,7 +324,7 @@ class PharmacyController extends Controller
         return $this->page(request(), $res_view);
     }
 
-    public function pharmacysListAddHandler(Request $request) {
+    public function pharmacysListAddHandler(SavePharmacyRequest $request) {
         if((Auth::user()->can('admin'))) {
             if($request->input('save')>0) {
                 $tariffSelection = $request->validate([

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\StoreUserRequest;
 use App\Models\AdminArea;
 use App\Models\Pharmacy;
 use App\Models\ActionLog;
@@ -194,7 +196,7 @@ class UserSettingsController extends Controller
     /**
      * @param int|string $user_id
      */
-    public function settingsUserseditHandler(Request $request,$user_id) {
+    public function settingsUserseditHandler(UpdateUserRequest $request,$user_id) {
         Gate::authorize('manage-account', [$user_id]);
         $user = DB::table('users')->where('id', $user_id)->first();
         if($request->filled('role') && $request->input('role') !== $user->role) {
@@ -276,22 +278,22 @@ class UserSettingsController extends Controller
     }
 
     public function settingsUsersAdd() {
-        $input['name']='';
-        $input['last_name']='';
-        $input['email']='';
-        $input['phone']='';
+        $input['name']=old('name', '');
+        $input['last_name']=old('last_name', '');
+        $input['email']=old('email', '');
+        $input['phone']=old('phone', '');
         $input['image']='';
-        $input['address']='';
+        $input['address']=old('address', '');
         $input['password']='';
-        $input['apartment']='';
-        $input['zip']='';
-        $input['pharmacy']='';
+        $input['apartment']=old('apartment', '');
+        $input['zip']=old('zip', '');
+        $input['pharmacy']=old('pharmacy', '');
         $pharmacys = Pharmacy::query()->get();
         $res_view = view('settings.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Settings','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
         return $this->page(request(), $res_view);
     }
 
-    public function settingsUsersAddHandler(Request $request) {
+    public function settingsUsersAddHandler(StoreUserRequest $request) {
         if($request->input('save')>0) {
             if(!empty(DB::table('users')->where('email', $request->input('email'))->where('pharmacy_id', $request->input('pharmacy'))->first())) {
                 $input['name']=$request->input('name');

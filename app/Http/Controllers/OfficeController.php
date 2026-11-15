@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SaveOfficeRequest;
 use App\Models\AdminArea;
 use App\Models\Office;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -81,7 +82,7 @@ class OfficeController extends Controller
     /**
      * @param int|string $office_id
      */
-    public function officesListEditHandler(Request $request,$office_id) {
+    public function officesListEditHandler(SaveOfficeRequest $request,$office_id) {
         if($request->input('save')>0) {
             if(!empty(DB::table('offices')->where('id','!=',$office_id)->where(function($query) use ($request) {
                     $query->where('email', $request->input('email'))->orWhere('zone_id', $request->input('zone_id'));
@@ -125,7 +126,7 @@ class OfficeController extends Controller
         return $this->page(request(), $res_view);
     }
 
-    public function officesListAddHandler(Request $request) {
+    public function officesListAddHandler(SaveOfficeRequest $request) {
         if($request->input('save')>0) {
             if(!empty(DB::table('offices')->where('email', $request->input('email'))->orWhere('zone_id', $request->input('zone_id'))->first())) {
                 $office=new \StdClass();
