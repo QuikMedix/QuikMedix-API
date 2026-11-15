@@ -23,6 +23,10 @@
         <env name="MAIL_FROM_ADDRESS" value="tests@example.org" force="true"/>
         <env name="LOG_CHANNEL" value="null" force="true"/>
         <env name="BROADCAST_DRIVER" value="null" force="true"/>
+        <env name="PUSHER_APP_ID" value="testing" force="true"/>
+        <env name="PUSHER_APP_KEY" value="testing" force="true"/>
+        <env name="PUSHER_APP_SECRET" value="testing" force="true"/>
+        <env name="PUSHER_APP_CLUSTER" value="mt1" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4" force="true"/>
     </php>
 </phpunit>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="Patient">
+  <!-- The page prints the order number over the bottom 19px, so that band is a plain label plate. -->
+  <rect x="6" y="59.5" width="68" height="20" rx="6" fill="#ffffff" fill-opacity="0.92" stroke="#0e46b7" stroke-opacity="0.35"/>
+  <circle cx="40" cy="34" r="21" fill="#0e46b7" stroke="#ffffff" stroke-width="3"/>
+  <circle cx="40" cy="27" r="7" fill="#ffffff"/>
+  <path d="M26.5 46.5c1.3-6.5 6.9-10.5 13.5-10.5s12.2 4 13.5 10.5c-3.5 3.4-8.3 5.5-13.5 5.5s-10-2.1-13.5-5.5z" fill="#ffffff"/>
+</svg>

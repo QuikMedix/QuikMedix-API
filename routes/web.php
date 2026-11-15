@@ -9,6 +9,7 @@ use App\Http\Controllers\OrderStatusController;
 use App\Http\Controllers\AllOrdersController;
 use App\Http\Controllers\LexaAdminApiNoAuth;
 use App\Http\Controllers\FacilityController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\OrderCreationController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PharmacyDriverController;
@@ -315,10 +316,10 @@ Route::get('/dispatching', [LexaAdmin::class, 'dispatching']);
 Route::post('/dispatching', [LexaAdmin::class, 'dispatchingHandler']);
 Route::get('/dispatching/show/{driver_id}', [LexaAdmin::class, 'dispatchingShow']);
 Route::post('/dispatching/show/{driver_id}', [LexaAdmin::class, 'dispatchingShowHandler']);
-Route::get('/faq', [LexaAdmin::class, 'faq']);
-Route::post('/faq', [LexaAdmin::class, 'faqHandler']);
-Route::get('/faq/add', [LexaAdmin::class, 'faqAdd']);
-Route::post('/faq/add', [LexaAdmin::class, 'faqAddHandler']);
+Route::get('/faq', [FaqController::class, 'index']);
+Route::post('/faq', [FaqController::class, 'destroy']);
+Route::get('/faq/add', [FaqController::class, 'create']);
+Route::post('/faq/add', [FaqController::class, 'store']);
 
 Route::get('/drivers', [LexaAdmin::class, 'drivers']);
 

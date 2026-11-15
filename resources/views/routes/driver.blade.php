@@ -1650,7 +1650,7 @@ label {
     function attachSecretMessage(marker) {
         marker.addListener("click", () => {
             var id = marker.get('id');
-            if(id!="") {
+            if(id) {
                 if(setup_route==true) {
                     $('.modal2').find('input[name="id"]').val(id);
                     if($('.wrapper .plus-item').index($('.wrapper').find("."+id))<0) {
