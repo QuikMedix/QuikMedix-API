@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\RepeatOrder;
 use App\Models\DeliveryMethod;
 use App\Models\DeliveryTime;
 use App\Models\Status;
@@ -202,32 +203,7 @@ class OrderController extends Controller
             Rx::query()->where('order_id',$request->input('order_id'))->delete();
         }
         if($request->input('repeat')>0) {
-            $order = DB::table('orders')->where('id', $request->input('order_id'))->first();
-            $order->id = NULL;
-            $order->medic_id = Auth::id();
-            $order->statuse_id = 1;
-            $order->finish = NULL;
-            $order->rating = NULL;
-            $order->statuse_copay = 1;
-            $order->tariff = NULL;
-            $order->drop_off_photo = NULL;
-            $order->signature_photo = NULL;
-            $order->signature_type = NULL;
-            $order->invoice_payed = NULL;
-            $order->eta = NULL;
-            $order->delivery_date = date("Y-m-d",strtotime(date("Y-m-d H:i:s")." +1 day"));
-            $pharmacy_id = $order->pharmacy_id;
-            $order = json_encode($order);
-            $order = json_decode($order,true);
-            $order_id = Order::query()->insertGetId($order);
-            $rxs = DB::table('rxs')->where('order_id',$request->input('order_id'))->get();
-            foreach($rxs as $rx) {
-                $rx->id = NULL;
-                $rx->order_id = $order_id;
-                $rx = json_encode($rx);
-                $rx = json_decode($rx,true);
-                Rx::query()->insert($rx);
-            }
+            [$pharmacy_id, $order_id] = app(RepeatOrder::class)->handle($request->input('order_id'));
             return redirect("orders/$pharmacy_id/edit/$order_id");
         }
         return redirect("orders/$pharmacy_id");
