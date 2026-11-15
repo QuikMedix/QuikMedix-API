@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\RoutePlanningController;
 use App\Http\Controllers\DispatchingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FacilityOrderController;
@@ -120,22 +121,22 @@ Route::get('/patients/{pharmacy_id}/removed', [PatientController::class, 'remove
 Route::get('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'edit']);
 Route::post('/patients/{pharmacy_id}/edit/{user_id}', [PatientController::class, 'update']);
 
-Route::get('/routes-list', [LexaAdmin::class, 'routes']);
+Route::get('/routes-list', [RoutePlanningController::class, 'orders']);
 
-Route::get('/routes-drivers', [LexaAdmin::class, 'routesDrivers']);
+Route::get('/routes-drivers', [RoutePlanningController::class, 'drivers']);
 
-Route::get('/routes-pharmacys', [LexaAdmin::class, 'routesPharmacys']);
+Route::get('/routes-pharmacys', [RoutePlanningController::class, 'pharmacies']);
 
 Route::post('/orders/{pharmacy_id}/ready', [OrderController::class, 'markReady']);
 
 Route::get('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopay']);
 Route::post('/pay/copay/{order_id}', [LexaAdmin::class, 'payCopayHandler']);
 
-Route::get('/routes-list/show/{order_id}', [LexaAdmin::class, 'routesShow']);
-Route::post('/routes-list/show/{order_id}', [LexaAdmin::class, 'routesShowHandler']);
+Route::get('/routes-list/show/{order_id}', [RoutePlanningController::class, 'showOrder']);
+Route::post('/routes-list/show/{order_id}', [RoutePlanningController::class, 'assignOrder']);
 
-Route::get('/routes-list/driver/{driver_id}', [LexaAdmin::class, 'routesDriver']);
-Route::post('/routes-list/driver/{driver_id}', [LexaAdmin::class, 'routesDriverHandler']);
+Route::get('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'showDriver']);
+Route::post('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'updateDriver']);
 
 // Global creation links need a pharmacy before opening the scoped form.
 Route::get('/orders/add', [OrderCreationController::class, 'create'])->name('orders.create');

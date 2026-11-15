@@ -21,6 +21,14 @@ trait RendersLegacyPages
     }
 
     /**
+     * The page number asked for; a missing or empty one is the first page.
+     */
+    protected function currentPage(Request $request): int
+    {
+        return empty($request->query('page')) ? 1 : intval($request->query('page'));
+    }
+
+    /**
      * Up to two pages either side of the current one, in the shape the list views expect.
      *
      * @return list<array{id: int, class: string}>
