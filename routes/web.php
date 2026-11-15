@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LexaAdmin;
+use App\Http\Controllers\DispatchingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FacilityOrderController;
 use App\Http\Controllers\OrderPrintController;
@@ -311,10 +312,10 @@ Route::get('/reports/invoices', [LexaAdmin::class, 'reportsInvoices']);
 Route::get('/reports/map', [LexaAdmin::class, 'reportsMap']);
 Route::post('/reports/map', [LexaAdmin::class, 'reportsMapHandler']);
 Route::get('/reports/customers', [LexaAdmin::class, 'reportsCustomers']);
-Route::get('/dispatching', [LexaAdmin::class, 'dispatching']);
-Route::post('/dispatching', [LexaAdmin::class, 'dispatchingHandler']);
-Route::get('/dispatching/show/{driver_id}', [LexaAdmin::class, 'dispatchingShow']);
-Route::post('/dispatching/show/{driver_id}', [LexaAdmin::class, 'dispatchingShowHandler']);
+Route::get('/dispatching', [DispatchingController::class, 'index']);
+Route::post('/dispatching', [DispatchingController::class, 'update']);
+Route::get('/dispatching/show/{driver_id}', [DispatchingController::class, 'show']);
+Route::post('/dispatching/show/{driver_id}', [DispatchingController::class, 'recalculateEta']);
 Route::get('/faq', [FaqController::class, 'index']);
 Route::post('/faq', [FaqController::class, 'destroy']);
 Route::get('/faq/add', [FaqController::class, 'create']);
