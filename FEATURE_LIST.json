@@ -343,6 +343,33 @@
         "2026-11-14 follow-up: bootstrap/app.php switched from the old kernel's stacks to the framework's defaults plus this application's settings; six stock middleware subclasses deleted. composer test 546 tests / 2341 assertions, 45 routing and 69 tariff checks; 2,497 recorded route answers unchanged; config, route and view caching OK."
       ],
       "notes": "Branch refactor/modularize-phase-3 from main a1b833f (PR #26 merged), eleven commits and one record. Deploy notes: run composer dump-autoload and php artisan optimize:clear after pulling, because a cached configuration still names the two removed providers. Findings left unchanged: 68 signed-in routes do not refuse a blocked account (for example /news, /faq, /chat, /delivery-calendar, /drivers/{id}/profile); the QuickBooks pages query a table production lacks. A wrong fix was made and reverted inside the session: BestRxApi and MerchantApi looked as if they used PDF without importing it, but PHP matches the existing Pdf import without regard to case. Not converted to middleware: 26 actions whose first check is something else (a lookup, a Gate with parameters, an else-if chain) and the older controllers that declare active in their constructor. Not done: models stay in app/ (moving them changes class names that may be stored in morph columns), controllers still declare auth and 2fa in constructors, and the framework's newer default global middleware (ValidatePathEncoding, InvokeDeferredCallbacks) is not adopted because the kernel did not have it. Not verified: any page in a browser, MySQL (most list pages use MySQL-only SQL, so the snapshot compares their errors, not their content), PHP 8.5, Vite build, Pint. Owner's rule from 2026-11-14: no backward compatibility is needed; use the framework's current conventions."
+    },
+    {
+      "id": "codebase-modularization-phase-4",
+      "priority": 13,
+      "area": "maintainability",
+      "title": "Access on route groups, Eloquent models, the mobile API split by domain, thinner controllers, scripts out of the driver route view, scheduled tasks as classes",
+      "user_visible_behavior": "Working pages keep their addresses and content. Intended changes: blocked or inactive accounts are refused on 63 more signed-in routes (chat included); creating, deleting, editing and assigning route templates needs the same roles as viewing them (superadmin, admin, dispadmin, logist, medic); route templates now also require the second sign-in step; six chat endpoints that failed with a class-not-found error resolve; the 403 text reads 'Permission error.'.",
+      "status": "passing",
+      "verification_steps": [
+        "Record the route table and which action answers 915 sample URLs before the routes rewrite; compare after: same routes, same actions, no route lost a middleware, same set of routes open without sign-in.",
+        "Regenerate tests/Feature/Auth/web-access.json and review its diff: only 'blocked account' additions and the four route-template write routes.",
+        "Compare the 2,497 recorded route answers after every step.",
+        "Log every SQL statement the suite and the route harness execute before and after sending writes and counts through the models; the logs must match.",
+        "For every scripted move (guard clauses, LexaAdminApi, updateDriver branches, scheduled tasks) check that the moved lines are the old lines.",
+        "composer test, the Node smoke checks, config/route/view caching, class-reference check."
+      ],
+      "evidence": [
+        "2026-11-14 routes: 329 routes before and after, 0 action or name changes, 915 sample URLs resolve to the same action, 0 routes lost a middleware, the 38 routes without sign-in middleware are the same 38.",
+        "2026-11-14 access matrix: 44 routes gained 'blocked account'; the four route-template write routes gained 'no permission' for sale, driver, user and facility; nothing else changed.",
+        "2026-11-14 route answers: 133 of 2,497 differ from the pre-refactor recording: 63 blocked-account refusals, 16 route-template refusals, 54 chat answers that were class-not-found errors.",
+        "2026-11-14 guard clauses: 64 conversions; ignoring whitespace the diff is exactly 64 abort_unless lines added and 64 if/else/abort/brace groups removed.",
+        "2026-11-14 models: 37 models, test checks every table, timestamps setting and 70+ relationships on the migrated schema. 375 query chains converted; SQL log 44,241 statements before, identical after apart from one schema check made by a test that scans source for table names.",
+        "2026-11-14 LexaAdminApi: 1,666 moved lines, 0 not found in the old file; API route middleware unchanged; set of distinct SQL statements unchanged.",
+        "2026-11-14 updateDriver: 320 lines moved into six methods, identical. ScanPackage: the two scan methods differed only in argument handling, the order of two where clauses and an empty if/else.",
+        "2026-11-14 final: composer test 547 tests / 2561 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; config, route and view caching OK; class names all resolve; git diff --check clean."
+      ],
+      "notes": "Branch refactor/modularize-phase-4 on top of refactor/framework-middleware-defaults (dbcea05). Not verified: browser, MySQL, PHP 8.5, Vite build. Left as is: 906 DB::table reads that return rows (converting them changes what the views receive and needs page checks on MySQL); validation was not moved to form requests because the web controllers do not call validate() and new rules would be new behavior; OrderController (797 lines) and the two views with 31 and 61 Blade expressions inside their scripts; Schema::defaultStringLength(191) stays until the production MySQL version is known; LexaAdminApiNoAuth. Removed tests: seven driver-app variants of NotifyNextPatientTest whose subject, the next_patient_push wrapper, is gone. Deploy: composer dump-autoload and php artisan optimize:clear; jobs queued before the deploy that carry App\\User would not load."
     }
   ]
 }
