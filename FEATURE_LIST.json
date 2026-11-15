@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-13",
+  "last_updated": "2026-11-14",
   "features": [
     {
       "id": "orders-qr-status",
@@ -272,6 +272,43 @@
         "2026-11-13 partner logo files: the owner supplied the Micro Merchant Systems, PioneerRx, BestRx and PrimeRx logos. They were added unaltered in design as public/images/micromerchantsystem.png, PioneerRx-0.png, bestrx-0.png and mms-logo-v2.png (PrimeRx, for orders received through the merchant integration); the only processing was trimming blank margins and resizing to three times the display height. The dashboard shows the stacked Micro Merchant Systems logo at 56px beside the 40px wordmarks, and the orders list shows PrimeRx at 40px instead of 28px, judged from a render at display size. StaticImagesTest now requires every named image to exist with no exceptions; with PartnerLogoComponentTest it passes 6 tests / 34 assertions. composer test: 452 tests / 1831 assertions plus 45 routing and 69 tariff checks."
       ],
       "notes": "Six commits and two records on branch refactor/modularize-phase-1, after the delivery-eta-and-stop-map-fixes record. None of the added images was ever in git (no commit in the fork's 83-commit history adds them), which suggests the production server may hold image files outside git. If production already has a file with one of these names, keep the original and remove the generated one before deploying, because a deploy would either overwrite it or stop on untracked files; the production site could not be reached from the session to check. The four partner logos are the files the owner supplied, not drawings; mms-logo-v2.png holds the PrimeRx logo because the files were given in that order, and can be swapped for the Micro Merchant Systems logo by replacing the file and the name in orders/list. The cleanup command was not run against any real database; run it without --delete first. Not verified: the pages in a browser, real HERE responses for routes over fifty stops, MySQL, PHP 8.5, Vite build, Pint."
+    },
+    {
+      "id": "codebase-modularization-phase-2",
+      "priority": 10,
+      "area": "maintainability",
+      "title": "Remove the admin template's sample pages and move dispatching out of LexaAdmin",
+      "user_visible_behavior": "No visible change. The dispatch board (/dispatching), its decision form, the driver page (/dispatching/show/{driver}) and its ETA button behave as before from their own controller. The theme's demo pages, which no route served, are gone from the repository.",
+      "status": "passing",
+      "verification_steps": [
+        "Compute which Blade views are reachable from routes, controllers, mail, error and package conventions and from other reachable views, before and after the deletion.",
+        "Write DispatchingControllerTest against the old LexaAdmin handlers, then run it unchanged against the new controller; compare the route table before and after.",
+        "Check that the board and driver page query code was moved line for line.",
+        "Run the full installed PHP suite, both PHP smoke scripts, all Node smoke scripts, view compilation and git diff --check."
+      ],
+      "evidence": [
+        "2026-11-14 template pages: removed resources/views/{ui,pages,email,pagelayouts,tables,charts,icons,form,maps,calendar}, common-components/breadcrumb and chart, seven layouts-*-master variants, layouts/master1, headerCss, footerJs and partials/header, rightbar, sidebar (80 views), 20 demo scripts under public/js/pages that nothing names, the 14 placeholder photos generated for those pages, LexaAdmin::index and its commented-out catch-all route: 116 files, 37,482 lines. The reachability script found 140 of 229 views reachable before and the same 140 of 149 after; the nine remaining unreachable ones are the six auth views that laravel/ui's controller traits render by convention and three application pages left in place (drivers/map, pharmacy/invoices, sales/index). php artisan route:list --json was identical before and after (332 routes) and php artisan view:cache compiled.",
+        "2026-11-14 dispatching: DispatchingController (index, update, show, recalculateEta) replaces LexaAdmin::dispatching, dispatchingHandler, dispatchingShow and dispatchingShowHandler; App\\Actions\\ReturnOrderToOffice replaces the block duplicated in the 'not confirmed' and 'reschedule' decisions. DispatchingControllerTest, 21 tests / 123 assertions, passed against the old handlers and passes unchanged against the new: guests, the five non-dispatch roles and a blocked dispatcher on all four URLs; note, skipped call, confirmed, not confirmed with and without an office stop and without a patient stop, reschedule of two orders, a request without a decision; the driver page's view data including primary addresses, grouped orders and stop order, and its AJAX form; the ETA button and an unrelated post. The route table differs in exactly these four routes: the action, and 'active' added to web, auth, 2fa. The 13-line board body and the 41-line driver page body were found unchanged in the new file apart from one adapted return statement.",
+        "2026-11-14 final: composer test passed 496 tests / 2005 assertions plus 45 routing and 69 tariff checks on PHP 8.4.27 with in-memory SQLite. Node smoke scripts passed 35, 35, 23, 20, 68, 19, 23 and 25 checks. LexaAdmin.php is 7,093 lines (7,277 before)."
+      ],
+      "notes": "Branch refactor/modularize-phase-2 from main 3552f5e. On the driver page GROUP_CONCAT lost its explicit comma separator (the MySQL default) so the page runs on SQLite. The board (GET /dispatching) still uses MySQL-only SQL (count(distinct a, b), CURDATE(), CONCAT) and is covered for access only; its query was not changed. The new controller does not lift the PHP memory limit as LexaAdmin's constructor does. Posting a decision for an order id that does not exist still fails with a server error, as before. Not verified: the pages in a browser, MySQL, PHP 8.5, Vite build, Pint. Kept although unreachable: drivers/map, pharmacy/invoices, sales/index. Not removed: resources/js/pages (template sources the build does not use) and a few scripts in public/js that nothing names (calendar.init.js, dropzone.min.js, form-advanced.init.js, maplabel.js, themes/silver)."
+    },
+    {
+      "id": "schema-baseline-migration",
+      "priority": 11,
+      "area": "maintainability",
+      "title": "Make the database schema buildable from migrations",
+      "user_visible_behavior": "A fresh installation can create every table the application uses with php artisan migrate, and tests can use the real table definitions instead of hand-built ones.",
+      "status": "blocked",
+      "verification_steps": [
+        "Run php artisan quikmedix:schema-baseline against a database that has the real tables; review and commit the written migration.",
+        "Run php artisan migrate on an empty database and compare its tables and columns with the source database.",
+        "Run php artisan migrate on the source database and confirm nothing changes."
+      ],
+      "evidence": [
+        "2026-11-14 tooling only: about 45 of the 54 tables the code uses have no migration and the users migration creates only a fraction of that table's columns; the repository holds no schema dump. App\\Support\\SchemaBaseline and php artisan quikmedix:schema-baseline read the connected database and write database/migrations/<date>_create_legacy_schema.php, a migration that creates missing tables, adds missing columns and changes nothing else. SchemaBaselineTest passes 23 tests / 51 assertions: a written migration rebuilds the same columns, defaults, indexes and foreign key on an empty SQLite database; it is a no-op on its source; it adds missing columns to an existing table and keeps rows; an existing baseline is not replaced without --force; 16 MySQL 8 and MariaDB column descriptions map to the expected definitions; unknown types and text-column indexes are reported; MySQL-only features do not stop it on SQLite."
+      ],
+      "notes": "Blocked: the baseline migration itself has not been written, because the session cannot reach a database that has the real schema. Someone with such a database (local or production, read-only is enough) has to run the command once and commit the file. The MySQL path of the generator is tested with column descriptions as Laravel reports them, not against a MySQL server. Lookup rows (statuses, delivery methods, plans, states) are data, not schema, and are not covered. Index prefix lengths, column comments, character sets and ON UPDATE CURRENT_TIMESTAMP are not reproduced."
     }
   ]
 }

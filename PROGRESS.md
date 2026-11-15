@@ -1,6 +1,12 @@
 # Progress
 
-## Current verified state — 2026-11-13 (follow-ups)
+## Current verified state — 2026-11-14 (modularization phase 2)
+
+Feature `codebase-modularization-phase-2` passes isolated verification: the admin template's sample pages are removed (116 files, 37,482 lines; the same 140 views stay reachable and the route table is unchanged) and dispatching has its own `DispatchingController` with `App\Actions\ReturnOrderToOffice`, covered by 21 tests that were written against the old `LexaAdmin` handlers. `LexaAdmin.php` is 7,093 lines. Feature `schema-baseline-migration` is blocked: `php artisan quikmedix:schema-baseline` is written and tested, but the baseline migration has to be generated once from a database that has the real tables, which the session cannot reach.
+
+Latest isolated `composer test` passed 496 tests / 2005 assertions plus 45 routing and 69 tariff checks; Node smoke scripts passed 35, 35, 23, 20, 68, 19, 23 and 25 checks. Not run: `npm run build`, the full `./init.sh`, Pint; tests ran on PHP 8.4.27. Work is on branch `refactor/modularize-phase-2` from `main` 3552f5e (which holds the merged phase 1, PR #25 of the fork), placed in the user's fork checkout for them to push. Nothing is deployed.
+
+## Previous verified state — 2026-11-13 (follow-ups)
 
 Feature `map-marker-images-and-eta-followups` passes isolated verification. Every image a view or stylesheet names under `/images` now exists, the four partner logos being files the owner supplied, and the log cleanup command also finds pharmacy changes that never happened. The four marker images the Leaflet pages ask for (`public/images/i011.svg`, `i022.svg`, `i033.svg`, `i055.svg`) exist as new drawings; ETA routes over fifty stops continue from the previous stop instead of restarting at the driver, and a request without a route no longer shifts legs onto the wrong stops; when HERE finds no route the next-patient notification carries no travel time and neither the order nor the driver receives a zero ETA; `php artisan quikmedix:prune-profile-log` lists, and with `--delete` removes after saving a copy, old profile log rows that claimed a blanking that never happened. Routes and dependencies are unchanged.
 
@@ -419,3 +425,17 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Not verified: the two pages in a browser.
 - Commit status: one commit on `refactor/modularize-phase-1`, added to the user's fork checkout for them to push. Not deployed.
 - Next action: push; if the orders list should show the Micro Merchant Systems logo rather than PrimeRx, replace `mms-logo-v2.png` and the name in `orders/list`.
+
+## Session log — 2026-11-14: modularization phase 2
+
+- Goal: after a structure review the user chose three steps in this order: remove the template sample pages, make the database reproducible, continue splitting LexaAdmin with dispatching.
+- Starting point: fork `main` 3552f5e, the merge of PR #25 (phase 1 and all follow-ups); its tree equals the last verified branch.
+- Step 1, template pages: a reachability script (roots: view names in app, routes and config code, plus error, package and component views by convention; then every view name found inside a reachable view) showed 89 of 229 views unreachable. Removed the theme's demo folders, the layout variants and partials only they used, 20 demo page scripts and the placeholder photos, plus `LexaAdmin::index` and its commented-out route. Kept: `auth.*` (rendered by laravel/ui traits) and three application pages nothing links to (`drivers/map`, `pharmacy/invoices`, `sales/index`), which are the owner's call. `StaticImagesTest`'s sanity threshold was lowered because fewer images are named now.
+- Step 2, schema: no authoritative schema exists in the repository (16 migrations, about 45 hand-made tables, no dump), so a faithful baseline cannot be written from here, and one inferred from code would be wrong in types, defaults and indexes. Built the tool that writes it from a real database instead: `php artisan quikmedix:schema-baseline` (App\Support\SchemaBaseline, stubs/legacy-schema-migration.stub). The written migration is dated when it is generated, so on a new installation it runs after the existing migrations, none of which depends on a legacy table; it creates what is missing and adds missing columns (for example the legacy columns of `users`), and on the source database it does nothing. The command test-runs the file on an empty in-memory SQLite database and lists what it could not reproduce.
+- Step 3, dispatching: characterization tests first (the driver page needed `GROUP_CONCAT` without the explicit comma separator to run on SQLite), then the move to `DispatchingController`, the shared `ReturnOrderToOffice` action, and four repointed routes. The in-method blocked check became the `active` middleware, which gives the same 403. Existing oddities kept and pinned by tests: a decision for an order without a patient stop is still marked and noted; an unrelated post to the driver page answers with an empty page.
+- Verification: see FEATURE_LIST.json `codebase-modularization-phase-2` and `schema-baseline-migration`. Final `composer test`: 496 tests / 2005 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; `php artisan view:cache` OK; git diff --check clean.
+- Formatter: Pint is not installed.
+- Not verified: browser behavior; MySQL (the board query is MySQL-only and has no data test; the generator's MySQL path is tested from column descriptions only); PHP 8.5; Vite build.
+- Blocker: the baseline migration needs one run of `php artisan quikmedix:schema-baseline` on a machine connected to a database with the real tables.
+- Commit status: three commits plus this record on `refactor/modularize-phase-2`, added to the user's fork checkout. Not pushed by the session, not deployed.
+- Next action: run the baseline command and commit the file; then switch tests from hand-built tables to the migrated schema; continue LexaAdmin with the driver routes pages (`routes*`), which share the stop and ETA actions already extracted. Open decisions for the owner: delete or route `drivers/map`, `pharmacy/invoices`, `sales/index`; remove `resources/js/pages` and the unnamed scripts in `public/js`.
