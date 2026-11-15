@@ -507,3 +507,4 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Not verified: browser behavior; MySQL; PHP 8.5; Vite build.
 - Commit status: eleven commits plus this record on `refactor/modularize-phase-4`, added to the owner's fork checkout. Not pushed by the session, not deployed.
 - Next action: browser check on MySQL; convert the row-returning reads to models area by area with page checks; OrderController; the remaining inline scripts; review the open API routes; decide on `defaultStringLength` once the MySQL version is known.
+- Follow-up, same day: the owner confirmed MySQL 8, so `Schema::defaultStringLength(191)` is removed. Existing columns are untouched; string columns created from now on default to 255.
