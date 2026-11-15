@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
+use App\Models\Pharmacy;
+use App\Models\PharmacyPayment;
+use App\Models\Order;
+use App\Models\InvoiceExclusion;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,7 +64,7 @@ class BillingController extends Controller
                         }
                     }
                 }
-                DB::table('invoices')->where('pharmacy_id',$pharmacy_id)->where('id',$invoice->id)->update(['count'=>$count_orders, 'amount'=>$sum_amount, 'copay'=>$sum_copay]);
+                Invoice::query()->where('pharmacy_id',$pharmacy_id)->where('id',$invoice->id)->update(['count'=>$count_orders, 'amount'=>$sum_amount, 'copay'=>$sum_copay]);
             }
             $invoices = DB::table('invoices')->where('pharmacy_id',$pharmacy_id)->where("payed","0")->get();
             $sum_amount = 0;
@@ -81,7 +86,7 @@ class BillingController extends Controller
             }
             $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
             if($pharmacy->balance<=0){
-                DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
             }
             $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
             $invoices = DB::table('invoices')->where('invoices.pharmacy_id',$pharmacy_id)->leftJoin("pharmacy_payments","pharmacy_payments.invoice_id","=","invoices.id")->select("invoices.id","invoices.created","invoices.pharmacy_id","invoices.date_from","invoices.date_to","invoices.count","invoices.amount","invoices.copay","invoices.corrections","invoices.payed","pharmacy_payments.amount as payed_amount")->groupBy("invoices.id","invoices.created","invoices.pharmacy_id","invoices.date_from","invoices.date_to","invoices.count","invoices.amount","invoices.copay","invoices.corrections","invoices.payed","pharmacy_payments.amount")->orderBy('id','desc')->get();
@@ -217,10 +222,10 @@ class BillingController extends Controller
                     }
                     // Creating an invoice already debited the balance; a balance of zero or more means it is covered.
                     if($amount==0 || floatval($pharmacy->balance)>=0) {
-                        DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>'balance','type'=>'pay']);
-                        DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
+                        PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>'balance','type'=>'pay']);
+                        Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
                         $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
-                        DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
+                        Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                     } else if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
                         $client = new \Square\SquareClient([
                             'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
@@ -245,11 +250,11 @@ class BillingController extends Controller
                             $payment_status = $result->getPayment()->getStatus();
                             if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
                                 $balance = floatval($pharmacy->balance)+$amount;
-                                DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'pay']);
-                                DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                                DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
+                                PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'pay']);
+                                Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                                Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
                                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
-                                DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
+                                Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                             } else {
                                 $error = "Payment not completed!";
                             }
@@ -286,11 +291,11 @@ class BillingController extends Controller
                                 $payment_status = $result->getPayment()->getStatus();
                                 if($payment_status=="COMPLETED" || $payment_status=="APPROVED" || $payment_status=="PENDING") {
                                     $balance = floatval($pharmacy->balance)+$amount;
-                                    DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'pay']);
-                                    DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                                    DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
+                                    PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'pay']);
+                                    Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                                    Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
                                     $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
-                                    DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
+                                    Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                                 } else {
                                     $error = "Payment not completed!";
                                 }
@@ -344,8 +349,8 @@ class BillingController extends Controller
                             $payment_status = $result->getPayment()->getStatus();
                             if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
                                 $balance = floatval($pharmacy->balance)+$amount;
-                                DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'refill']);
-                                DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                                PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'refill']);
+                                Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
                             } else {
                                 $error = "Payment not completed!";
                             }
@@ -376,37 +381,37 @@ class BillingController extends Controller
                         $amount = round(($invoice->amount+$invoice->corrections),2);
                     }
                     $balance = floatval($pharmacy->balance)+$amount;
-                    DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>'','type'=>$request->input('type')]);
-                    DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                    DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
+                    PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>'','type'=>$request->input('type')]);
+                    Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                    Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
                     $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
-                    DB::table('orders')->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
+                    Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
                 }
             }
             if((Auth::user()->can('admin')) && is_numeric($request->input('balance-change'))) {
                 if(floatval($request->input('balance-change'))===0){
-                    DB::table('pharmacys')->where("id",$pharmacy_id)->update(["balance_ban"=>"0"]);
+                    Pharmacy::query()->where("id",$pharmacy_id)->update(["balance_ban"=>"0"]);
                 }
-                DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>floatval($request->input('balance-change'))]);
+                Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>floatval($request->input('balance-change'))]);
             }
             if((Auth::user()->can('admin')) && is_numeric($request->input('corrections-change')) && !empty($invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->first())) {
                 $corrections=floatval($request->input('corrections-change'));
-                DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["corrections"=>$corrections]);
+                Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["corrections"=>$corrections]);
                 if($pharmacy->balance<0) {
                     $balance = floatval($pharmacy->balance)+$invoice->corrections-$corrections;
                 } else {
                     $balance = floatval($pharmacy->balance)-$invoice->corrections+$corrections;
                 }
-                DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
             }
             if((Auth::user()->can('admin')) && !empty($request->input('unblock'))) {
                 if($request->input('unblock')>0){
-                    DB::table('pharmacys')->where("id",$pharmacy_id)->update(["balance_ban"=>"0"]);
+                    Pharmacy::query()->where("id",$pharmacy_id)->update(["balance_ban"=>"0"]);
                 }
             }
             if((Auth::user()->can('admin')) && !empty($request->input('remove')) && !empty($request->input('invoice_id'))) {
-                $invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->delete();
-                DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->delete();
+                $invoice = Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->delete();
+                InvoiceExclusion::query()->where('invoice_id',$request->input('invoice_id'))->delete();
             }
             return redirect("/billing/$pharmacy_id")->with([ 'error' => $error ]);
         } else {
@@ -534,7 +539,7 @@ class BillingController extends Controller
                         } else {
                             $tariff_res = floatval($tariff);
                         }
-                        DB::table('orders')->where('id', $order->id)->update(['tariff'=>$tariff_res]);
+                        Order::query()->where('id', $order->id)->update(['tariff'=>$tariff_res]);
                         $sum_amount = $sum_amount+$tariff_res;
                         if($order->statuse_copay==3 || $order->statuse_copay==4){
                             $sum_copay = $sum_copay+floatval($order->copay);
@@ -551,12 +556,12 @@ class BillingController extends Controller
                     $amount2 = round(($sum_amount),2);
                 }
                 $balance = floatval($pharmacy->balance)-$amount2;
-                DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                $invoice_id = DB::table('invoices')->insertGetId(['pharmacy_id'=>$pharmacy_id,'date_from' => $request->input('date_from'),'date_to' => $request->input('date_to'), 'count'=>$count_orders, 'amount'=>$sum_amount, 'copay'=>$sum_copay]);
+                Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                $invoice_id = Invoice::query()->insertGetId(['pharmacy_id'=>$pharmacy_id,'date_from' => $request->input('date_from'),'date_to' => $request->input('date_to'), 'count'=>$count_orders, 'amount'=>$sum_amount, 'copay'=>$sum_copay]);
                 if(!empty($request->input('invoice_exclusions'))){
                     foreach($invoice_exclusions as $invoice_exclusion){
                         if(!empty($invoice_exclusion)){
-                            DB::table('invoice_exclusion')->insert(['invoice_id' => $invoice_id,'order_id' => intval(preg_replace('/\s+/', '', $invoice_exclusion))]);
+                            InvoiceExclusion::query()->insert(['invoice_id' => $invoice_id,'order_id' => intval(preg_replace('/\s+/', '', $invoice_exclusion))]);
                         }
                     }
                 }
@@ -603,12 +608,12 @@ class BillingController extends Controller
                     $count_orders=$count_orders->whereNotIn('id',$invoice_exclusions);
                 }
                 $count_orders=$count_orders->count();
-                DB::table('invoices')->where('id', $invoice_id)->where('pharmacy_id', $pharmacy_id)->update(['date_from' => $request->input('date_from'),'date_to' => $request->input('date_to'), 'count'=>$count_orders, 'tariff'=>floatval($request->input('tariff'))]);
-                DB::table('invoice_exclusion')->where('invoice_id', $invoice_id)->delete();
+                Invoice::query()->where('id', $invoice_id)->where('pharmacy_id', $pharmacy_id)->update(['date_from' => $request->input('date_from'),'date_to' => $request->input('date_to'), 'count'=>$count_orders, 'tariff'=>floatval($request->input('tariff'))]);
+                InvoiceExclusion::query()->where('invoice_id', $invoice_id)->delete();
                 if(!empty($request->input('invoice_exclusions'))){
                     foreach($invoice_exclusions as $invoice_exclusion){
                         if(!empty($invoice_exclusion)){
-                            DB::table('invoice_exclusion')->insert(['invoice_id' => $invoice_id,'order_id' => intval(preg_replace('/\s+/', '', $invoice_exclusion))]);
+                            InvoiceExclusion::query()->insert(['invoice_id' => $invoice_id,'order_id' => intval(preg_replace('/\s+/', '', $invoice_exclusion))]);
                         }
                     }
                 }

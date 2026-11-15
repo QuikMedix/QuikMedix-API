@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use Illuminate\Http\Request;
 use App\Support\Notifications;
 use Illuminate\Support\Facades\DB;
@@ -286,7 +287,7 @@ class LexaAdminApiNoAuth extends Controller
         if(!empty($user)) {
             $password = bin2hex(openssl_random_pseudo_bytes(4));
             DB::table('users')->where('id',$user->id)->update(['password'=>Hash::make($password)]);
-            DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user->id,'action_user_id'=>$user->id]);
+            ActionLog::query()->insert(['type'=>'change password','user_id'=>$user->id,'action_user_id'=>$user->id]);
             $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
             try {
                 $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Password has been reset. \nLogin: ".$user->phone."\nPassword: ".$password."\nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);

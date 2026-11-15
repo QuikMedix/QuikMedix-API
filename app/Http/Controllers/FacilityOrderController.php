@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Rx;
+use App\Models\AdditionalRecipient;
+use App\Models\Medicine;
 use App\Actions\ChangeOrderStatus;
 use App\Support\Notifications;
 use App\Support\OrderStatus;
@@ -65,7 +69,7 @@ class FacilityOrderController extends Controller
             }
         }
         if($request->input('save')>0) {
-            $id_max = DB::table('orders')->max('id')+1;
+            $id_max = Order::query()->max('id')+1;
             $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
             $statuse_copay = (empty($request->input('copay')))?'1':'2';
             if(!empty($request->input('copay_paid_pharm'))) {
@@ -94,7 +98,7 @@ class FacilityOrderController extends Controller
                     }
                     $data[]=["order_id"=>$id_max,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>intval($rx_counts[$key]),"rx_copay"=>$rx_copay,"rx_recipient"=>$rx_recipient];
                 }
-                DB::table('rxs')->insert($data);
+                Rx::query()->insert($data);
             }
             if($request->input('delivery_time')=="1"){
                 $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
@@ -112,7 +116,7 @@ class FacilityOrderController extends Controller
             } else {
                 $driver_id = NULL;
             }
-            DB::table('orders')->insert(['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
+            Order::query()->insert(['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
             if(!empty($request->input('facility'))){
                 $us = DB::table('users')->where('id',$request->input('facility'))->first();
             } else {
@@ -168,7 +172,7 @@ class FacilityOrderController extends Controller
                 $user->phone=str_replace('Ph#: ','',(strpos($text[2][1],'Cell#: () -')!==false)?str_replace('Ph#: ','',$text[1][1]):str_replace('Cell#: ','',$text[2][1]));
                 $facility = DB::table('additional_recipients')->where('family_phone',$user->phone)->where('user_id',$order->user_id)->where('family_name',$user->name.' '.$user->last_name)->first();
                 if(empty($facility)){
-                    $facility_id = DB::table('additional_recipients')->insertGetId(['user_id'=>$order->user_id,'family_type' => 'Additional Recipient','family_name' => $user->name.' '.$user->last_name,'family_phone' => $user->phone]);
+                    $facility_id = AdditionalRecipient::query()->insertGetId(['user_id'=>$order->user_id,'family_type' => 'Additional Recipient','family_name' => $user->name.' '.$user->last_name,'family_phone' => $user->phone]);
                 } else {
                     $facility_id = $facility->id;
                 }
@@ -197,8 +201,8 @@ class FacilityOrderController extends Controller
                 foreach($rxs as $rx) {
                     $data[]=["order_id"=>$order_id,"rx_id"=>$rx['rx_id'],"rx_date"=>$rx['rx_date'],"rx_count"=>1,"rx_copay"=>0,"rx_recipient"=>$facility_id];
                 }
-                DB::table('rxs')->insert($data);
-                DB::table('orders')->where('id', $order_id)->update(['copay'=>($order->copay+$copay)]);
+                Rx::query()->insert($data);
+                Order::query()->where('id', $order_id)->update(['copay'=>($order->copay+$copay)]);
             }
         }
         return redirect("orders/$pharmacy_id/facilitys_edit/$id_max");
@@ -277,7 +281,7 @@ class FacilityOrderController extends Controller
                 $user->phone=str_replace('Ph#: ','',(strpos($text[2][1],'Cell#: () -')!==false)?str_replace('Ph#: ','',$text[1][1]):str_replace('Cell#: ','',$text[2][1]));
                 $facility = DB::table('additional_recipients')->where('family_phone',$user->phone)->where('user_id',$order->user_id)->where('family_name',$user->name.' '.$user->last_name)->first();
                 if(empty($facility)){
-                    $facility_id = DB::table('additional_recipients')->insertGetId(['user_id'=>$order->user_id,'family_type' => 'Additional Recipient','family_name' => $user->name.' '.$user->last_name,'family_phone' => $user->phone]);
+                    $facility_id = AdditionalRecipient::query()->insertGetId(['user_id'=>$order->user_id,'family_type' => 'Additional Recipient','family_name' => $user->name.' '.$user->last_name,'family_phone' => $user->phone]);
                 } else {
                     $facility_id = $facility->id;
                 }
@@ -306,8 +310,8 @@ class FacilityOrderController extends Controller
                 foreach($rxs as $rx) {
                     $data[]=["order_id"=>$order_id,"rx_id"=>$rx['rx_id'],"rx_date"=>$rx['rx_date'],"rx_count"=>1,"rx_copay"=>0,"rx_recipient"=>$facility_id];
                 }
-                DB::table('rxs')->insert($data);
-                DB::table('orders')->where('id', $order_id)->update(['copay'=>($order->copay+$copay)]);
+                Rx::query()->insert($data);
+                Order::query()->where('id', $order_id)->update(['copay'=>($order->copay+$copay)]);
             }
             return redirect("orders/$pharmacy_id/facilitys_edit/$order_id");
         }
@@ -332,7 +336,7 @@ class FacilityOrderController extends Controller
             $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
             $order = DB::table('orders')->where('id', $order_id)->first();
             $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-            DB::table('rxs')->where('order_id',$order_id)->delete();
+            Rx::query()->where('order_id',$order_id)->delete();
             $rx_ids = $request->input('rx_id');
             $rf_ids = $request->input('rf_id');
             $rx_dates = $request->input('rx_date');
@@ -355,14 +359,14 @@ class FacilityOrderController extends Controller
                     $data[]=["order_id"=>$order_id,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>intval($rx_counts[$key]),"rx_copay"=>$rx_copay,"rx_recipient"=>$rx_recipient];
                 }
             }
-            DB::table('rxs')->insert($data);
+            Rx::query()->insert($data);
             if($request->input('delivery_time')=="1"){
                 $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
             } else {
                 $delivery_date = DB::raw("CURDATE()");
             }
             if($request->input('statuse_copay')==4){
-                DB::table('orders')->where('id', $order_id)->update(['statuse_copay' => 4]);
+                Order::query()->where('id', $order_id)->update(['statuse_copay' => 4]);
             }
             $driver_id = $request->input('driver');
             $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
@@ -371,7 +375,7 @@ class FacilityOrderController extends Controller
             } else {
                 $delivery_time_range = $request->input('delivery_time_range');
             }
-            DB::table('orders')->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $validated['count_bags'] ?? max(1, (int) $order->count_bags), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge]);
+            Order::query()->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $validated['count_bags'] ?? max(1, (int) $order->count_bags), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge]);
             if($request->input('statuse')==1 && ($request->input('delivery_time')==3 || $request->input('delivery_time')==4)) {
                 $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                 Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
@@ -382,7 +386,7 @@ class FacilityOrderController extends Controller
                 );
             }
             $changeOrderStatus->handle((int) $order_id, $statusId);
-            DB::table('medicine')->where('order_id', $order_id)->delete();
+            Medicine::query()->where('order_id', $order_id)->delete();
         }
         return redirect("orders/$pharmacy_id");
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Order;
 use App\Http\Controllers\Concerns\RespondsWithApiErrors;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -35,7 +36,7 @@ class DeliveryTimeController extends Controller
         if (empty($order) || $order->user_id != $request->user()->id) {
             return $this->notFound('Order not found');
         }
-        DB::table('orders')->where('id', $request->input('order_id'))->update(['delivery_time_id' => intval($request->input('time_id'))]);
+        Order::query()->where('id', $request->input('order_id'))->update(['delivery_time_id' => intval($request->input('time_id'))]);
 
         return response()->json(['message' => 'OK']);
     }

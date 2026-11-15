@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentAccount;
+use App\Models\PharmacyPaymentAccount;
+use App\Models\Pharmacy;
+use App\Models\PharmacyPayment;
+use App\Models\Order;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -92,7 +97,7 @@ class PaymentController extends Controller
                 if (($response != null) && ($response->getMessages()->getResultCode() == "Ok") )
                 {
                     $success= "New Card successfully added!";
-                    DB::table('payment_accounts')->where('user_id',Auth::user()->id)->update(['card'=>$ncard]);
+                    PaymentAccount::query()->where('user_id',Auth::user()->id)->update(['card'=>$ncard]);
                 } else if ($response != null) {
                     $errorMessages = $response->getMessages()->getMessage();
                     $error=$errorMessages[0]->getText();
@@ -154,7 +159,7 @@ class PaymentController extends Controller
                 $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                 if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
                     $paymentProfiles = $response->getCustomerPaymentProfileIdList();
-                    DB::table('payment_accounts')->insert(['user_id'=>Auth::user()->id,'profile_id'=>$response->getCustomerProfileId(),'payment_profile_id'=>$paymentProfiles[0],'card'=>$ncard]);
+                    PaymentAccount::query()->insert(['user_id'=>Auth::user()->id,'profile_id'=>$response->getCustomerProfileId(),'payment_profile_id'=>$paymentProfiles[0],'card'=>$ncard]);
                     $success="Card successfully added!";
                 } else {
                     $errorMessages = $response->getMessages()->getMessage();
@@ -237,14 +242,14 @@ class PaymentController extends Controller
                     $api_response = $client->getCustomersApi()->createCustomer($body);
                     if ($api_response->isSuccess()) {
                         $result = $api_response->getResult();
-                        DB::table('payment_pharmacy_accounts')->insert(['pharmacy_id'=>$pharmacy_id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
+                        PharmacyPaymentAccount::query()->insert(['pharmacy_id'=>$pharmacy_id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
                         $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
                     } else {
                         $error = json_encode($api_response->getErrors());
                         return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
                     }
                 } else {
-                    DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->update(["type"=>$type]);
+                    PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->update(["type"=>$type]);
                 }
                 if($type=="card") {
                     $amount_money = new \Square\Models\Money();
@@ -266,7 +271,7 @@ class PaymentController extends Controller
                         $payment_id = $result->getPayment()->getId();
                         $payment_status = $result->getPayment()->getStatus();
                         if($payment_status=="COMPLETED" || $payment_status=="APPROVED" || $payment_status=="PENDING") {
-                            DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->update(["payment_id"=>$payment_id]);
+                            PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->update(["payment_id"=>$payment_id]);
                             $card = new \Square\Models\Card();
                             $card->setCardholderName($name[0].' '.$name[1]);
                             $card->setBillingAddress($address);
@@ -281,7 +286,7 @@ class PaymentController extends Controller
                             if ($api_response->isSuccess()) {
                                 $result = $api_response->getResult();
                                 $unid = uniqid("",true).rand(0,100);
-                                DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->update(["payment_profile_id"=>$result->getCard()->getId(),"card"=>$result->getCard()->getLast4()]);
+                                PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->update(["payment_profile_id"=>$result->getCard()->getId(),"card"=>$result->getCard()->getLast4()]);
                                 $body = new \Square\Models\RefundPaymentRequest($unid, $amount_money);
                                 $body->setPaymentId($payment_id);
                                 $api_response = $client->getRefundsApi()->refundPayment($body);
@@ -368,8 +373,8 @@ class PaymentController extends Controller
                     $tresponse = $response->getTransactionResponse();
                     if ($tresponse != null && $tresponse->getMessages() != null) {
                         $balance = round(floatval($amount+floatval($pharmacy->balance)),2);
-                        DB::table('pharmacys')->where('id',$pharmacy_id)->update(['balance'=>$balance]);
-                        DB::table('pharmacy_payments')->insert(['pharmacy_id'=>$pharmacy_id,'amount'=>$amount,'transaction_id'=>$tresponse->getTransId(),'type'=>'refill']);
+                        Pharmacy::query()->where('id',$pharmacy_id)->update(['balance'=>$balance]);
+                        PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'amount'=>$amount,'transaction_id'=>$tresponse->getTransId(),'type'=>'refill']);
                         return response('<script>window.close();</script><a href="/billing/'.$pharmacy_id.'">Go Back</a> OR Close Window');
                     } else {
                         $error= "Transaction Failed: ";
@@ -447,7 +452,7 @@ class PaymentController extends Controller
                 if($response->getMessages()->getResultCode() == "Ok") {
                     $tresponse = $response->getTransactionResponse();
                     if ($tresponse != null && $tresponse->getMessages() != null) {
-                        DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>3]);
+                        Order::query()->where('id',$order_id)->update(['statuse_copay'=>3]);
                         DB::table('payments')->insert(['order_id'=>$order_id,'transaction_id'=>$tresponse->getTransId(),'type'=>'copay']);
                         return response("<script>window.close();</script>");
                     } else {
@@ -525,7 +530,7 @@ class PaymentController extends Controller
                     if (($response != null) && ($response->getMessages()->getResultCode() == "Ok") )
                     {
                         $success= "New Card successfully added!";
-                        DB::table('payment_accounts')->where('user_id',$user->id)->update(['card'=>$ncard]);
+                        PaymentAccount::query()->where('user_id',$user->id)->update(['card'=>$ncard]);
                     } else if ($response != null) {
                         $errorMessages = $response->getMessages()->getMessage();
                         $error=$errorMessages[0]->getText();
@@ -590,7 +595,7 @@ class PaymentController extends Controller
                 $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
                 if (($response != null) && ($response->getMessages()->getResultCode() == "Ok")) {
                     $paymentProfiles = $response->getCustomerPaymentProfileIdList();
-                    DB::table('payment_accounts')->insert(['user_id'=>$user->id,'profile_id'=>$response->getCustomerProfileId(),'payment_profile_id'=>$paymentProfiles[0],'card'=>$ncard]);
+                    PaymentAccount::query()->insert(['user_id'=>$user->id,'profile_id'=>$response->getCustomerProfileId(),'payment_profile_id'=>$paymentProfiles[0],'card'=>$ncard]);
                     $success="Card successfully added!";
                 } else {
                     $errorMessages = $response->getMessages()->getMessage();

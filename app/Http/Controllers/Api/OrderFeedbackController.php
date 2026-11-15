@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Note;
+use App\Models\Order;
 use App\Http\Controllers\Concerns\RespondsWithApiErrors;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -34,7 +36,7 @@ class OrderFeedbackController extends Controller
             return $this->badRequest();
         }
 
-        DB::table('notes')->insert([
+        Note::query()->insert([
             'order_id' => $order_id,
             'user_id' => $request->user()->id,
             'type' => '2',
@@ -64,7 +66,7 @@ class OrderFeedbackController extends Controller
         if ($rating < 0) {
             $rating = 1;
         }
-        DB::table('orders')->where('id', $order_id)->update(['rating' => min($rating, 5)]);
+        Order::query()->where('id', $order_id)->update(['rating' => min($rating, 5)]);
 
         return response()->json(['message' => 'OK']);
     }

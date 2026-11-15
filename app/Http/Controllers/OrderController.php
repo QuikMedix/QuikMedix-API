@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Rx;
+use App\Models\Note;
+use App\Models\CashLog;
+use App\Models\Medicine;
 use App\Actions\RotateSignature;
 use App\Actions\ChangeOrderStatus;
 use App\Http\Controllers\Concerns\LoadsOrderLookups;
@@ -185,8 +190,8 @@ class OrderController extends Controller
         }
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
         if($request->input('remove')>0) {
-            DB::table('orders')->where('id', $request->input('order_id'))->delete();
-            DB::table('rxs')->where('order_id',$request->input('order_id'))->delete();
+            Order::query()->where('id', $request->input('order_id'))->delete();
+            Rx::query()->where('order_id',$request->input('order_id'))->delete();
         }
         if($request->input('repeat')>0) {
             $order = DB::table('orders')->where('id', $request->input('order_id'))->first();
@@ -206,14 +211,14 @@ class OrderController extends Controller
             $pharmacy_id = $order->pharmacy_id;
             $order = json_encode($order);
             $order = json_decode($order,true);
-            $order_id = DB::table('orders')->insertGetId($order);
+            $order_id = Order::query()->insertGetId($order);
             $rxs = DB::table('rxs')->where('order_id',$request->input('order_id'))->get();
             foreach($rxs as $rx) {
                 $rx->id = NULL;
                 $rx->order_id = $order_id;
                 $rx = json_encode($rx);
                 $rx = json_decode($rx,true);
-                DB::table('rxs')->insert($rx);
+                Rx::query()->insert($rx);
             }
             return redirect("orders/$pharmacy_id/edit/$order_id");
         }
@@ -346,8 +351,8 @@ class OrderController extends Controller
                 ? ['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]
                 : ['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('user'), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')];
             $id_max = DB::transaction(function () use ($order_row, $data) {
-                $order_id = DB::table('orders')->insertGetId($order_row);
-                DB::table('rxs')->insert(array_map(fn ($rx) => ['order_id' => $order_id] + $rx, $data));
+                $order_id = Order::query()->insertGetId($order_row);
+                Rx::query()->insert(array_map(fn ($rx) => ['order_id' => $order_id] + $rx, $data));
                 return $order_id;
             });
             if(!empty($request->input('facility'))){
@@ -460,7 +465,7 @@ class OrderController extends Controller
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.signature_type', 'users.name as username', 'users.last_name as last_name', 'users.os as useros', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor', 'orders.statuse_copay', 'statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.pharmacy_id', 'orders.eta', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.dispatcher_notes', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.signature_type', 'orders.user_id', 'users.name', 'users.last_name', 'users.os', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color', 'orders.statuse_copay', 'statuses_copay.name','statuses_copay.color')->first();
         abort_unless((Auth::user()->role == 'medic' && Auth::user()->pharmacy_id==$pharmacy_id) || ((Auth::user()->can('admin'))) ||  (Auth::user()->role == 'logist') || (Auth::user()->role == 'driver' && Auth::user()->id==$order->driver_id) || (Auth::user()->role == 'user' && Auth::user()->id==$order->user_id), 403, AccessMessages::NO_PERMISSION);
         if(request()->request->has('dispatcher_notes')) {
-            DB::table('notes')->insert(["order_id"=>$order_id,"user_id"=>Auth::user()->id,"type"=>"1",'note'=>addslashes($request->input('dispatcher_notes'))]);
+            Note::query()->insert(["order_id"=>$order_id,"user_id"=>Auth::user()->id,"type"=>"1",'note'=>addslashes($request->input('dispatcher_notes'))]);
             return json_encode([
                 'message' => 'OK'
             ]);
@@ -469,17 +474,17 @@ class OrderController extends Controller
             $file = $request->file('drop_off_photo');
             $file->move(public_path() . '/images/drop_off/',\App\Support\PublicUpload::name($request->file('drop_off_photo')));
             $src = '/images/drop_off/'.\App\Support\PublicUpload::name($request->file('drop_off_photo'));
-            DB::table('orders')->where('orders.id',$order_id)->update(['drop_off_photo'=>$src]);
+            Order::query()->where('orders.id',$order_id)->update(['drop_off_photo'=>$src]);
         }
         if($request->hasFile('signature_photo')) {
             $file = $request->file('signature_photo');
             $file->move(public_path() . '/images/signature/',\App\Support\PublicUpload::name($request->file('signature_photo')));
             $src = '/images/signature/'.\App\Support\PublicUpload::name($request->file('signature_photo'));
-            DB::table('orders')->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
+            Order::query()->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
         }
         if($request->input('rotate_signature')>0 && !empty($order->signature_photo)) {
             $src = $rotateSignature->handle($order->signature_photo);
-            DB::table('orders')->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
+            Order::query()->where('orders.id',$order_id)->update(['signature_photo'=>$src]);
         }
         if($request->input('eta_calculate')>0) {
             if($order->driver_id>0) {
@@ -491,16 +496,16 @@ class OrderController extends Controller
             if(!empty($order->driver_id)){
                 $cash_log = DB::table('cash_log')->where("order_id",$order_id)->where("driver_id",$order->driver_id)->first();
                 if(!empty($cash_log)) {
-                    DB::table('cash_log')->where('id',$cash_log->id)->update(["copay"=>$order->copay]);
+                    CashLog::query()->where('id',$cash_log->id)->update(["copay"=>$order->copay]);
                 } else {
-                    DB::table('cash_log')->insert(["order_id"=>$order_id,"driver_id"=>$order->driver_id,"copay"=>$order->copay]);   
+                    CashLog::query()->insert(["order_id"=>$order_id,"driver_id"=>$order->driver_id,"copay"=>$order->copay]);   
                 }
             }
-            DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>4]);
+            Order::query()->where('id',$order_id)->update(['statuse_copay'=>4]);
             return redirect()->back()->with('success', "Successfully paid co-pay.");
         }
         if($request->input('not_paid')>0) {
-            DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>5]);
+            Order::query()->where('id',$order_id)->update(['statuse_copay'=>5]);
             return redirect()->back()->with('success', "Successfully changed status co-pay.");
         }
         return redirect("orders/$pharmacy_id/show/$order_id");
@@ -620,7 +625,7 @@ class OrderController extends Controller
             $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
             $order = DB::table('orders')->where('id', $order_id)->first();
             $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-            DB::table('rxs')->where('order_id',$order_id)->delete();
+            Rx::query()->where('order_id',$order_id)->delete();
             $rx_ids = $request->input('rx_id');
             $rf_ids = $request->input('rf_id');
             $rx_dates = $request->input('rx_date');
@@ -637,7 +642,7 @@ class OrderController extends Controller
                     $data[]=["order_id"=>$order_id,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>$rx_counts[$key],"rx_recipient"=>$rx_recipient];
                 }
             }
-            DB::table('rxs')->insert($data);
+            Rx::query()->insert($data);
             if(!empty($request->input('delivery_date'))){
                 $delivery_date = date("Y-m-d",strtotime($request->input('delivery_date')));
             } else {
@@ -648,7 +653,7 @@ class OrderController extends Controller
                 }
             }
             if($request->input('statuse_copay')==4){
-                DB::table('orders')->where('id', $order_id)->update(['statuse_copay' => 4]);
+                Order::query()->where('id', $order_id)->update(['statuse_copay' => 4]);
             }
             if($request->input('type_driver')==2) {
                 $driver_id = $request->input('driver2');
@@ -661,7 +666,7 @@ class OrderController extends Controller
             } else {
                 $delivery_time_range = $request->input('delivery_time_range');
             }
-            DB::table('orders')->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $validated['count_bags'] ?? max(1, (int) $order->count_bags), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge, 'family_id' => $request->input('family_id')]);
+            Order::query()->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $validated['count_bags'] ?? max(1, (int) $order->count_bags), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge, 'family_id' => $request->input('family_id')]);
             if($request->input('statuse')==1 && ($request->input('delivery_time')==3 || $request->input('delivery_time')==4)) {
                 $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
                 Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
@@ -672,7 +677,7 @@ class OrderController extends Controller
                 );
             }
             $changeOrderStatus->handle((int) $order_id, $statusId);
-            DB::table('medicine')->where('order_id', $order_id)->delete();
+            Medicine::query()->where('order_id', $order_id)->delete();
         }
         return redirect("orders/$pharmacy_id");
     }
@@ -758,7 +763,7 @@ class OrderController extends Controller
      */
     public function markReady($pharmacy_id) {
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-        DB::table("orders")->where("pharmacy_id",$pharmacy_id)->where("orders.ready",'0')->where("orders.statuse_id",1)->update(["ready"=>'1']);
+        Order::query()->where("pharmacy_id",$pharmacy_id)->where("orders.ready",'0')->where("orders.statuse_id",1)->update(["ready"=>'1']);
         return json_encode([
             'message' => 'OK'
         ]);

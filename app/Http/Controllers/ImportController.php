@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Rx;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\Notifications;
 use App\Models\User;
@@ -122,7 +124,7 @@ class ImportController extends Controller
                 if($key>0 && $row!='') {
                     $data0 = explode($delimiter, $row);
                     if(empty($key_email) || empty($data0[$key_email])){
-                        $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
+                        $email = 'patients'.User::query()->max('id').'@'.config('branding.account_email_domain');
                     } else {
                         $email = $data0[$key_email];
                     }
@@ -241,7 +243,7 @@ class ImportController extends Controller
                 $src = '';
                 $email = $request->input('email');
                 if(empty($email)){
-                    $email = 'patients'.(intval(DB::table('users')->max('id'))+1).'@'.config('branding.account_email_domain');
+                    $email = 'patients'.(intval(User::query()->max('id'))+1).'@'.config('branding.account_email_domain');
                 }
                 $address = $request->input('address');
                 $data = app(\App\Actions\GeocodeAddress::class)->response($address);
@@ -256,7 +258,7 @@ class ImportController extends Controller
                 DB::table('users')->where('id',$user->id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'address' => $address,'location' => $location,'zip' => $request->input('zip'),'apartment' => $request->input('apartment')]);
             }
             $user = DB::table('users')->where('phone', $request->input('phone'))->where('pharmacy_id', $pharmacy_id)->first();
-            $id_max = DB::table('orders')->max('id')+1;
+            $id_max = Order::query()->max('id')+1;
             $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
             $statuse_copay = (empty($request->input('copay')))?'1':'2';
             if(!empty($request->input('copay_paid_pharm'))) {
@@ -270,7 +272,7 @@ class ImportController extends Controller
             foreach(array_keys($rx_ids) as $key){
                 $data[]=["order_id"=>$id_max,"rx_id"=>str_replace(" ",'',$rx_ids[$key]),"rx_date"=>$rx_dates[$key]];
             }
-            DB::table('rxs')->insert($data);
+            Rx::query()->insert($data);
             if($request->input('delivery_time')=="1"){
                 $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
             } else {
@@ -287,7 +289,7 @@ class ImportController extends Controller
             } else {
                 $driver_id = NULL;
             }
-            DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id' => Auth::user()->id, 'driver_id'=>$driver_id, 'user_id' => $user->id, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge]);
+            Order::query()->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id' => Auth::user()->id, 'driver_id'=>$driver_id, 'user_id' => $user->id, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge]);
             Notifications::send_push($user->id,"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user->address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
             if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
                 $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();

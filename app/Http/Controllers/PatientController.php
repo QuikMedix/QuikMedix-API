@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FamilyMember;
 use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
@@ -126,7 +127,7 @@ class PatientController extends Controller
 
         $geo = $geocoder->lookup(trim($request->input('address').' '.$request->input('zip')));
         $password = bin2hex(random_bytes(4));
-        $email = $request->input('email') ?: 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
+        $email = $request->input('email') ?: 'patients'.User::query()->max('id').'@'.config('branding.account_email_domain');
 
         $patientId = DB::table('users')->insertGetId([
             ...$request->safe()->only(['name', 'last_name', 'phone', 'birth_date', 'zip', 'apartment']),
@@ -186,13 +187,13 @@ class PatientController extends Controller
                 'family_address' => ['required', 'string', 'max:255'],
             ]);
             $location = $geocoder->handle($family['family_address'], 'family_address');
-            DB::table('family_members')->insert($family + ['user_id' => $user_id, 'location' => $location]);
+            FamilyMember::query()->insert($family + ['user_id' => $user_id, 'location' => $location]);
 
             return $back->with('success', 'Family member added.');
         }
 
         if ($request->input('family_member_remove') > 0) {
-            DB::table('family_members')->where('id', $request->input('family_member_remove'))->where('user_id', $user_id)->delete();
+            FamilyMember::query()->where('id', $request->input('family_member_remove'))->where('user_id', $user_id)->delete();
 
             return $back->with('success', 'Family member removed.');
         }
@@ -281,7 +282,7 @@ class PatientController extends Controller
 
         $row = [
             ...Arr::only($validated, ['name', 'last_name', 'phone', 'zip', 'apartment', 'zip2', 'apartment2', 'zip3', 'apartment3']),
-            'email' => $request->input('email') ?: 'patients'.((int) DB::table('users')->max('id') + 1).'@'.config('branding.account_email_domain'),
+            'email' => $request->input('email') ?: 'patients'.((int) User::query()->max('id') + 1).'@'.config('branding.account_email_domain'),
             'home_phone' => $request->input('home_phone') ?: null,
             'image' => $image,
             'primary_address' => $primary,

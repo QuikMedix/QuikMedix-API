@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Office;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class OfficeController extends Controller
 
     public function officesListHandler(Request $request) {
         if($request->input('remove')>0) {
-            DB::table('offices')->where('id', $request->input('user_id'))->delete();
+            Office::query()->where('id', $request->input('user_id'))->delete();
         }
         $offices = DB::table('offices');
         if(!empty(request()->query('search'))) {
@@ -109,7 +110,7 @@ class OfficeController extends Controller
                 }
                 $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                 $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                DB::table('offices')->where('id', $office_id)->update(['name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'address' => $request->input('address'),'location' => $location,'zone_id' => $request->input('zone_id')]);
+                Office::query()->where('id', $office_id)->update(['name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'address' => $request->input('address'),'location' => $location,'zone_id' => $request->input('zone_id')]);
             }
         }
         return redirect("offices");
@@ -150,7 +151,7 @@ class OfficeController extends Controller
                 }
                 $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                 $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                DB::table('offices')->insert(['name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'address' => $request->input('address'),'location' => $location,'zone_id' => $request->input('zone_id')]);
+                Office::query()->insert(['name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'address' => $request->input('address'),'location' => $location,'zone_id' => $request->input('zone_id')]);
             }
         }
         return redirect("offices");

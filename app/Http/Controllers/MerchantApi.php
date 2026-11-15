@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Models\Order;
+use App\Models\Rx;
+use App\Models\RouteStop;
 use Illuminate\Http\Request;
 use Twilio\Rest\Client;
 use App\Support\Notifications;
@@ -176,7 +180,7 @@ class MerchantApi extends Controller
                         if(preg_match( '/^(\d{3})(\d{3})(\d{4})$/', $response->patient->home_phone_number,  $matches)) {
                             $home_phone = '('.$matches[1].') '.$matches[2].'-'.$matches[3];
                         }
-                        $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
+                        $email = 'patients'.User::query()->max('id').'@'.config('branding.account_email_domain');
                         DB::table('users')->insert(['isactive' => '1','name' => $response->patient->first_name,'last_name' => $response->patient->last_name,'email' => $email,'phone' => $patient_phone,'home_phone'=> $home_phone,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $response->recipient->address->zipcode,'pharmacy_id' => $pharmacy_auth->id]);
                         try {
                             $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
@@ -189,7 +193,7 @@ class MerchantApi extends Controller
                         }
                         $patient = DB::table("users")->where("phone",$patient_phone)->where("pharmacy_id",$pharmacy_auth->id)->first();
                     }
-                    $id_max = DB::table('orders')->max('id')+1;
+                    $id_max = Order::query()->max('id')+1;
                     $copay=0;
                     $fridge=0;
                     $data=[];
@@ -205,8 +209,8 @@ class MerchantApi extends Controller
                         $data[]=["order_id"=>$id_max,"rx_id"=>str_replace(" ",'',$rx->number).'-'.$rx->fill_number,"rx_date"=>$rx->date_of_service,"rx_count"=>$rx->fill_quantity];
                     }
                     $statuse_copay = (empty($copay))?'1':'2';
-                    DB::table('rxs')->insert($data);
-                    DB::table('orders')->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_auth->id, 'user_id' => $patient->id, 'count_bags'=>$count_bags, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => 4, 'special_instructions' => $special_instructions, 'type_driver' => 1, 'delivery_time_id' => $delivery_time_id, 'delivery_date'=>$delivery_date, 'fridge' => $fridge, 'signature'=>$signature, 'merchantOrder'=>'1']);
+                    Rx::query()->insert($data);
+                    Order::query()->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_auth->id, 'user_id' => $patient->id, 'count_bags'=>$count_bags, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => 4, 'special_instructions' => $special_instructions, 'type_driver' => 1, 'delivery_time_id' => $delivery_time_id, 'delivery_date'=>$delivery_date, 'fridge' => $fridge, 'signature'=>$signature, 'merchantOrder'=>'1']);
                     if($patient->primary_address==3){
                         if(!empty($patient->apartment3)){
                             $user_address = $patient->address3.' Apt '.$patient->apartment3;
@@ -285,8 +289,8 @@ class MerchantApi extends Controller
                     $data[]=["order_id"=>$order_id,"rx_id"=>str_replace(" ",'',$rx->number).'-'.$rx->fill_number,"rx_date"=>$rx->date_of_service,"rx_count"=>$rx->fill_quantity];
                 }
                 $statuse_copay = (empty($copay))?'1':'2';
-                DB::table('rxs')->insert($data);
-                DB::table('orders')->where('id',$order_id)->update(['copay'=>$copay,'statuse_copay'=>$statuse_copay,'fridge'=>$fridge]);
+                Rx::query()->insert($data);
+                Order::query()->where('id',$order_id)->update(['copay'=>$copay,'statuse_copay'=>$statuse_copay,'fridge'=>$fridge]);
                 return response()->json([
                     'order' => [
                         'id'=>$order_id,
@@ -324,7 +328,7 @@ class MerchantApi extends Controller
         if($pharmacy_auth = $this->checkAuth($request)){
             $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
-                DB::table('rxs')->where('order_id',$order_id)->where("rx_id",$rx_number)->delete();
+                Rx::query()->where('order_id',$order_id)->where("rx_id",$rx_number)->delete();
                 return response()->json(NULL, 200);
             } else {
                 return response()->json([
@@ -348,8 +352,8 @@ class MerchantApi extends Controller
             $order=DB::table('orders')->where('id',$order_id)->where('pharmacy_id',$pharmacy_auth->id)->where('merchantOrder','1')->first();
             if(!empty($order)){
                 if($order->statuse_id==1) {
-                    DB::table('orders')->where('id',$order_id)->update(["statuse_id"=>5]);
-                    DB::table('routes_priority')->where('order_id',$order_id)->delete();
+                    Order::query()->where('id',$order_id)->update(["statuse_id"=>5]);
+                    RouteStop::query()->where('order_id',$order_id)->delete();
                     return response()->json(NULL, 204);
                 } else {
                     return response()->json([

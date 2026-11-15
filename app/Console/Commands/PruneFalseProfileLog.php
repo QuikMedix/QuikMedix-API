@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ActionLog;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Support\Facades\DB;
@@ -82,7 +83,7 @@ class PruneFalseProfileLog extends Command
         $removed = DB::transaction(function () use ($ids): int {
             $removed = 0;
             foreach (array_chunk($ids, 500) as $chunk) {
-                $removed += DB::table('action_log')->whereIn('id', $chunk)->delete();
+                $removed += ActionLog::query()->whereIn('id', $chunk)->delete();
             }
 
             return $removed;
@@ -103,7 +104,7 @@ class PruneFalseProfileLog extends Command
     private function falseRows(): array
     {
         $columns = self::FIELDS + [self::PHARMACY => 'pharmacy_id'];
-        $userIds = DB::table('action_log')->whereColumn('user_id', 'action_user_id')
+        $userIds = ActionLog::query()->whereColumn('user_id', 'action_user_id')
             ->where(function ($query): void {
                 $query->where(fn ($blank) => $blank->whereIn('type', array_keys(self::FIELDS))->where('comment', 'like', 'from % to '))
                     ->orWhere('type', self::PHARMACY);

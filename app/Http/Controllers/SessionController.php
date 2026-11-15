@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +45,7 @@ class SessionController extends Controller
         abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
         $password = bin2hex(openssl_random_pseudo_bytes(4));
         DB::table('users')->where('id',$user_id)->update(['password'=>Hash::make($password)]);
-        DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
+        ActionLog::query()->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
         if(!empty($user->pharmacy_id)) {
             $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
             if(!empty($pharmacy) && !empty($pharmacy->name)) {

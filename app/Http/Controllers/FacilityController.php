@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdditionalRecipient;
 use Illuminate\Support\Facades\Gate;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
@@ -110,7 +111,7 @@ class FacilityController extends Controller
             'role' => 'facility',
             'isactive' => '1',
             'last_name' => $request->input('last_name') ?: ' ',
-            'email' => $request->input('email') ?: 'facilitys'.DB::table('users')->max('id').'@'.config('branding.account_email_domain'),
+            'email' => $request->input('email') ?: 'facilitys'.User::query()->max('id').'@'.config('branding.account_email_domain'),
             'home_phone' => $request->input('home_phone') ?: null,
             'image' => $this->storeUpload($request->file('image'), 'users') ?? '',
             'address' => $geo['formatted_address'],
@@ -154,7 +155,7 @@ class FacilityController extends Controller
             $patients = DB::table('users')->where('pharmacy_id', $pharmacy_id)->where('role', 'user')
                 ->whereIn('id', (array) $request->input('patients_db'))->get();
             foreach ($patients as $patient) {
-                DB::table('additional_recipients')->insert(['user_id' => $user_id, 'family_type' => 'Additional Recipient', 'family_name' => $patient->name.' '.$patient->last_name, 'family_phone' => $patient->phone]);
+                AdditionalRecipient::query()->insert(['user_id' => $user_id, 'family_type' => 'Additional Recipient', 'family_name' => $patient->name.' '.$patient->last_name, 'family_phone' => $patient->phone]);
             }
 
             return $back->with('success', 'Recipients added.');
@@ -167,7 +168,7 @@ class FacilityController extends Controller
                 'family_name2' => ['required', 'string', 'max:255'],
                 'family_phone' => ['required', 'string', 'max:20'],
             ]);
-            DB::table('additional_recipients')->insert([
+            AdditionalRecipient::query()->insert([
                 'user_id' => $user_id,
                 'family_type' => $recipient['family_type'],
                 'family_name' => $recipient['family_name'].' '.$recipient['family_name2'],
@@ -178,7 +179,7 @@ class FacilityController extends Controller
         }
 
         if ($request->input('additional_recipient_remove') > 0) {
-            DB::table('additional_recipients')->where('id', $request->input('additional_recipient_remove'))->where('user_id', $user_id)->delete();
+            AdditionalRecipient::query()->where('id', $request->input('additional_recipient_remove'))->where('user_id', $user_id)->delete();
 
             return $back->with('success', 'Recipient removed.');
         }
@@ -221,7 +222,7 @@ class FacilityController extends Controller
 
         DB::table('users')->where('id', $facilityId)->update([
             ...Arr::only($validated, ['name', 'last_name', 'phone', 'zip', 'apartment']),
-            'email' => ($validated['email'] ?? null) ?: 'facilitys'.((int) DB::table('users')->max('id') + 1).'@'.config('branding.account_email_domain'),
+            'email' => ($validated['email'] ?? null) ?: 'facilitys'.((int) User::query()->max('id') + 1).'@'.config('branding.account_email_domain'),
             'home_phone' => ($validated['home_phone'] ?? null) ?: null,
             'image' => $image,
             'address' => $geo['formatted_address'],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\Pharmacy;
 use App\Actions\GeocodeAddress;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -106,7 +107,7 @@ class RegisterController extends Controller
         } else {
             $src = NULL;
         }
-        $pharmacy_id = DB::table('pharmacys')->insertGetId(['name' => $data['pharmacyName'],'email' => $data['pharmacyEmail'],'phone' => $data['pharmacyPhone'],'address' => $data['pharmacyAddress'],'location' => $location,'logo'=>$src,'site'=>$data['pharmacyWebsite'] ?? null,'admin_id' => $user->id, 'ref_id' => $ref_id,'ip'=>\Request::ip()]);
+        $pharmacy_id = Pharmacy::query()->insertGetId(['name' => $data['pharmacyName'],'email' => $data['pharmacyEmail'],'phone' => $data['pharmacyPhone'],'address' => $data['pharmacyAddress'],'location' => $location,'logo'=>$src,'site'=>$data['pharmacyWebsite'] ?? null,'admin_id' => $user->id, 'ref_id' => $ref_id,'ip'=>\Request::ip()]);
         $user->pharmacy_id = $pharmacy_id;
         $user->save();
         return $user;

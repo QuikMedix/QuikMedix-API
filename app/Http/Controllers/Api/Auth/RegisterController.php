@@ -13,7 +13,7 @@ class RegisterController extends Controller
     public function __invoke(RegisterFormRequest $request)
     {
         if(empty($request->input('email'))){
-            $email = 'patients'.DB::table('users')->max('id').'@'.config('branding.account_email_domain');
+            $email = 'patients'.User::query()->max('id').'@'.config('branding.account_email_domain');
         } else {
             $email = $request->input('email');
         }

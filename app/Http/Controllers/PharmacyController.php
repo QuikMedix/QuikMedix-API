@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
+use App\Models\PharmacyArea;
 use App\Actions\GeocodeAddress;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\PageLinks;
@@ -114,19 +116,19 @@ class PharmacyController extends Controller
 
     public function pharmacysListHandler(Request $request) {
         if($request->input('block')>0) {
-            DB::table('pharmacys')->where('id', $request->input('user_id'))->update(['isblocked' => 1]);
+            Pharmacy::query()->where('id', $request->input('user_id'))->update(['isblocked' => 1]);
         }
         if($request->input('unblock')>0) {
-            DB::table('pharmacys')->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
+            Pharmacy::query()->where('id', $request->input('user_id'))->update(['isblocked' => 0]);
         }
         if($request->input('activate')>0) {
-            DB::table('pharmacys')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
+            Pharmacy::query()->where('id', $request->input('user_id'))->update(['isactive' => 1]);
         }
         if($request->input('activateuser')>0) {
             DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
         }
         if($request->input('remove')>0) {
-            DB::table('pharmacys')->where('id', $request->input('user_id'))->delete();
+            Pharmacy::query()->where('id', $request->input('user_id'))->delete();
         }
         return redirect('pharmacys');
     }
@@ -209,7 +211,7 @@ class PharmacyController extends Controller
                     }
                 }
                 $balance = floatval($sum_amount)*-1;
-                DB::table('pharmacys')->where("id",$pharmacy_id)->update(['balance'=>$balance]);
+                Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
             }
             if(!empty($request->input('npi'))){
                 $npi = $request->input('npi');
@@ -259,7 +261,7 @@ class PharmacyController extends Controller
                 $bestrxKey = NULL;
                 $bestrxSecret = NULL;
             }
-            DB::table('pharmacy_areas')->where('pharmacy_id',$pharmacy_id)->delete();
+            PharmacyArea::query()->where('pharmacy_id',$pharmacy_id)->delete();
             $tariff_areas1 = $request->input('tariff_areas1');
             $tariff_areas2 = $request->input('tariff_areas2');
             $tariff_areas3 = $request->input('tariff_areas3');
@@ -279,7 +281,7 @@ class PharmacyController extends Controller
                     $data[]=["pharmacy_id"=>$pharmacy_id,"area_id"=>$value,"type"=>3];
                 }
             }
-            DB::table('pharmacy_areas')->insert($data);
+            PharmacyArea::query()->insert($data);
             if($request->input('plan_id')=="2"){
                 if(!empty($request->input('date_end_trial'))) {
                     $date_end_trial = $request->input('date_end_trial');
@@ -295,7 +297,7 @@ class PharmacyController extends Controller
             }
             $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
             $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-            DB::table('pharmacys')->where('id', $pharmacy_id)->update(['name' => $request->input('name'),'email' => $request->input('email'),'plan_id' => $request->input('plan_id'),'date_end_trial'=>$date_end_trial,'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more'),'phone' => $request->input('phone'),'logo' => $src,'image_front'=>$src2,'site' => $request->input('site'),'copay_bill'=>$copay_bill,'massiveBagsTransfer'=>$massiveBagsTransfer,'merchantFunc'=>$merchantFunc,'merchantKey'=>$merchantKey,'merchantSecret'=>$merchantSecret,'npi'=>$npi,'ncpdp'=>$ncpdp,'dea'=>$dea,'bestrxFunc'=>$bestrxFunc,'bestrx_pharmacy_id'=>$bestrx_pharmacy_id,'bestrxKey'=>$bestrxKey,'bestrxSecret'=>$bestrxSecret,'address' => $request->input('address'),'schedule'=>json_encode($schedule),'location' => $location,'zone_id'=>$request->input('zone_id')]);
+            Pharmacy::query()->where('id', $pharmacy_id)->update(['name' => $request->input('name'),'email' => $request->input('email'),'plan_id' => $request->input('plan_id'),'date_end_trial'=>$date_end_trial,'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more'),'phone' => $request->input('phone'),'logo' => $src,'image_front'=>$src2,'site' => $request->input('site'),'copay_bill'=>$copay_bill,'massiveBagsTransfer'=>$massiveBagsTransfer,'merchantFunc'=>$merchantFunc,'merchantKey'=>$merchantKey,'merchantSecret'=>$merchantSecret,'npi'=>$npi,'ncpdp'=>$ncpdp,'dea'=>$dea,'bestrxFunc'=>$bestrxFunc,'bestrx_pharmacy_id'=>$bestrx_pharmacy_id,'bestrxKey'=>$bestrxKey,'bestrxSecret'=>$bestrxSecret,'address' => $request->input('address'),'schedule'=>json_encode($schedule),'location' => $location,'zone_id'=>$request->input('zone_id')]);
         }
         return redirect("pharmacys/edit/$pharmacy_id");
     }
@@ -381,12 +383,12 @@ class PharmacyController extends Controller
                         $massiveBagsTransfer = "0";
                     }
                     DB::transaction(function () use ($request, $src, $src2, $massiveBagsTransfer, $location, $tariffSelection) {
-                        $pharmacy_id = DB::table('pharmacys')->insertGetId(['name' => $request->input('name'),'email' => $request->input('email'),'plan_id' => $request->input('plan_id'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'massiveBagsTransfer'=>$massiveBagsTransfer,'address' => $request->input('address'),'location' => $location,'zone_id'=>$request->input('zone_id')]);
+                        $pharmacy_id = Pharmacy::query()->insertGetId(['name' => $request->input('name'),'email' => $request->input('email'),'plan_id' => $request->input('plan_id'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'massiveBagsTransfer'=>$massiveBagsTransfer,'address' => $request->input('address'),'location' => $location,'zone_id'=>$request->input('zone_id')]);
                         $areas = array_map(function ($area_id) use ($pharmacy_id) {
                             return ['pharmacy_id' => $pharmacy_id, 'area_id' => $area_id, 'type' => 1];
                         }, $tariffSelection['tariff_areas'] ?? []);
                         if ($areas) {
-                            DB::table('pharmacy_areas')->insert($areas);
+                            PharmacyArea::query()->insert($areas);
                         }
                     });
                 }
@@ -422,7 +424,7 @@ class PharmacyController extends Controller
                     }
                     $data = app(\App\Actions\GeocodeAddress::class)->response($request->input('address'));
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                    DB::table('pharmacys')->insert(['isactive'=>'1','name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'address' => $request->input('address'),'location' => $location,'admin_id'=>Auth::user()->id,'ip'=>$request->ip()]);
+                    Pharmacy::query()->insert(['isactive'=>'1','name' => $request->input('name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'logo' => $src,'image_front' => $src2,'site' => $request->input('site'),'address' => $request->input('address'),'location' => $location,'admin_id'=>Auth::user()->id,'ip'=>$request->ip()]);
                     DB::table('users')->where('id', Auth::user()->id)->update(['role' => 'medic','pharmacy_id' => DB::table('pharmacys')->where('admin_id', Auth::user()->id)->value('id')]);
                 }
             }
@@ -487,7 +489,7 @@ class PharmacyController extends Controller
             $file = $request->file('merchant_agreement');
             $file->move(public_path() . '/agreements/pharmacys/',$name);
             $src = '/agreements/pharmacys/'.$name;
-            DB::table('pharmacys')->where('pharmacys.merchantFunc','1')->where('id',$request->input('pharmacy_id'))->update(['merchant_agreement'=>$src]);
+            Pharmacy::query()->where('pharmacys.merchantFunc','1')->where('id',$request->input('pharmacy_id'))->update(['merchant_agreement'=>$src]);
         }
         return redirect("/pharmacys/integrations");
     }

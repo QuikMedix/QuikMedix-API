@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\PageLinks;
@@ -62,10 +63,10 @@ class DashboardController extends Controller
             $orders = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 4)->orderBy('orders.id','desc')->limit(6)->get();
             $chartDelivered = DB::table('orders')->where('statuse_id',4)->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->select(DB::raw("count(id) as count"), DB::raw("DATE_FORMAT(created, '%m-%Y') date"))->groupby(DB::raw("DATE_FORMAT(created, '%m-%Y')"))->orderBy('id','desc')->limit(12)->get()->reverse();
             $orders0 = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 1)->orderBy('orders.id','desc')->limit(6)->get();
-            $app_android_users = DB::table("users")->where("role","user")->where("os","1")->count();
-            $app_android_drivers = DB::table("users")->where("role","driver")->where("os","1")->count();
-            $app_ios_users = DB::table("users")->where("role","user")->where("os","2")->count();
-            $app_ios_drivers = DB::table("users")->where("role","driver")->where("os","2")->count();
+            $app_android_users = User::query()->where("role","user")->where("os","1")->count();
+            $app_android_drivers = User::query()->where("role","driver")->where("os","1")->count();
+            $app_ios_users = User::query()->where("role","user")->where("os","2")->count();
+            $app_ios_drivers = User::query()->where("role","driver")->where("os","2")->count();
             $pageviews = array();
             $count_orders_todays = DB::table('orders')->select("orders.statuse_id",DB::raw('count(orders.id) as count'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->whereDate('orders.created', Carbon::today())->groupBy("orders.statuse_id")->get();
             $count_orders_today = array();

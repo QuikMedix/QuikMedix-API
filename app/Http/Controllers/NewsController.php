@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\News;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class NewsController extends Controller
 
     public function news() {
         $countOnPage=20;
-        $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
+        $max_pages=ceil(News::query()->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $news = DB::table('news')->orderBy('id','desc')->leftJoin('news_read',function ($join) {
@@ -53,14 +54,14 @@ class NewsController extends Controller
 
     public function newsAddHandler(Request $request) {
         if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
-            DB::table('news')->insert(["user_id"=>Auth::user()->id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
+            News::query()->insert(["user_id"=>Auth::user()->id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }
         return redirect("news");
     }
 
     public function news_patient() {
         $countOnPage=20;
-        $max_pages=ceil(DB::table('news')->where('user_id', Auth::user()->id)->count()/$countOnPage);
+        $max_pages=ceil(News::query()->where('user_id', Auth::user()->id)->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $news = DB::table('news_patient')->where("pharmacy_id",Auth::user()->pharmacy_id)->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();

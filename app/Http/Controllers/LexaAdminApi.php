@@ -2,6 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
+use App\Models\PackageTransition;
+use App\Models\PaymentAccount;
+use App\Models\Order;
+use App\Models\RouteStopLog;
+use App\Models\DriverPayout;
+use App\Models\CashLog;
+use App\Models\RouteStop;
+use App\Models\FamilyMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Actions\LogUserChanges;
@@ -88,7 +97,7 @@ class LexaAdminApi extends Controller
             if($request->input('password')!='') {
                 if($request->input('password')==$request->input('password2')) {
                     $user->password = Hash::make($request->input('password'));
-                    DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
+                    ActionLog::query()->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
                 } else {
                     return response()->json([
                         'message' => 'Passwords must match',
@@ -428,7 +437,7 @@ class LexaAdminApi extends Controller
                     $routes[$key]->order=$order;
                     $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->value('name') ?? '';
                     $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
-                    $routes[$key]->order->count_scanned=DB::table('packages_transitions')->where('order_id',$value->order_id)->where('user_id',$value->type_id)->where('driver_id',Auth::user()->id)->count();
+                    $routes[$key]->order->count_scanned=PackageTransition::query()->where('order_id',$value->order_id)->where('user_id',$value->type_id)->where('driver_id',Auth::user()->id)->count();
                 }
                 if($value->type=='office') {
                     $office = DB::table('offices')->where('id',$value->type_id)->first();
@@ -588,7 +597,7 @@ class LexaAdminApi extends Controller
                     $api_response = $client->getCustomersApi()->createCustomer($body);
                     if ($api_response->isSuccess()) {
                         $result = $api_response->getResult();
-                        DB::table('payment_accounts')->insert(['user_id'=>Auth::user()->id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
+                        PaymentAccount::query()->insert(['user_id'=>Auth::user()->id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
                         $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
                     } else {
                         $error = json_encode($api_response->getErrors());
@@ -598,7 +607,7 @@ class LexaAdminApi extends Controller
                         ], 400);
                     }
                 } else {
-                    DB::table('payment_accounts')->where('user_id',Auth::user()->id)->update(["type"=>$type]);
+                    PaymentAccount::query()->where('user_id',Auth::user()->id)->update(["type"=>$type]);
                 }
                 if($type=="card") {
                     $amount_money = new \Square\Models\Money();
@@ -620,7 +629,7 @@ class LexaAdminApi extends Controller
                         $payment_id = $result->getPayment()->getId();
                         $payment_status = $result->getPayment()->getStatus();
                         if($payment_status=="COMPLETED" || $payment_status=="APPROVED" || $payment_status=="PENDING") {
-                            DB::table('payment_accounts')->where('user_id',Auth::user()->id)->update(["payment_id"=>$payment_id]);
+                            PaymentAccount::query()->where('user_id',Auth::user()->id)->update(["payment_id"=>$payment_id]);
                             $card = new \Square\Models\Card();
                             $card->setCardholderName($name[0].' '.$name[1]);
                             $card->setBillingAddress($address);
@@ -635,7 +644,7 @@ class LexaAdminApi extends Controller
                             if ($api_response->isSuccess()) {
                                 $result = $api_response->getResult();
                                 $unid = uniqid("",true).rand(0,100);
-                                DB::table('payment_accounts')->where('user_id',Auth::user()->id)->update(["payment_profile_id"=>$result->getCard()->getId(),"card"=>$result->getCard()->getLast4()]);
+                                PaymentAccount::query()->where('user_id',Auth::user()->id)->update(["payment_profile_id"=>$result->getCard()->getId(),"card"=>$result->getCard()->getLast4()]);
                                 $body = new \Square\Models\RefundPaymentRequest($unid, $amount_money);
                                 $body->setPaymentId($payment_id);
                                 $api_response = $client->getRefundsApi()->refundPayment($body);
@@ -700,7 +709,7 @@ class LexaAdminApi extends Controller
             $order=DB::table('orders')->where('id',$order_id)->where('driver_id',Auth::user()->id)->first();
             if(!empty($order)) {
                 if (in_array((int) $order->statuse_id, [OrderStatus::READY_FOR_PICKUP, 2, 6, OrderStatus::HUB], true)) {
-                    DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>OrderStatus::ON_THE_WAY]);
+                    Order::query()->where('id',$order_id)->update(['statuse_id'=>OrderStatus::ON_THE_WAY]);
                     Notifications::send_push($order->user_id,"QuikMedix","Your order #$order_id is on its way!");
                 }
                 return response()->json([
@@ -752,7 +761,7 @@ class LexaAdminApi extends Controller
                 $file->move(public_path() . '/images/drop_off/',\App\Support\PublicUpload::name($request->file('image')));
                 $src = '/images/drop_off/'.\App\Support\PublicUpload::name($request->file('image'));
                 if(empty($order->signature_photo)) {
-                    DB::table('orders')->where('id',$order_id)->update(['drop_off_photo'=>$src]);
+                    Order::query()->where('id',$order_id)->update(['drop_off_photo'=>$src]);
                 } else {
                     $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
                     $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
@@ -847,18 +856,18 @@ class LexaAdminApi extends Controller
                     } else {
                         $driver_location=$user_location;
                     }
-                    DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>4,'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'drop_off_photo'=>$src,'tariff'=>$tariff_res]);
+                    Order::query()->where('id',$order_id)->update(['statuse_id'=>4,'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'drop_off_photo'=>$src,'tariff'=>$tariff_res]);
                     $route = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient');
                     foreach($route->get() as $routes_priority) {
-                        DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                        RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                         if($routes_priority->type_pay==1) {
-                            DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
+                            DriverPayout::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
                         }
                         if($routes_priority->type_pay==2) {
-                            DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
+                            DriverPayout::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
                         }
                         if($routes_priority->type_pay==3) {
-                            DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                            DriverPayout::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                         }
                     }
                     $route->delete();
@@ -921,7 +930,7 @@ class LexaAdminApi extends Controller
                 $src = '/images/signature/'.\App\Support\PublicUpload::name($request->file('image'));
                 if($order->signature>0) {
                     if(empty($order->drop_off_photo)) {
-                        DB::table('orders')->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>$request->input('signature_type')]);
+                        Order::query()->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>$request->input('signature_type')]);
                     } else {
                         $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
                         $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
@@ -1016,18 +1025,18 @@ class LexaAdminApi extends Controller
                         } else {
                             $driver_location=$user_location;
                         }
-                        DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>4,'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'signature_photo'=>$src,'signature_type'=>$request->input('signature_type'),'tariff'=>$tariff_res]);
+                        Order::query()->where('id',$order_id)->update(['statuse_id'=>4,'finish'=>date('Y-m-d H:i:s'),'delivery_address'=>$user_address,'delivery_location'=>$driver_location,'signature_photo'=>$src,'signature_type'=>$request->input('signature_type'),'tariff'=>$tariff_res]);
                         $route = DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient');
                         foreach($route->get() as $routes_priority) {
-                            DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                            RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                             if($routes_priority->type_pay==1) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
+                                DriverPayout::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
                             }
                             if($routes_priority->type_pay==2) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
+                                DriverPayout::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value]);
                             }
                             if($routes_priority->type_pay==3) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                DriverPayout::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                             }
                         }
                         $route->delete();
@@ -1040,7 +1049,7 @@ class LexaAdminApi extends Controller
                         }
                     }
                 } else {
-                    DB::table('orders')->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>$request->input('signature_type')]);
+                    Order::query()->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>$request->input('signature_type')]);
                 }
                 return response()->json([
                     'message' => 'Signature was saved'
@@ -1074,7 +1083,7 @@ class LexaAdminApi extends Controller
                 $file = $request->file('image');
                 $file->move(public_path() . '/images/signature/',\App\Support\PublicUpload::name($request->file('image')));
                 $src = '/images/signature/'.\App\Support\PublicUpload::name($request->file('image'));
-                DB::table('orders')->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>'Patient']);
+                Order::query()->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>'Patient']);
                 return response()->json([
                     'message' => 'Signature was saved'
                 ], 200);
@@ -1348,7 +1357,7 @@ class LexaAdminApi extends Controller
                         'errors' => 'Forbidden',
                     ], 403);
                 } else {
-                    DB::table('orders')->where('id', $order_id)->update(['statuse_id'=>$status_id]);
+                    Order::query()->where('id', $order_id)->update(['statuse_id'=>$status_id]);
                 }
                 return response()->json([
                     'message' => 'OK'
@@ -1379,7 +1388,7 @@ class LexaAdminApi extends Controller
                 }
                 $order = DB::table('orders')->where('id',$order_id)->where('driver_id', Auth::user()->id)->first();
                 if(isset($order)) {
-                    $count_added = DB::table('packages_transitions')->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
+                    $count_added = PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
                     if(1+$count_added>$order->count_bags) {
                         return response()->json([
                             'order_id' => $order->id,
@@ -1387,13 +1396,13 @@ class LexaAdminApi extends Controller
                             'count_scanned' => $count_added
                         ], 200);
                     } else if(1+$count_added<=$order->count_bags) {
-                        if(DB::table('packages_transitions')->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->where('bag',$bag)->count()>0) {
                             return response()->json([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ], 404);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'user_id'=>$order->user_id,'driver_id'=>Auth::user()->id,'bag'=>$bag]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'user_id'=>$order->user_id,'driver_id'=>Auth::user()->id,'bag'=>$bag]);
                             return response()->json([
                                 'order_id' => $order->id,
                                 'count_bags' => $order->count_bags,
@@ -1439,7 +1448,7 @@ class LexaAdminApi extends Controller
                 }
                 $order = DB::table('orders')->where('id',$order_id)->where('driver_id', Auth::user()->id)->first();
                 if(isset($order) && $order_id==$order_id_code) {
-                    $count_added = DB::table('packages_transitions')->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
+                    $count_added = PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->count();
                     if(1+$count_added>$order->count_bags) {
                         return response()->json([
                             'order_id' => $order->id,
@@ -1447,13 +1456,13 @@ class LexaAdminApi extends Controller
                             'count_scanned' => $count_added
                         ], 200);
                     } else if(1+$count_added<=$order->count_bags) {
-                        if(DB::table('packages_transitions')->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->where('order_id',$order->id)->where('user_id',$order->user_id)->where('driver_id',Auth::user()->id)->where('bag',$bag)->count()>0) {
                             return response()->json([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ], 404);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'user_id'=>$order->user_id,'driver_id'=>Auth::user()->id,'bag'=>$bag]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'user_id'=>$order->user_id,'driver_id'=>Auth::user()->id,'bag'=>$bag]);
                             return response()->json([
                                 'order_id' => $order->id,
                                 'count_bags' => $order->count_bags,
@@ -1527,7 +1536,7 @@ class LexaAdminApi extends Controller
                             $result = $api_response->getResult();
                             $payment_status = $result->getPayment()->getStatus();
                             if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
-                                DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>3]);
+                                Order::query()->where('id',$order_id)->update(['statuse_copay'=>3]);
                                 DB::table('payments')->insert(['order_id'=>$order_id,'transaction_id'=>$result->getPayment()->getId(),'type'=>'copay']);
                                 return response()->json([
                                     'message' => 'OK'
@@ -1580,31 +1589,31 @@ class LexaAdminApi extends Controller
             if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'driver') && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                 $cash_log = DB::table('cash_log')->where("order_id",$order_id)->where("driver_id",Auth::user()->id)->first();
                 if(!empty($cash_log)) {
-                    DB::table('cash_log')->where('id',$cash_log->id)->update(["copay"=>$order->copay]);
+                    CashLog::query()->where('id',$cash_log->id)->update(["copay"=>$order->copay]);
                 } else {
-                    DB::table('cash_log')->insert(["order_id"=>$order_id,"driver_id"=>Auth::user()->id,"copay"=>$order->copay]);
+                    CashLog::query()->insert(["order_id"=>$order_id,"driver_id"=>Auth::user()->id,"copay"=>$order->copay]);
                 }
-                DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>4]);
+                Order::query()->where('id',$order_id)->update(['statuse_copay'=>4]);
                 if(empty(Auth::user()->pharmacy_id)) {
                     $next_office = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->where('type','office')->first();
                     if(!empty($next_office)) {
-                        DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
+                        RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
                     } else {
-                        $last_route = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->max('priority');
+                        $last_route = RouteStop::query()->where('driver_id',Auth::user()->id)->max('priority');
                         $route0=DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->first();
                         if(!empty($route0)) {
-                            DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>1,'type_pay'=>$route0->type_pay,'pay_value'=>$route0->pay_value,'priority'=>(intval($last_route)+1)]);
+                            RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'office','type_id'=>1,'type_pay'=>$route0->type_pay,'pay_value'=>$route0->pay_value,'priority'=>(intval($last_route)+1)]);
                         }
                     }
                 } else {
                     $next_office = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id)->first();
                     if(!empty($next_office)) {
-                        DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
+                        RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>$next_office->type_id,'type_pay'=>$next_office->type_pay,'pay_value'=>$next_office->pay_value,'priority'=>$next_office->priority]);
                     } else {
-                        $last_route = DB::table('routes_priority')->where('driver_id',Auth::user()->id)->max('priority');
+                        $last_route = RouteStop::query()->where('driver_id',Auth::user()->id)->max('priority');
                         $route0=DB::table('routes_priority')->where('order_id',$order_id)->where('driver_id',Auth::user()->id)->where('type','patient')->first();
                         if(!empty($route0)) {
-                            DB::table('routes_priority')->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>Auth::user()->pharmacy_id,'type_pay'=>$route0->type_pay,'pay_value'=>$route0->pay_value,'priority'=>(intval($last_route)+1)]);
+                            RouteStop::query()->insert(['driver_id'=>Auth::user()->id,'order_id'=>$order_id,'type'=>'pharmacy','type_id'=>Auth::user()->pharmacy_id,'type_pay'=>$route0->type_pay,'pay_value'=>$route0->pay_value,'priority'=>(intval($last_route)+1)]);
                         }
                     }
                 }
@@ -1632,7 +1641,7 @@ class LexaAdminApi extends Controller
         $order = DB::table('orders')->where('id',$order_id)->first();
         if(!empty($order)) {
             if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->role == 'driver') && $order->driver_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
-                DB::table('orders')->where('id',$order_id)->update(['statuse_copay'=>5]);
+                Order::query()->where('id',$order_id)->update(['statuse_copay'=>5]);
                 return response()->json([
                     'message' => 'OK'
                 ], 200);
@@ -1678,7 +1687,7 @@ class LexaAdminApi extends Controller
             ], 400);
         }
         $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-        DB::table('family_members')->insert(['user_id'=>Auth::user()->id,'family_type' => $request->input('family_type'),'family_name' => $request->input('family_name'),'family_phone' => $request->input('family_phone'),'family_address' => $request->input('family_address'),'location'=>$location]);
+        FamilyMember::query()->insert(['user_id'=>Auth::user()->id,'family_type' => $request->input('family_type'),'family_name' => $request->input('family_name'),'family_phone' => $request->input('family_phone'),'family_address' => $request->input('family_address'),'location'=>$location]);
         return response()->json([
             'message' => 'OK'
         ], 200);
@@ -1688,7 +1697,7 @@ class LexaAdminApi extends Controller
         $family_member = DB::table('family_members')->where('id',$request->input('family_member_id'))->first();
         if(!empty($family_member)) {
             if($family_member->user_id==Auth::user()->id) {
-                DB::table('family_members')->where('id',$request->input('family_member_id'))->delete();
+                FamilyMember::query()->where('id',$request->input('family_member_id'))->delete();
                 return response()->json([
                     'message' => 'OK'
                 ], 200);

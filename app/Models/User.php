@@ -175,7 +175,7 @@ class User extends Authenticatable implements OAuthenticatable
         if($res!=NULL) {
             return (int)$res;
         }
-        $news = DB::table('news')->count();
+        $news = News::query()->count();
         $news_read = DB::table('news_read')->where("user_id",$this->id)->count();
         $res = ($news-$news_read);
         Redis::setex(request()->getHttpHost().':get_unread_news:'.$this->id, 300, $res);
@@ -248,7 +248,7 @@ class User extends Authenticatable implements OAuthenticatable
             if($pharmacy_balance_ban==='1') {
                 $res = 1;
                 if($pharmacy_balance>=0) {
-                    DB::table('pharmacys')->where('id', $this->pharmacy_id)->update(['balance_ban'=>'0']);
+                    Pharmacy::query()->where('id', $this->pharmacy_id)->update(['balance_ban'=>'0']);
                     $res = 0;
                 }
             } else {

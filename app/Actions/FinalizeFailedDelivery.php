@@ -2,6 +2,11 @@
 
 namespace App\Actions;
 
+use App\Models\Order;
+use App\Models\RouteStopLog;
+use App\Models\DriverPayout;
+use App\Models\PackageTransition;
+use App\Models\RouteStop;
 use App\Support\GeoPoint;
 use Illuminate\Support\Facades\DB;
 use stdClass;
@@ -20,8 +25,8 @@ class FinalizeFailedDelivery
         $order = DB::table('orders')->where('id', $orderId)->first();
         abort_if($order === null, 404, 'Order not found');
 
-        DB::table('orders')->where('id', $orderId)->update(['statuse_id' => $statusId]);
-        DB::table('orders')->where('id', $orderId)->update([
+        Order::query()->where('id', $orderId)->update(['statuse_id' => $statusId]);
+        Order::query()->where('id', $orderId)->update([
             'finish' => date('Y-m-d H:i:s'),
             'drop_off_photo' => null,
             'signature_photo' => null,
@@ -36,12 +41,12 @@ class FinalizeFailedDelivery
 
         $routeNeed = $routes[0];
         foreach ($routes as $route) {
-            DB::table('routes_priority_logs')->insert(['id' => $route->id, 'driver_id' => $route->driver_id, 'order_id' => $route->order_id, 'type' => $route->type, 'type_id' => $route->type_id, 'type_pay' => $route->type_pay, 'pay_value' => $route->pay_value]);
+            RouteStopLog::query()->insert(['id' => $route->id, 'driver_id' => $route->driver_id, 'order_id' => $route->order_id, 'type' => $route->type, 'type_id' => $route->type_id, 'type_pay' => $route->type_pay, 'pay_value' => $route->pay_value]);
             if ((int) $route->type_pay === 1 || (int) $route->type_pay === 2) {
-                DB::table('payouts_driver')->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'amount' => $route->pay_value]);
+                DriverPayout::query()->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'amount' => $route->pay_value]);
             }
             if ((int) $route->type_pay === 3) {
-                DB::table('payouts_driver')->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'amount' => $route->pay_value * intval($order->count_bags)]);
+                DriverPayout::query()->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'amount' => $route->pay_value * intval($order->count_bags)]);
             }
         }
 
@@ -49,14 +54,14 @@ class FinalizeFailedDelivery
 
         $driverLocation = DB::table('locations')->whereIn('id', [DB::raw('select max(`id`) from locations GROUP BY user_id')])->where('user_id', $driverId)->first();
         if (! empty($driverLocation)) {
-            DB::table('packages_transitions')->insert(['order_id' => $orderId, 'user_id' => $routeNeed->type_id, 'driver_id' => $driverId, 'target' => 'faild', 'location' => $driverLocation->location]);
+            PackageTransition::query()->insert(['order_id' => $orderId, 'user_id' => $routeNeed->type_id, 'driver_id' => $driverId, 'target' => 'faild', 'location' => $driverLocation->location]);
         }
-        $failedAttempts = DB::table('packages_transitions')->where('order_id', $orderId)->where('user_id', $routeNeed->type_id)->where('target', 'faild')->count();
+        $failedAttempts = PackageTransition::query()->where('order_id', $orderId)->where('user_id', $routeNeed->type_id)->where('target', 'faild')->count();
         if ($failedAttempts >= 3) {
-            DB::table('orders')->where('id', $orderId)->update(['not_delivered' => 1]);
+            Order::query()->where('id', $orderId)->update(['not_delivered' => 1]);
         }
 
-        DB::table('routes_priority')->where('order_id', $orderId)->where('driver_id', $driverId)->where('type', 'patient')->delete();
+        RouteStop::query()->where('order_id', $orderId)->where('driver_id', $driverId)->where('type', 'patient')->delete();
     }
 
     /**
@@ -69,13 +74,13 @@ class FinalizeFailedDelivery
         $nextStop = DB::table('routes_priority')->where('driver_id', $driverId)->where('type', $type)
             ->when($typeId !== null, fn ($query) => $query->where('type_id', $typeId))->first();
         if (! empty($nextStop)) {
-            DB::table('routes_priority')->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'type' => $type, 'type_id' => $nextStop->type_id, 'type_pay' => $nextStop->type_pay, 'pay_value' => $nextStop->pay_value, 'priority' => $nextStop->priority]);
+            RouteStop::query()->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'type' => $type, 'type_id' => $nextStop->type_id, 'type_pay' => $nextStop->type_pay, 'pay_value' => $nextStop->pay_value, 'priority' => $nextStop->priority]);
 
             return;
         }
 
-        $lastPriority = DB::table('routes_priority')->where('driver_id', $driverId)->max('priority');
-        DB::table('routes_priority')->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'type' => $type, 'type_id' => $typeId ?? 1, 'type_pay' => $routeNeed->type_pay, 'pay_value' => $routeNeed->pay_value, 'priority' => intval($lastPriority) + 1]);
+        $lastPriority = RouteStop::query()->where('driver_id', $driverId)->max('priority');
+        RouteStop::query()->insert(['driver_id' => $driverId, 'order_id' => $orderId, 'type' => $type, 'type_id' => $typeId ?? 1, 'type_pay' => $routeNeed->type_pay, 'pay_value' => $routeNeed->pay_value, 'priority' => intval($lastPriority) + 1]);
     }
 
     private function tariff(stdClass $order): float

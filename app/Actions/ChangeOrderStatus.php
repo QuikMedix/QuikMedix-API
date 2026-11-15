@@ -2,6 +2,10 @@
 
 namespace App\Actions;
 
+use App\Models\RouteStop;
+use App\Models\Order;
+use App\Models\PharmacyArea;
+use App\Models\Area;
 use App\Support\Notifications;
 use App\Support\GeoPoint;
 use App\Support\OrderStatus;
@@ -36,12 +40,12 @@ class ChangeOrderStatus
             $changes = ['statuse_id' => $statusId];
             if (in_array($statusId, [4, 8, 9, 10], true)) {
                 $changes += $this->completionDetails($order);
-                DB::table('routes_priority')->where('order_id', $orderId)->delete();
+                RouteStop::query()->where('order_id', $orderId)->delete();
             } elseif (in_array((int) $order->statuse_id, [4, 8, 9, 10], true)) {
                 $changes['finish'] = null;
             }
 
-            DB::table('orders')->where('id', $orderId)->update($changes);
+            Order::query()->where('id', $orderId)->update($changes);
             DB::afterCommit(function () use ($order, $orderId, $statusId): void {
                 if (! empty($order->bestrx_order_id)) {
                     $this->sendOrderStatusToBestRx->handle($orderId);
@@ -66,8 +70,8 @@ class ChangeOrderStatus
         $tariffColumn = 'tariff_area_more';
 
         foreach ([1 => 'tariff', 2 => 'tariff_area2', 3 => 'tariff_area3'] as $type => $column) {
-            $areaIds = DB::table('pharmacy_areas')->where('pharmacy_id', $order->pharmacy_id)->where('type', $type)->pluck('area_id');
-            if ($areaIds->isNotEmpty() && DB::table('area')->whereIn('id', $areaIds)
+            $areaIds = PharmacyArea::query()->where('pharmacy_id', $order->pharmacy_id)->where('type', $type)->pluck('area_id');
+            if ($areaIds->isNotEmpty() && Area::query()->whereIn('id', $areaIds)
                 ->whereRaw('ST_CONTAINS(polygon, POINT(?, ?))', GeoPoint::bindings($patient->location))->exists()) {
                 $tariffColumn = $column;
                 break;

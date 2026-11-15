@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashLog;
+use App\Models\PackageTransition;
+use App\Models\Order;
+use App\Models\RouteStopLog;
+use App\Models\DriverPayout;
 use App\Actions\LogUserChanges;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\Notifications;
@@ -42,7 +47,7 @@ class DriverController extends Controller
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $orders = $orders->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-        $duty = DB::table('cash_log')->where('driver_id',$driver_id)->where('return','0')->sum('copay');
+        $duty = CashLog::query()->where('driver_id',$driver_id)->where('return','0')->sum('copay');
         $res_view = view('drivers.payouts',['user'=>$user,'orders'=>$orders,'pages'=>$pages,'duty'=>$duty,'title'=>'Drivers Payouts','br1'=>'Drivers','br2'=>'Payouts']);
         return $this->page(request(), $res_view);
     }
@@ -82,28 +87,28 @@ class DriverController extends Controller
             if((Auth::user()->can('admin'))) {
                 $order = DB::table('orders')->where('id',$order_id)->where('driver_id', $driver_id)->whereIn('statuse_id', [1,2,3,5,6,7,8,9])->first();
                 if(isset($order)) {
-                    $count_added = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','in')->count();
-                    $count_gived = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','out')->count();
+                    $count_added = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','in')->count();
+                    $count_gived = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','out')->count();
                     $order_transfer = DB::table('orders')->where('driver_id', $driver_id)->whereIn('statuse_id', [7])->where('id',$order->id)->first();
                     if(!empty($order_transfer)) {
                         if($count+$count_gived>=$order->count_bags) {
-                            if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                            if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
                                 return json_encode([
                                     'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                     'errors' => 'Not Found'
                                 ]);
                             } else {
-                                DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
-                                DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>3]);
+                                PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                                Order::query()->where('id',$order_id)->update(['statuse_id'=>3]);
                                 $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('type','office')->where('order_id',$order->id);
                                 foreach($route->get() as $routes_priority) {
-                                    DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                                    RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                                     if($routes_priority->type_pay==2) {
-                                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                     } else if($routes_priority->type_pay==3) {
-                                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                                     } else {
-                                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                     }
                                 }
                                 $route->delete();
@@ -123,13 +128,13 @@ class DriverController extends Controller
                                 ]);
                             }
                         } else if($count+$count_gived<$order->count_bags) {
-                            if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                            if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
                                 return json_encode([
                                     'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                     'errors' => 'Not Found'
                                 ]);
                             } else {
-                                DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                                PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
                                 return json_encode([
                                     'bag_added' => $order->id,
                                 ]);
@@ -142,17 +147,17 @@ class DriverController extends Controller
                         }
                     } else {
                         if($count+$count_added>=$order->count_bags) {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
-                            DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>7,'driver_id'=>null]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                            Order::query()->where('id',$order_id)->update(['statuse_id'=>7,'driver_id'=>null]);
                             $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('type','office');
                             foreach($route->get() as $routes_priority) {
-                                DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                                RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                                 if($routes_priority->type_pay==2) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 } else if($routes_priority->type_pay==3) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                                 } else {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 }
                             }
                             $route->delete();
@@ -166,13 +171,13 @@ class DriverController extends Controller
                                 'order_id_in' => $order->id,
                             ]);
                         } else if($count+$count_added<$order->count_bags) {
-                            if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
+                            if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
                                 return json_encode([
                                     'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                     'errors' => 'Not Found'
                                 ]);
                             } else {
-                                DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                                PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
                                 return json_encode([
                                     'bag_added_in' => $order->id,
                                 ]);
@@ -193,28 +198,28 @@ class DriverController extends Controller
             } else {
                 $order = DB::table('orders')->where('id',$order_id)->where('driver_id', $driver_id)->where('pharmacy_id', Auth::user()->pharmacy_id)->whereIn('statuse_id', [1,2,3,5,6,7,8,9])->first();
                 if(isset($order)) {
-                    $count_added = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->count();
-                    $count_gived = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->count();
+                    $count_added = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->count();
+                    $count_gived = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->count();
                     $order_transfer = DB::table('orders')->where('driver_id', $driver_id)->where('pharmacy_id', Auth::user()->pharmacy_id)->whereIn('statuse_id', [1,2])->where('id', $order->id)->first();
                     if(!empty($order_transfer)) {
                         if($count+$count_gived>=$order->count_bags) {
-                            if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                            if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
                                 return json_encode([
                                     'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                     'errors' => 'Not Found'
                                 ]);
                             } else {
-                                DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
-                                DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>3]);
+                                PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                                Order::query()->where('id',$order_id)->update(['statuse_id'=>3]);
                                 $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id)->where('order_id',$order->id);
                                 foreach($route->get() as $routes_priority) {
-                                    DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                                    RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                                     if($routes_priority->type_pay==2) {
-                                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                     } else if($routes_priority->type_pay==3) {
-                                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                                     } else {
-                                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                     }
                                 }
                                 $route->delete();
@@ -230,13 +235,13 @@ class DriverController extends Controller
                                 ]);
                             }
                         } else if($count+$count_gived<$order->count_bags) {
-                            if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                            if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
                                 return json_encode([
                                     'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                     'errors' => 'Not Found'
                                 ]);
                             } else {
-                                DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                                PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
                                 return json_encode([
                                     'bag_added' => $order->id,
                                 ]);
@@ -249,8 +254,8 @@ class DriverController extends Controller
                         }
                     } else {
                         if($count+$count_added>=$order->count_bags) {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
-                            DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>10,'driver_id'=>null]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                            Order::query()->where('id',$order_id)->update(['statuse_id'=>10,'driver_id'=>null]);
                             $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
                             $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
                             $patient=DB::table('users')->where('users.id',$order->user_id)->first();
@@ -328,16 +333,16 @@ class DriverController extends Controller
                             } else {
                                 $tariff_res = floatval($tariff);
                             }
-                            DB::table('orders')->where('orders.id',$order_id)->update(['finish'=>date('Y-m-d H:i:s'),'tariff'=>$tariff_res]);
+                            Order::query()->where('orders.id',$order_id)->update(['finish'=>date('Y-m-d H:i:s'),'tariff'=>$tariff_res]);
                             $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id);
                             foreach($route->get() as $routes_priority) {
-                                DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                                RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                                 if($routes_priority->type_pay==2) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 } else if($routes_priority->type_pay==3) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                                 } else {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 }
                             }
                             $route->delete();
@@ -351,13 +356,13 @@ class DriverController extends Controller
                                 'order_id_in' => $order->id,
                             ]);
                         } else if($count+$count_added<$order->count_bags) {
-                            if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
+                            if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
                                 return json_encode([
                                     'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                     'errors' => 'Not Found'
                                 ]);
                             } else {
-                                DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                                PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
                                 return json_encode([
                                     'bag_added_in' => $order->id,
                                 ]);
@@ -393,28 +398,28 @@ class DriverController extends Controller
         if((Auth::user()->can('admin'))) {
             $order = DB::table('orders')->where('id',$order_id)->where('driver_id', $driver_id)->whereIn('statuse_id', [1,2,3,5,6,7,8,9])->first();
             if(isset($order)) {
-                $count_added = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','in')->count();
-                $count_gived = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','out')->count();
+                $count_added = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','in')->count();
+                $count_gived = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('driver_id', $driver_id)->where('office_id',Auth::user()->office_id)->where('target','out')->count();
                 $order_transfer = DB::table('orders')->where('driver_id', $driver_id)->whereIn('statuse_id', [7])->where('id',$order->id)->first();
                 if(!empty($order_transfer)) {
                     if($count+$count_gived>=$order->count_bags) {
-                        if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('target','out')->where('bag',$bag)->count()>0) {
                             return json_encode([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ]);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
-                            DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>3]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                            Order::query()->where('id',$order_id)->update(['statuse_id'=>3]);
                             $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('type','office')->where('order_id',$order->id);
                             foreach($route->get() as $routes_priority) {
-                                DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                                RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                                 if($routes_priority->type_pay==2) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 } else if($routes_priority->type_pay==3) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                                 } else {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 }
                             }
                             $route->delete();
@@ -429,13 +434,13 @@ class DriverController extends Controller
                             ]);
                         }
                     } else if($count+$count_gived<$order->count_bags) {
-                        if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
                             return json_encode([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ]);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
                             return json_encode([
                                 'bag_added' => $order->id,
                             ]);
@@ -448,17 +453,17 @@ class DriverController extends Controller
                     }
                 } else {
                     if($count+$count_added>=$order->count_bags) {
-                        DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
-                        DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>7,'driver_id'=>null]);
+                        PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                        Order::query()->where('id',$order_id)->update(['statuse_id'=>7,'driver_id'=>null]);
                         $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('type','office');
                         foreach($route->get() as $routes_priority) {
-                            DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                            RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                             if($routes_priority->type_pay==2) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                             } else if($routes_priority->type_pay==3) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                             } else {
-                                DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                             }
                         }
                         $route->delete();
@@ -472,13 +477,13 @@ class DriverController extends Controller
                             'order_id_in' => $order->id,
                         ]);
                     } else if($count+$count_added<$order->count_bags) {
-                        if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('office_id',Auth::user()->office_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
                             return json_encode([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ]);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'office_id'=>Auth::user()->office_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
                             return json_encode([
                                 'bag_added_in' => $order->id,
                             ]);
@@ -499,28 +504,28 @@ class DriverController extends Controller
         } else {
             $order = DB::table('orders')->where('id',$order_id)->where('driver_id', $driver_id)->where('pharmacy_id', Auth::user()->pharmacy_id)->whereIn('statuse_id', [1,2,3,5,6,7,8,9])->first();
             if(isset($order)) {
-                $count_added = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->count();
-                $count_gived = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->count();
+                $count_added = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->count();
+                $count_gived = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->count();
                 $order_transfer = DB::table('orders')->where('driver_id', $driver_id)->where('pharmacy_id', Auth::user()->pharmacy_id)->whereIn('statuse_id', [1,2])->where('id', $order->id)->first();
                 if(!empty($order_transfer)) {
                     if($count+$count_gived>=$order->count_bags) {
-                        if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
                             return json_encode([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ]);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
-                            DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>3]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                            Order::query()->where('id',$order_id)->update(['statuse_id'=>3]);
                             $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id)->where('order_id',$order->id);
                             foreach($route->get() as $routes_priority) {
-                                DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                                RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                                 if($routes_priority->type_pay==2) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 } else if($routes_priority->type_pay==3) {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                                 } else {
-                                    DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                    DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                                 }
                             }
                             $route->delete();
@@ -536,13 +541,13 @@ class DriverController extends Controller
                             ]);
                         }
                     } else if($count+$count_gived<$order->count_bags) {
-                        if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','out')->where('bag',$bag)->count()>0) {
                             return json_encode([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ]);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'out','bag'=>$bag]);
                             return json_encode([
                                 'bag_added' => $order->id,
                             ]);
@@ -555,8 +560,8 @@ class DriverController extends Controller
                     }
                 } else {
                     if($count+$count_added>=$order->count_bags) {
-                        DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
-                        DB::table('orders')->where('id',$order_id)->update(['statuse_id'=>10,'driver_id'=>null]);
+                        PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                        Order::query()->where('id',$order_id)->update(['statuse_id'=>10,'driver_id'=>null]);
                         $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$order->pharmacy_id)->first();
                         $pharmacy_plan=DB::table('plans')->where('plans.id',$pharmacy->plan_id)->first();
                         $patient=DB::table('users')->where('users.id',$order->user_id)->first();
@@ -634,16 +639,16 @@ class DriverController extends Controller
                         } else {
                             $tariff_res = floatval($tariff);
                         }
-                        DB::table('orders')->where('orders.id',$order_id)->update(['finish'=>date('Y-m-d H:i:s'),'tariff'=>$tariff_res]);
+                        Order::query()->where('orders.id',$order_id)->update(['finish'=>date('Y-m-d H:i:s'),'tariff'=>$tariff_res]);
                         $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('type','pharmacy')->where('type_id',Auth::user()->pharmacy_id);
                         foreach($route->get() as $routes_priority) {
-                            DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                            RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                             if($routes_priority->type_pay==2) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                             } else if($routes_priority->type_pay==3) {
-                                DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                                DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                             } else {
-                                DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                                DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                             }
                         }
                         $route->delete();
@@ -657,13 +662,13 @@ class DriverController extends Controller
                             'order_id_in' => $order->id,
                         ]);
                     } else if($count+$count_added<$order->count_bags) {
-                        if(DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
+                        if(PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$order->id)->where('pharmacy_id', Auth::user()->pharmacy_id)->where('driver_id', $driver_id)->where('target','in')->where('bag',$bag)->count()>0) {
                             return json_encode([
                                 'message' => 'This bag has already been scanned, please scan the next bag for this order.',
                                 'errors' => 'Not Found'
                             ]);
                         } else {
-                            DB::table('packages_transitions')->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
+                            PackageTransition::query()->insert(['order_id'=>$order->id,'pharmacy_id'=>Auth::user()->pharmacy_id,'driver_id'=>$order->driver_id,'target'=>'in','bag'=>$bag]);
                             return json_encode([
                                 'bag_added_in' => $order->id,
                             ]);
@@ -697,13 +702,13 @@ class DriverController extends Controller
             }
             $orders_transfer = DB::table('orders')->where('driver_id', $user_id)->whereIn('statuse_id', [7])->whereIn('id', explode(',',$routes_priority0->order_id))->get();
             foreach($orders_transfer as $key=>$value) {
-                $orders_transfer[$key]->count_bags_transfer = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('office_id',Auth::user()->office_id)->where('driver_id',$value->driver_id)->where('target','out')->count();
+                $orders_transfer[$key]->count_bags_transfer = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('office_id',Auth::user()->office_id)->where('driver_id',$value->driver_id)->where('target','out')->count();
             }
             $orders_pick_up = DB::table('orders')->where('driver_id', $user_id)->whereIn('statuse_id', [2,3,5,6,8,9])->whereIn('id', explode(',',$routes_priority0->order_id))->get();
             foreach($orders_pick_up as $key=>$value) {
-                $orders_pick_up[$key]->count_bags_transfer = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('office_id',Auth::user()->office_id)->where('driver_id',$value->driver_id)->where('target','in')->count();
+                $orders_pick_up[$key]->count_bags_transfer = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('office_id',Auth::user()->office_id)->where('driver_id',$value->driver_id)->where('target','in')->count();
             }
-            $need_cash = DB::table('cash_log')->where('driver_id', $user_id)->where("return","0")->sum('copay');
+            $need_cash = CashLog::query()->where('driver_id', $user_id)->where("return","0")->sum('copay');
         } else {
             $routes_priority0 = DB::table('routes_priority')->select("driver_id", DB::raw("GROUP_CONCAT(order_id SEPARATOR ',') as order_id"), "type", "type_id", "priority")->where('driver_id', $user_id)->where('type', 'pharmacy')->where('type_id', Auth::user()->pharmacy_id)->groupBy("type","type_id","driver_id", "priority")->orderBy("priority","asc")->first();
             if(empty($routes_priority0)) {
@@ -712,13 +717,13 @@ class DriverController extends Controller
             }
             $orders_transfer = DB::table('orders')->where('driver_id', $user_id)->where('pharmacy_id', Auth::user()->pharmacy_id)->whereIn('statuse_id', [1,2])->whereIn('id', explode(',',$routes_priority0->order_id))->get();
             foreach($orders_transfer as $key=>$value) {
-                $orders_transfer[$key]->count_bags_transfer = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id',$value->driver_id)->where('target','out')->count();
+                $orders_transfer[$key]->count_bags_transfer = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id',$value->driver_id)->where('target','out')->count();
             }
             $orders_pick_up = DB::table('orders')->where('driver_id', $user_id)->whereIn('statuse_id', [2,3,5,6,8,9])->whereIn('id', explode(',',$routes_priority0->order_id))->get();
             foreach($orders_pick_up as $key=>$value) {
-                $orders_pick_up[$key]->count_bags_transfer = DB::table('packages_transitions')->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id',$value->driver_id)->where('target','in')->count();
+                $orders_pick_up[$key]->count_bags_transfer = PackageTransition::query()->whereRaw('Date(created) = CURDATE()')->where('order_id',$value->id)->where('pharmacy_id',Auth::user()->pharmacy_id)->where('driver_id',$value->driver_id)->where('target','in')->count();
             }
-            $need_cash = DB::table('cash_log')->where('driver_id', $user_id)->where("return","0")->sum('copay');
+            $need_cash = CashLog::query()->where('driver_id', $user_id)->where("return","0")->sum('copay');
         }
         $res_view = view('drivers.packages',['driver'=>$driver,'need_cash'=>$need_cash,'orders_transfer'=>$orders_transfer,'orders_pick_up'=>$orders_pick_up,'title'=>'Drivers Packages','br1'=>'Drivers','br2'=>'Drivers Packages','alert'=>'']);
         return $this->page(request(), $res_view);
@@ -739,13 +744,13 @@ class DriverController extends Controller
                     $route = DB::table('routes_priority')->where('driver_id', $driver_id)->where('order_id',$order->id)->where('type','pharmacy');
                 }
                 foreach($route->get() as $routes_priority) {
-                    DB::table('routes_priority_logs')->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
+                    RouteStopLog::query()->insert(["id"=>$routes_priority->id,"driver_id"=>$routes_priority->driver_id,"order_id"=>$routes_priority->order_id,"type"=>$routes_priority->type,"type_id"=>$routes_priority->type_id,"type_pay"=>$routes_priority->type_pay,"pay_value"=>$routes_priority->pay_value]);
                     if($routes_priority->type_pay==2) {
-                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                     } else if($routes_priority->type_pay==3) {
-                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
+                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value*intval($order->count_bags)]);
                     } else {
-                        DB::table('payouts_driver')->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
+                        DriverPayout::query()->insert(['driver_id'=>$routes_priority->driver_id,'order_id'=>$routes_priority->order_id,'amount'=>$routes_priority->pay_value]);
                     }
                 }
                 $route->delete();
@@ -756,7 +761,7 @@ class DriverController extends Controller
                     }
                 }
             }
-            DB::table('cash_log')->where('driver_id', $user_id)->where("return","0")->update(["return_at"=>DB::raw('NOW()'),"return"=>"1","admin_id"=>Auth::user()->id]);
+            CashLog::query()->where('driver_id', $user_id)->where("return","0")->update(["return_at"=>DB::raw('NOW()'),"return"=>"1","admin_id"=>Auth::user()->id]);
         }
         if($request->input('massiveBagsTransfer')>0) {
             if((Auth::user()->can('admin'))) {
@@ -792,7 +797,7 @@ class DriverController extends Controller
             $pharmacys = DB::table('pharmacys')->get()->keyBy('id');
             $user_actions = DB::table('action_log')->where('user_id', $driver_id)->get();
             $orders_stat = DB::table('orders')->where('user_id',$driver_id)->where('statuse_id',4)->select(DB::raw('count(distinct id) as count'),DB::raw('sum(copay) as copay'))->first();
-            $duty = DB::table('cash_log')->where('driver_id',$driver_id)->where('return','0')->sum('copay');
+            $duty = CashLog::query()->where('driver_id',$driver_id)->where('return','0')->sum('copay');
             $last_cash = DB::table('cash_log')->where('driver_id',$driver_id)->where('return','1')->orderBy('return_at','desc')->first();
             $orders = DB::table('orders')->where('user_id',$driver_id)->join('users', 'orders.user_id', '=', 'users.id')->leftJoin('users as driver', 'orders.driver_id', '=', 'driver.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.driver_id', 'orders.merchantOrder','orders.special_instructions', 'orders.rating','orders.fridge','orders.actual','orders.eta','orders.facility', 'driver.name as drivername', 'driver.last_name as driverlast_name', 'driver.pharmacy_id as driverpharmacy_id', 'orders.count_bags', 'orders.signature','orders.statuse_id', 'orders.pharmacy_id', 'orders.copay', 'users.name as username', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.os as useros', 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'orders.tariff', 'statuses.name as statusename','statuses.color as statusecolor','statuses_copay.name as statuse_copay_name','statuses_copay.color as statuse_copay_color')->groupBy('orders.id', 'orders.statuse_id', 'orders.merchantOrder', 'orders.actual','orders.eta', 'orders.driver_id', 'orders.rating','orders.signature','orders.fridge','driver.name', 'driver.last_name', 'driver.pharmacy_id','orders.special_instructions', 'orders.count_bags', 'orders.created', 'orders.facility','orders.copay', 'orders.pharmacy_id', 'orders.tariff', 'users.name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'pharmacys.address', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.phone', 'statuses.name','statuses.color','users.last_name', 'statuses_copay.name','statuses_copay.color', 'users.os')->orderBy('orders.id','desc')->limit(8)->get();
             $res_view = view('drivers.profile',['user'=>$user,'pharmacys'=>$pharmacys,'duty'=>$duty,'last_cash'=>$last_cash,'user_actions'=>$user_actions,'orders_stat'=>$orders_stat,'orders'=>$orders,'alert'=>'','title'=>'Driver Profile','br1'=>'Drivers','br2'=>'Profile']);

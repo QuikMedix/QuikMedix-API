@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RouteTemplate;
+use App\Models\RouteTemplateItem;
+use App\Models\Order;
+use App\Models\RouteStop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -54,7 +58,7 @@ class RouteTemplatesController extends Controller
      */
     public function destroy($id)
     {
-        DB::table('route_templates')->where('id', $id)->delete();
+        RouteTemplate::query()->where('id', $id)->delete();
         return redirect('/route-templates')->with('success', 'Template deleted successfully');
     }
 
@@ -151,7 +155,7 @@ class RouteTemplatesController extends Controller
         
         DB::beginTransaction();
         try {
-            DB::table('route_template_items')->where('route_template_id', $id)->delete();
+            RouteTemplateItem::query()->where('route_template_id', $id)->delete();
             
             if(!empty($items)) {
                 $insertData = [];
@@ -277,7 +281,7 @@ class RouteTemplatesController extends Controller
                         ];
                         
                         // Update order to assigned
-                         DB::table('orders')->where('id', $order->id)->update([
+                         Order::query()->where('id', $order->id)->update([
                              'driver_id' => $driver_id,
                              'statuse_id' => 2,
                              'ready' => 2 
@@ -291,7 +295,7 @@ class RouteTemplatesController extends Controller
         }
         
         if(!empty($data_array)) {
-            DB::table('routes_priority')->insert($data_array);
+            RouteStop::query()->insert($data_array);
             Notifications::send_push($driver_id,"QuikMedix","New route template assigned to you.");
             return redirect()->back()->with('success', "Template assigned to driver! Added $added_count points (some may contain multiple orders).");
         } else {

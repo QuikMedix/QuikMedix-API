@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DriverEta;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\PageLinks;
 use App\Models\User;
@@ -28,7 +29,7 @@ class PharmacyProcessController extends Controller
      */
     public function process($pharmacy_id) {
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-        $etas = DB::table('drivers_eta')->select(DB::raw("MAX(id) as id"))->groupBy("driver_id")->pluck('id');
+        $etas = DriverEta::query()->select(DB::raw("MAX(id) as id"))->groupBy("driver_id")->pluck('id');
         $users = User::where('role','driver')->where('pharmacy_id',$pharmacy_id)->where('work_now','1')->where('isblocked',0)->leftJoin("routes_priority","routes_priority.driver_id","=","users.id")->leftJoin('routes_priority_logs',function ($join) {
             $join->on('routes_priority_logs.driver_id', '=' , 'users.id') ;
             $join->whereRaw('Date(routes_priority_logs.created) = CURDATE()');

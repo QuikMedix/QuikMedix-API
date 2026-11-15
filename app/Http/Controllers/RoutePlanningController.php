@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\RouteStop;
+use App\Models\DriverPayout;
+use App\Models\Office;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\Notifications;
 use App\Support\PageLinks;
@@ -178,7 +182,7 @@ class RoutePlanningController extends Controller
         Gate::authorize('access-order', $order_id);
         abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
         if($request->input('driver_id')>1) {
-            DB::table('orders')->where('id', $order_id)->update(['driver_id'=>$request->input('driver_id'),'statuse_id'=>'2']);
+            Order::query()->where('id', $order_id)->update(['driver_id'=>$request->input('driver_id'),'statuse_id'=>'2']);
         }
         $order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.statuse_id', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', 'orders.driver_id', 'users.name as username', 'users.last_name as last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress', 'pharmacys.location as pharmacylocation', 'pharmacys.phone as pharmacyphone', 'statuses.name as statusename','statuses.color as statusecolor')->where('orders.id',$order_id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.driver_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.name', 'pharmacys.address', 'pharmacys.location','pharmacys.phone', 'statuses.name','statuses.color')->first();
         $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->get();
@@ -309,9 +313,9 @@ class RoutePlanningController extends Controller
         if(!empty($route)) {
             $type_pay =$route->type_pay;
             if($type_pay==3) {
-                $pay_value = round(floatval($route->pay_value)*DB::table('routes_priority')->where('driver_id', $driver_id)->count(),2);
+                $pay_value = round(floatval($route->pay_value)*RouteStop::query()->where('driver_id', $driver_id)->count(),2);
             } else if($type_pay==2 && !empty($driver->distance)) {
-                $pay_value = round((floatval($route->pay_value)*DB::table('routes_priority')->where('driver_id', $driver_id)->count())/$driver->distance,2);
+                $pay_value = round((floatval($route->pay_value)*RouteStop::query()->where('driver_id', $driver_id)->count())/$driver->distance,2);
             } else {
                 $pay_value = -1;
             }
@@ -346,7 +350,7 @@ class RoutePlanningController extends Controller
         }
         abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
         if($request->input('confirm_order_id')>1) {
-            DB::table('orders')->where('id', $request->input('confirm_order_id'))->update(['driver_id'=>$driver_id,'statuse_id'=>'2','ready'=>'2']);
+            Order::query()->where('id', $request->input('confirm_order_id'))->update(['driver_id'=>$driver_id,'statuse_id'=>'2','ready'=>'2']);
             $order = DB::table('orders')->where('id', $request->input('confirm_order_id'))->first();
             $types = ["pharmacy","patient"];
             $count_priority = DB::table('routes_priority')->where('driver_id', $driver_id)->orderBy("priority","desc")->first();
@@ -375,10 +379,10 @@ class RoutePlanningController extends Controller
                 }
                 $data_array[] = $record;
             }
-            DB::table('routes_priority')->insert($data_array);
+            RouteStop::query()->insert($data_array);
             Notifications::send_push($driver_id,"QuikMedix","New route has added to your shift (or schedule)");
         } else if(!empty($request->input('close_route'))) {
-            $count = DB::table('payouts_driver')->where('driver_id',$driver_id)->where('amount',-1)->count();
+            $count = DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->count();
             $type_pay = $request->input('type_pay');
             if($type_pay==1) {
                 $pay_value=floatval($request->input('pay_value'));
@@ -390,7 +394,7 @@ class RoutePlanningController extends Controller
                 return redirect()->back()->with('error', 'Unknown pay type.');
             }
             if($count>0) {
-                DB::table('payouts_driver')->where('driver_id',$driver_id)->where('amount',-1)->update(["amount"=>round($pay_value/$count,2)]);
+                DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->update(["amount"=>round($pay_value/$count,2)]);
                 return redirect()->back()->with('success', "Successfully, $count orders were paid to the driver at the selected rate.");
             } else {
                 return redirect()->back()->with('error', 'Oh no, no completed orders have been found for the selected driver for the current shift.');
@@ -506,7 +510,7 @@ class RoutePlanningController extends Controller
                         }
                     }
                     foreach($routes_res as $key => $routes_priorit){
-                        DB::table('routes_priority')->where('driver_id', $driver_id)->where("type",$routes_priorit->type)->where("type_id",$routes_priorit->type_id)->where("priority",$routes_priorit->priority)->update(["priority"=>$key]);
+                        RouteStop::query()->where('driver_id', $driver_id)->where("type",$routes_priorit->type)->where("type_id",$routes_priorit->type_id)->where("priority",$routes_priorit->priority)->update(["priority"=>$key]);
                     }
                     app(RecalculateDriverEta::class)->handle($driver_id,TRUE);
                     return redirect()->back()->with('success', "Successfully the route is automatically built.");
@@ -595,7 +599,7 @@ class RoutePlanningController extends Controller
                             $record['pay_value'] = $pay_value;
                             $count_priority->priority = $count_priority->priority+1;
                             $data_array[] = $record;
-                            DB::table('orders')->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
+                            Order::query()->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
                         }
                     }
                 }
@@ -629,25 +633,25 @@ class RoutePlanningController extends Controller
                             $record['pay_value'] = $pay_value;
                             $count_priority->priority = $count_priority->priority+1;
                             $data_array[] = $record;
-                            DB::table('orders')->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
+                            Order::query()->where('id', $order->id)->update(['driver_id'=>$driver_id,'ready'=>'2']);
                         }
                     }
                 }
             }
             if(!empty($data_array)) {
-                DB::table('routes_priority')->insert($data_array);
+                RouteStop::query()->insert($data_array);
             }
             //DB::table('users')->where('id', $driver_id)->update(['route_status'=>'updated']);
             Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
         } else {
             $stops = self::validateRouteStops($request);
             DB::transaction(function () use ($request, $driver_id, $stops): void {
-                DB::table('routes_priority')->where('driver_id', $driver_id)->delete();
-                DB::table('orders')->where('driver_id', $driver_id)->whereIn('statuse_id', [1, 2, 3, 7, 8, 9])->update(['driver_id' => null]);
+                RouteStop::query()->where('driver_id', $driver_id)->delete();
+                Order::query()->where('driver_id', $driver_id)->whereIn('statuse_id', [1, 2, 3, 7, 8, 9])->update(['driver_id' => null]);
                 $records = [];
                 foreach ($stops as $index => $stop) {
                     foreach ($stop['order_ids'] as $orderId) {
-                        DB::table('orders')->where('id', $orderId)->update(['driver_id' => $driver_id, 'ready' => '2']);
+                        Order::query()->where('id', $orderId)->update(['driver_id' => $driver_id, 'ready' => '2']);
                         $records[] = [
                             'driver_id' => $driver_id,
                             'order_id' => $orderId,
@@ -658,7 +662,7 @@ class RoutePlanningController extends Controller
                     }
                 }
                 if ($records !== []) {
-                    DB::table('routes_priority')->insert($records);
+                    RouteStop::query()->insert($records);
                 }
                 $typePay = $request->input('type_pay');
                 $count = count($records);
@@ -667,7 +671,7 @@ class RoutePlanningController extends Controller
                     2 => $count === 0 ? 1 : (float) $request->input('pay_value') * 100 / $count,
                     default => -1,
                 };
-                DB::table('routes_priority')->where('driver_id', $driver_id)->update(['type_pay' => $typePay, 'pay_value' => $payValue]);
+                RouteStop::query()->where('driver_id', $driver_id)->update(['type_pay' => $typePay, 'pay_value' => $payValue]);
             });
             app(RecalculateDriverEta::class)->handle($driver_id);
             Notifications::send_push($driver_id,"QuikMedix","Your schedule was updated! Please check");
@@ -705,10 +709,10 @@ class RoutePlanningController extends Controller
                 ]);
             }
             $selectedIds = array_values(array_unique(explode(',', $orderIds)));
-            if (DB::table('orders')->whereIn('id', $selectedIds)->count() !== count($selectedIds)) {
+            if (Order::query()->whereIn('id', $selectedIds)->count() !== count($selectedIds)) {
                 throw ValidationException::withMessages(['order_id.'.$index => 'One of the selected orders no longer exists. Reload the route and try again.']);
             }
-            if ($type === 'office' && ! DB::table('offices')->where('id', $typeId)->exists()) {
+            if ($type === 'office' && ! Office::query()->where('id', $typeId)->exists()) {
                 throw ValidationException::withMessages(['type_id.'.$index => 'Choose a valid office for this stop.']);
             }
             $stops[] = ['order_ids' => $selectedIds, 'type' => $type, 'type_id' => (int) $typeId];

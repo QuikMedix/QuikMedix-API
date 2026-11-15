@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Rx;
 use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -180,8 +182,8 @@ class AllOrdersController extends Controller
 
     public function updateStatus(Request $request) {
         if($request->input('remove')>0) {
-            DB::table('orders')->where('id', $request->input('order_id'))->delete();
-            DB::table('rxs')->where('order_id',$request->input('order_id'))->delete();
+            Order::query()->where('id', $request->input('order_id'))->delete();
+            Rx::query()->where('order_id',$request->input('order_id'))->delete();
         }
         if($request->input('repeat')>0) {
             $order = DB::table('orders')->where('id', $request->input('order_id'))->first();
@@ -201,14 +203,14 @@ class AllOrdersController extends Controller
             $pharmacy_id = $order->pharmacy_id;
             $order = json_encode($order);
             $order = json_decode($order,true);
-            $order_id = DB::table('orders')->insertGetId($order);
+            $order_id = Order::query()->insertGetId($order);
             $rxs = DB::table('rxs')->where('order_id',$request->input('order_id'))->get();
             foreach($rxs as $rx) {
                 $rx->id = NULL;
                 $rx->order_id = $order_id;
                 $rx = json_encode($rx);
                 $rx = json_decode($rx,true);
-                DB::table('rxs')->insert($rx);
+                Rx::query()->insert($rx);
             }
             return redirect("orders/$pharmacy_id/edit/$order_id");
         }

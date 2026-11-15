@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Actions\LogUserChanges;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use Illuminate\Http\Request;
@@ -64,7 +65,7 @@ class ProfileController extends Controller
                     $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
                     app(LogUserChanges::class)->handle($request,$address,$user_id);
                     DB::table('users')->where('id', $user_id)->update(['name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $request->input('email'),'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'driving_license' => $request->input('driving_license'),'driving_license_img' => $driving_license_img,'identification_cards' => $request->input('identification_cards'),'car_info' => $request->input('car_info'),'payment_card' => $request->input('payment_card'),'pharmacy_id' => $request->input('pharmacy')]);
-                    DB::table('action_log')->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
+                    ActionLog::query()->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
                 } else {
                     $pharmacys = DB::table('pharmacys')->get();
                     $admin_areas = DB::table('admin_areas')->get();

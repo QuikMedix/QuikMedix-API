@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Rx;
 use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -87,7 +88,7 @@ class OrderPrintController extends Controller
         }
         $orders=$orders->get();
         foreach($orders as $key=>$order){
-            $rxs = DB::table('rxs')->where('order_id',$order->id)->count();
+            $rxs = Rx::query()->where('order_id',$order->id)->count();
             $orders[$key]->rxs_count=$rxs;
         }
         $pharmacys = self::get_pharmacys($orders->pluck('pharmacy_id')->all());

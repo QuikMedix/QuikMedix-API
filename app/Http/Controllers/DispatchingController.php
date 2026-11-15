@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Note;
 use App\Actions\RecalculateDriverEta;
 use App\Actions\ReturnOrderToOffice;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
@@ -69,22 +71,22 @@ class DispatchingController extends Controller
             }
         }
         if ($request->input('confirmed') > 0) {
-            DB::table('orders')->whereIn('id', $orderIds)->update(['actual' => '1']);
+            Order::query()->whereIn('id', $orderIds)->update(['actual' => '1']);
         }
         if ($request->input('not_confirmed') > 0) {
             foreach ($orderIds as $orderId) {
                 $order = DB::table('orders')->where('id', $orderId)->first();
-                DB::table('orders')->where('id', $orderId)->update(['actual' => '2'] + self::NO_PROOF_OF_DELIVERY);
+                Order::query()->where('id', $orderId)->update(['actual' => '2'] + self::NO_PROOF_OF_DELIVERY);
                 $returnToOffice->handle($order);
-                DB::table('orders')->where('id', $orderId)->update(['not_delivered' => 1]);
+                Order::query()->where('id', $orderId)->update(['not_delivered' => 1]);
                 $this->note($request, $orderId, 'order not confirmed');
             }
         }
         if ($request->input('reschedule') > 0) {
-            DB::table('orders')->whereIn('id', $orderIds)->update(['delivery_date' => $request->input('date')]);
+            Order::query()->whereIn('id', $orderIds)->update(['delivery_date' => $request->input('date')]);
             foreach ($orderIds as $orderId) {
                 $order = DB::table('orders')->where('id', $orderId)->first();
-                DB::table('orders')->where('id', $orderId)->update(self::NO_PROOF_OF_DELIVERY);
+                Order::query()->where('id', $orderId)->update(self::NO_PROOF_OF_DELIVERY);
                 $returnToOffice->handle($order);
                 $this->note($request, $orderId, 'reschedule to '.$request->input('date'));
             }
@@ -163,6 +165,6 @@ class DispatchingController extends Controller
 
     private function note(Request $request, string $orderId, string $text): void
     {
-        DB::table('notes')->insert(['order_id' => $orderId, 'user_id' => $request->user()->id, 'type' => '1', 'note' => addslashes($text)]);
+        Note::query()->insert(['order_id' => $orderId, 'user_id' => $request->user()->id, 'type' => '1', 'note' => addslashes($text)]);
     }
 }

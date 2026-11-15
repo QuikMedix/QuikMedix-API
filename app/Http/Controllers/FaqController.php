@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Faq;
 use App\Http\Controllers\Concerns\RendersLegacyPages;
 use App\Support\PageLinks;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +24,7 @@ class FaqController extends Controller
     public function index(Request $request): View|array
     {
         $page = empty($request->query('page')) ? 1 : intval($request->query('page'));
-        $maxPages = ceil(DB::table('faqs')->count() / self::PER_PAGE);
+        $maxPages = ceil(Faq::query()->count() / self::PER_PAGE);
 
         return $this->page($request, view('faq.index', [
             'faqs' => DB::table('faqs')->orderBy('id', 'asc')->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(),
@@ -49,7 +50,7 @@ class FaqController extends Controller
     {
 
         if ($request->input('save') > 0 && ! empty($request->input('title')) && ! empty($request->input('text'))) {
-            DB::table('faqs')->insert([
+            Faq::query()->insert([
                 'user_id' => $request->user()->id,
                 'title' => $request->input('title'),
                 'text' => $request->input('text'),
@@ -63,7 +64,7 @@ class FaqController extends Controller
     {
 
         if ($request->input('remove') > 0 && ! empty($request->input('faq_id'))) {
-            DB::table('faqs')->where('id', $request->input('faq_id'))->delete();
+            Faq::query()->where('id', $request->input('faq_id'))->delete();
         }
 
         return redirect('faq');
