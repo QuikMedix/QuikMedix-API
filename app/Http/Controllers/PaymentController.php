@@ -25,7 +25,7 @@ class PaymentController extends Controller
 
 
     public function cardAdd() {
-        $payment_account = DB::table('payment_accounts')->where('user_id',Auth::user()->id)->first();
+        $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
         $success='';
         $error='';
         return view('card.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
@@ -172,10 +172,10 @@ class PaymentController extends Controller
      * @param int|string $pharmacy_id
      */
     public function cardPharmacyAdd($pharmacy_id) {
-        $pharmacy = DB::table('pharmacys')->where("id",$pharmacy_id)->first();
+        $pharmacy = Pharmacy::query()->where("id",$pharmacy_id)->first();
         if(!empty($pharmacy)) {
             abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-            $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+            $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
             $success='';
             $error='';
             return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);

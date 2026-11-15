@@ -22,7 +22,7 @@ class PlanController extends Controller
         $max_pages=ceil(Plan::query()->count()/$countOnPage);
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
-        $plans = DB::table('plans')->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
+        $plans = Plan::query()->orderBy('id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
         $res_view = view('plans.list',['plans'=>$plans,'pages'=>$pages,'title'=>'Tariff Plans List','br1'=>'Tariff','br2'=>'Tariff Plans']);
         return $this->page(request(), $res_view);
     }

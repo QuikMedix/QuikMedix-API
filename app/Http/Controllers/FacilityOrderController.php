@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
+use App\Models\DeliveryMethod;
+use App\Models\DeliveryTime;
 use App\Models\Order;
 use App\Models\Rx;
 use App\Models\AdditionalRecipient;
@@ -31,11 +34,11 @@ class FacilityOrderController extends Controller
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-        $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
+        $pharmacy = Pharmacy::query()->where('id', $pharmacy_id)->first();
         abort_unless($pharmacy, 404, 'Pharmacy not found.');
         $facilitys = DB::table('users')->where('role', 'facility')->where('pharmacy_id', $pharmacy_id)->get();
-        $delivery_methods = DB::table('delivery_methods')->get();
-        $delivery_times = DB::table('delivery_times')->get();
+        $delivery_methods = DeliveryMethod::query()->get();
+        $delivery_times = DeliveryTime::query()->get();
         $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
         $res_view = view('facilitys.add',['facilitys'=>$facilitys,'pharmacy'=>$pharmacy,'time_ranges'=>$time_ranges,'delivery_methods'=>$delivery_methods, 'delivery_times'=>$delivery_times,'title'=>'Order Facilitys Add','br1'=>'Orders','br2'=>'Order Facilitys Add','alert'=>'']);
         if(request()->query->has('ajax')) {

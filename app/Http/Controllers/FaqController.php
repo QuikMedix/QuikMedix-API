@@ -27,7 +27,7 @@ class FaqController extends Controller
         $maxPages = ceil(Faq::query()->count() / self::PER_PAGE);
 
         return $this->page($request, view('faq.index', [
-            'faqs' => DB::table('faqs')->orderBy('id', 'asc')->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(),
+            'faqs' => Faq::query()->orderBy('id', 'asc')->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(),
             'pages' => PageLinks::around($page, $maxPages),
             'title' => 'Faqs', 'br1' => 'FAQ', 'br2' => 'List',
         ]));

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Area;
 use App\Models\User;
 use App\Http\Controllers\Concerns\LoadsOrderLookups;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -55,15 +57,15 @@ class DashboardController extends Controller
             }
             $new_patients_app = DB::table('users')->select(DB::raw('count(users.id) as count'))->where('pharmacy_id', Auth::user()->pharmacy_id)->where('isactive', '1')->where('role', 'user')->whereNotNull("os")->first()->count;
             $patients = DB::table('users')->where('pharmacy_id', Auth::user()->pharmacy_id)->where('isactive', '1')->orderBy('id','desc')->limit(6)->get();
-            $orders = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 4)->orderBy('orders.id','desc')->limit(6)->get();
+            $orders = Order::query()->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 4)->orderBy('orders.id','desc')->limit(6)->get();
             $chartDelivered = DB::table('orders')->where('statuse_id',4)->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->select(DB::raw("count(id) as count"), DB::raw("DATE_FORMAT(created, '%m-%Y') date"))->groupby(DB::raw("DATE_FORMAT(created, '%m-%Y')"))->orderBy('id','desc')->limit(12)->get()->reverse();
-            $orders0 = DB::table('orders')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 1)->orderBy('orders.id','desc')->limit(6)->get();
+            $orders0 = Order::query()->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->join('users', 'orders.user_id', '=', 'users.id')->select('orders.id','orders.statuse_id','orders.created','users.image','users.name','users.last_name','statuses.name as statusename','statuses.color as statusecolor')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->where('orders.statuse_id', 1)->orderBy('orders.id','desc')->limit(6)->get();
             $app_android_users = User::query()->where("role","user")->where("os","1")->count();
             $app_android_drivers = User::query()->where("role","driver")->where("os","1")->count();
             $app_ios_users = User::query()->where("role","user")->where("os","2")->count();
             $app_ios_drivers = User::query()->where("role","driver")->where("os","2")->count();
             $pageviews = array();
-            $count_orders_todays = DB::table('orders')->select("orders.statuse_id",DB::raw('count(orders.id) as count'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->whereDate('orders.created', Carbon::today())->groupBy("orders.statuse_id")->get();
+            $count_orders_todays = Order::query()->select("orders.statuse_id",DB::raw('count(orders.id) as count'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->whereDate('orders.created', Carbon::today())->groupBy("orders.statuse_id")->get();
             $count_orders_today = array();
             foreach($count_orders_todays as $item) {
                 $count_orders_today[$item->statuse_id] = $item->count;
@@ -71,14 +73,14 @@ class DashboardController extends Controller
             $count_orders_today[4] = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->whereDate('orders.finish', Carbon::today())->where('statuse_id', '4')->first()->count0;
             $count_orders_today[201] = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->whereDate('orders.created', Carbon::today())->where('delivery_time_id','2')->first()->count0;
             $count_orders_today[202] = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->whereDate('orders.created', Carbon::today())->whereIn('delivery_time_id',['3','4'])->first()->count0;
-            $count_orders_alls = DB::table('orders')->select("orders.statuse_id",DB::raw('count(orders.id) as count'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy("orders.statuse_id")->get();
+            $count_orders_alls = Order::query()->select("orders.statuse_id",DB::raw('count(orders.id) as count'))->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy("orders.statuse_id")->get();
             $count_orders_all = array();
             foreach($count_orders_alls as $item) {
                 $count_orders_all[$item->statuse_id] = $item->count;
             }
             $count_orders_merchant = DB::table('orders')->select(DB::raw('count(orders.id) as count0'))->where('pharmacy_id', Auth::user()->pharmacy_id)->where('merchantOrder','1')->where('statuse_id', '1')->first()->count0;
-            $orders_7days = DB::table('orders')->select(DB::raw('DATE(orders.finish) as date'),DB::raw('count(orders.id) as count'))->whereBetween('finish', [Carbon::now()->subDays(7),Carbon::now()])->where('statuse_id', '4')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy(DB::raw('DATE(orders.finish)'))->orderBy(DB::raw('DATE(orders.finish)'),'asc')->get();
-            $orders_7days_c = DB::table('orders')->select(DB::raw('DATE(orders.created) as date'),DB::raw('count(orders.id) as count'))->whereBetween('created', [Carbon::now()->subDays(7),Carbon::now()])->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy(DB::raw('DATE(orders.created)'))->orderBy(DB::raw('DATE(orders.created)'),'asc')->get();
+            $orders_7days = Order::query()->select(DB::raw('DATE(orders.finish) as date'),DB::raw('count(orders.id) as count'))->whereBetween('finish', [Carbon::now()->subDays(7),Carbon::now()])->where('statuse_id', '4')->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy(DB::raw('DATE(orders.finish)'))->orderBy(DB::raw('DATE(orders.finish)'),'asc')->get();
+            $orders_7days_c = Order::query()->select(DB::raw('DATE(orders.created) as date'),DB::raw('count(orders.id) as count'))->whereBetween('created', [Carbon::now()->subDays(7),Carbon::now()])->where('orders.pharmacy_id', Auth::user()->pharmacy_id)->groupBy(DB::raw('DATE(orders.created)'))->orderBy(DB::raw('DATE(orders.created)'),'asc')->get();
             $res_arr = ['count_orders'=>$count_orders,'total_count_orders'=>$total_count_orders,'total_count_orders_quikmedix'=>$total_count_orders_quikmedix,'new_patients'=>$new_patients,'new_patients_app'=>$new_patients_app,'pageviews'=>$pageviews,'patients'=>$patients,'orders'=>$orders,'orders0'=>$orders0,'chartDelivered'=>$chartDelivered,'app_android_users'=>$app_android_users,'app_android_drivers'=>$app_android_drivers,'app_ios_users'=>$app_ios_users,'app_ios_drivers'=>$app_ios_drivers,'orders_proc'=>$orders_proc,
             'patients_proc'=>$patients_proc,
             'orders_7days'=>$orders_7days,
@@ -550,7 +552,7 @@ class DashboardController extends Controller
 
     public function deliveryCalendar() {
         if(request()->query->has('get_zones') && !empty(request()->query('get_zones')) && request()->query->has('state') && !empty(request()->query('state'))){
-            $zones = DB::table('area')->where('state',request()->query('state'))->select('id','name')->get();
+            $zones = Area::query()->where('state',request()->query('state'))->select('id','name')->get();
             return json_encode($zones);
         }
         if(request()->query->has('month') && !empty(request()->query('month'))){
@@ -623,7 +625,7 @@ class DashboardController extends Controller
             $pharmacy_id = '';
         }
         $states = DB::table('states')->get();
-        $zones = DB::table('area')->select('id','name','state')->get();
+        $zones = Area::query()->select('id','name','state')->get();
         return view('routes.delivery-calendar',['month'=>$month,'weeks'=>$dates,'stats'=>$stats,'states'=>$states,'zones'=>$zones,'pharmacy_id'=>$pharmacy_id,'alert'=>'','title'=>'Delivery Calendar','br1'=>'Routes','br2'=>'Delivery Calendar']);
     }
 

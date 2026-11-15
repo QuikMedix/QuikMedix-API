@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
+use App\Models\Area;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
 use Illuminate\Http\Request;
@@ -65,7 +67,7 @@ class ReportController extends Controller
     }
 
     public function reportsInvoices() {
-        $chartData = DB::table('invoices')->select(DB::raw('CONCAT(date_from," ",date_to) as y'),DB::raw('ROUND(sum((amount+corrections)),2) as a'),DB::raw('count(id) as b'),DB::raw('ROUND(sum(count),2) as c'))->groupBy(DB::raw('CONCAT(date_from," ",date_to)'))->orderBy(DB::raw('CONCAT(date_from," ",date_to)'),'desc')->limit(46)->get();
+        $chartData = Invoice::query()->select(DB::raw('CONCAT(date_from," ",date_to) as y'),DB::raw('ROUND(sum((amount+corrections)),2) as a'),DB::raw('count(id) as b'),DB::raw('ROUND(sum(count),2) as c'))->groupBy(DB::raw('CONCAT(date_from," ",date_to)'))->orderBy(DB::raw('CONCAT(date_from," ",date_to)'),'desc')->limit(46)->get();
         $res_view = view('reports.invoices',['chartData'=>$chartData,'alert'=>'','title'=>'Reports Invoices','br1'=>'Reports','br2'=>'Invoices']);
         return $this->page(request(), $res_view);
     }
@@ -121,7 +123,7 @@ class ReportController extends Controller
     }
 
     public function reportsCustomers() {
-        $areas = DB::table('area')->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
+        $areas = Area::query()->select('id','name',DB::raw('ST_AsText(polygon) as polygon'))->get();
         $count_all = 0;
         foreach($areas as $key=>$pol) {
             if(!empty($pol->polygon)) {

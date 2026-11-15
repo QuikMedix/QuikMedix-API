@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
+use App\Models\AdminArea;
 use App\Models\ActionLog;
 use App\Actions\LogUserChanges;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -20,9 +22,9 @@ class ProfileController extends Controller
 
 
     public function profile() {
-        $pharmacys = DB::table('pharmacys')->get();
+        $pharmacys = Pharmacy::query()->get();
         $user = Auth::user();
-        $admin_areas = DB::table('admin_areas')->get();
+        $admin_areas = AdminArea::query()->get();
         $res_view = view('settings.user_edit',['user'=> $user,'admin_areas'=>$admin_areas,'pharmacys'=>$pharmacys,'title'=>'Profile','br1'=>'Profile','alert'=>'']);
         return $this->page(request(), $res_view);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pharmacy;
 use App\Actions\LogUserChanges;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
@@ -157,7 +158,7 @@ class PharmacyUserController extends Controller
         $input['zip']='';
         $input['apartment']='';
         $input['pharmacy']=$pharmacy_id;
-        $pharmacys = DB::table('pharmacys')->get();
+        $pharmacys = Pharmacy::query()->get();
         $res_view = view('pharmacy.user_add',['pharmacys'=>$pharmacys,'title'=>'User Add','br1'=>'Pharmacy','br2'=>'Users','br3'=>'User Add','alert'=>'','input'=>$input]);
         return $this->page(request(), $res_view);
     }

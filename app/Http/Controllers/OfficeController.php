@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminArea;
 use App\Models\Office;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
@@ -119,7 +120,7 @@ class OfficeController extends Controller
         $office->logo='';
         $office->address='';
         $office->zone_id='';
-        $admin_areas = DB::table('admin_areas')->get();
+        $admin_areas = AdminArea::query()->get();
         $res_view = view('offices.form',['office'=>$office,'admin_areas'=>$admin_areas,'title'=>'Office Add','br1'=>'Offices','br2'=>'Office','br3'=>'Office Add','alert'=>'']);
         return $this->page(request(), $res_view);
     }

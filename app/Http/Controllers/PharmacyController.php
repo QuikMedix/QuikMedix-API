@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Plan;
+use App\Models\Area;
 use App\Models\Pharmacy;
 use App\Models\PharmacyArea;
 use App\Actions\GeocodeAddress;
@@ -438,10 +440,10 @@ class PharmacyController extends Controller
      * @param int|string $pharmacy_id
      */
     public function pharmacysTariffMap($pharmacy_id) {
-        $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-        $pharmacy_areas = DB::table('pharmacys')->where('id', $pharmacy_id)->get();
-        $pharmacy_plan = DB::table('plans')->where('id', $pharmacy->plan_id)->first();
-        $polygons = DB::table('area')->join('pharmacy_areas','pharmacy_areas.area_id',"=","area.id")->where('pharmacy_areas.pharmacy_id',$pharmacy_id)->select('area.name',DB::raw('ST_AsText(area.polygon) as polygon'),'pharmacy_areas.type')->get();
+        $pharmacy = Pharmacy::query()->where('id', $pharmacy_id)->first();
+        $pharmacy_areas = Pharmacy::query()->where('id', $pharmacy_id)->get();
+        $pharmacy_plan = Plan::query()->where('id', $pharmacy->plan_id)->first();
+        $polygons = Area::query()->join('pharmacy_areas','pharmacy_areas.area_id',"=","area.id")->where('pharmacy_areas.pharmacy_id',$pharmacy_id)->select('area.name',DB::raw('ST_AsText(area.polygon) as polygon'),'pharmacy_areas.type')->get();
         foreach($polygons as $key=>$pol) {
             if(!empty($pol->polygon)) {
                 $polygons[$key]->polygon = \App\Support\WktPolygon::toJsonPoints($pol->polygon);
