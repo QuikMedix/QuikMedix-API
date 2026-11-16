@@ -161,139 +161,175 @@ class OrderController extends Controller
             return redirect("billing/".Auth::user()->pharmacy_id, 302);
         }
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-        if(request()->request->has('user_id')) {
-            $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
-            $patient=DB::table('users')->where('users.id',$request->input('user_id'))->first();
-            if(!empty($patient) && !empty($pharmacy)) {
-                $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-                if(!empty($zip_tariff)){
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => $zip_tariff->tariff
-                    ]);
-                } else {
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => 0
-                    ]);
-                }
-            } else {
-                return json_encode([
-                    'message' => 'OK',
-                    'tariff' => 0
-                ]);
-            }
+        if($request->request->has('user_id')) {
+            return $this->tariffAnswer(DB::table('pharmacys')->where('id',$pharmacy_id)->exists() ? $request->input('user_id') : null);
         }
         if($request->input('save')>0) {
-            // rxs.rx_id is varchar(20) and stores "<RX#>-<Rf#>", so RX# (15) + "-" + Rf# (4) fits.
-            $request->validate([
-                'user' => ['required_without:facility', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('users', 'id')->where('pharmacy_id', $pharmacy_id)],
-                'count_bags' => ['nullable', 'integer', 'min:1', 'max:10'],
-                'copay' => ['nullable', 'numeric', 'min:0'],
-                'delivery_method' => ['required', 'integer', 'exists:delivery_methods,id'],
-                'delivery_time' => ['required', 'integer', 'exists:delivery_times,id'],
-                'delivery_date' => ['nullable', 'date'],
-                'type_driver' => ['nullable', 'in:1,2'],
-                'driver' => ['nullable', 'integer', 'exists:users,id'],
-                'special_instructions' => ['nullable', 'string', 'max:1000'],
-                'rx_id' => ['required', 'array', 'min:1'],
-                'rx_id.*' => ['required', 'string', 'max:15'],
-                'rf_id.*' => ['nullable', 'regex:/^\d{1,4}$/'],
-                'rx_count.*' => ['nullable', 'integer', 'min:1'],
-                'rx_date.*' => ['nullable', 'date'],
-            ], [
-                'user.required_without' => 'Choose a customer.',
-                'user.exists' => 'The selected customer does not belong to this pharmacy.',
-                'delivery_method.required' => 'Choose a delivery option.',
-                'delivery_time.required' => 'Choose a preferred delivery time.',
-                'rx_id.required' => 'Add at least one RX#.',
-                'rx_id.*.required' => 'Every RX row needs an RX#.',
-                'rx_id.*.max' => 'RX# can be at most 15 characters.',
-                'rf_id.*.regex' => 'Rf# must be a number of up to 4 digits.',
-                'rx_count.*.min' => 'Qty must be at least 1.',
-            ]);
-            $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
-            $statuse_copay = (empty($request->input('copay')))?'1':'2';
-            if(!empty($request->input('copay_paid_pharm'))) {
-                $statuse_copay='6';
-            }
-            $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
-            $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-            $rx_ids = $request->input('rx_id');
-            $rf_ids = $request->input('rf_id');
-            $rx_counts = $request->input('rx_count');
-            $rx_dates = $request->input('rx_date');
-            $rx_recipients = $request->input('rx_recipient');
-            $data=[];
-            foreach(array_keys($rx_ids) as $key){
-                if(empty($rx_recipients[$key])) {
-                    $rx_recipient=NULL;
-                } else {
-                    $rx_recipient=$rx_recipients[$key];
-                }
-                $data[]=["rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.($rf_ids[$key] ?? ''),"rx_date"=>$rx_dates[$key] ?? null,"rx_count"=>$rx_counts[$key] ?? 1,"rx_recipient"=>$rx_recipient];
-            }
-            if(!empty($request->input('delivery_date'))){
-                $delivery_date = date("Y-m-d",strtotime($request->input('delivery_date')));
-            } else {
-                // Use the app's timezone; the database server's CURDATE() is UTC.
-                $delivery_date = $request->input('delivery_time')=="1" ? now()->addDay()->toDateString() : now()->toDateString();
-            }
-            $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-            if(empty($request->input('delivery_time_range'))) {
-                $delivery_time_range = $time_ranges[0].";".end($time_ranges);
-            } else {
-                $delivery_time_range = $request->input('delivery_time_range');
-            }
-            if(!empty($request->input('driver'))) {
-                $driver_id = $request->input('driver');
-            } else {
-                $driver_id = NULL;
-            }
-            $order_row = !empty($request->input('facility'))
-                ? ['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]
-                : ['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('user'), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')];
-            $id_max = DB::transaction(function () use ($order_row, $data) {
-                $order_id = Order::query()->insertGetId($order_row);
-                Rx::query()->insert(array_map(fn ($rx) => ['order_id' => $order_id] + $rx, $data));
-                return $order_id;
-            });
-            if(!empty($request->input('facility'))){
-                $us = DB::table('users')->where('id',$request->input('facility'))->first();
-            } else {
-                $us = DB::table('users')->where('id',$request->input('user'))->first();
-            }
-            if($us->primary_address==3){
-                if(!empty($us->apartment)){
-                    $user_address = $us->address3.' Apt '.$us->apartment3;
-                } else {
-                    $user_address = $us->address3;
-                }
-            } elseif($us->primary_address==2){
-                if(!empty($us->apartment)){
-                    $user_address = $us->address2.' Apt '.$us->apartment2;
-                } else {
-                    $user_address = $us->address2;
-                }
-            } else {
-                if(!empty($us->apartment)){
-                    $user_address = $us->address.' Apt '.$us->apartment;
-                } else {
-                    $user_address = $us->address;
-                }
-            }
-            Notifications::send_push($request->input('user'),"QuikMedix","created your order #$id_max (medicines), which will be delivered to: $user_address. If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
-            if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
-                $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-                Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
-                    "Attention!",
-                    "Urgent order No.".$id_max." has been created, which needs to be processed promptly.",
-                    url('/')."/orders/".$pharmacy_id."?statuse%5B%5D=1",
-                    "rush_order"
-                );
-            }
+            $this->validateNewOrder($request, $pharmacy_id);
+            $id_max = $this->createOrder($request, $pharmacy_id);
+            $this->announceNewOrder($request, $pharmacy_id, $id_max);
         }
         return redirect("orders/$pharmacy_id".(isset($id_max) ? "?added=$id_max" : ""));
+    }
+
+    /**
+     * The delivery tariff of a patient's ZIP area. The order form asks for it when a customer is chosen.
+     *
+     * @param  int|string|null  $patient_id
+     * @return string JSON for the form
+     */
+    private function tariffAnswer($patient_id): string
+    {
+        $patient = $patient_id === null ? null : DB::table('users')->where('id',$patient_id)->first(['zip']);
+        $zip_tariff = empty($patient) ? null : DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
+
+        return json_encode(['message' => 'OK', 'tariff' => empty($zip_tariff) ? 0 : $zip_tariff->tariff]);
+    }
+
+    /**
+     * @param  int|string  $pharmacy_id
+     */
+    private function validateNewOrder(Request $request, $pharmacy_id): void
+    {
+        // rxs.rx_id is varchar(20) and stores "<RX#>-<Rf#>", so RX# (15) + "-" + Rf# (4) fits.
+        $request->validate([
+            'user' => ['required_without:facility', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('users', 'id')->where('pharmacy_id', $pharmacy_id)],
+            'count_bags' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'copay' => ['nullable', 'numeric', 'min:0'],
+            'delivery_method' => ['required', 'integer', 'exists:delivery_methods,id'],
+            'delivery_time' => ['required', 'integer', 'exists:delivery_times,id'],
+            'delivery_date' => ['nullable', 'date'],
+            'type_driver' => ['nullable', 'in:1,2'],
+            'driver' => ['nullable', 'integer', 'exists:users,id'],
+            'special_instructions' => ['nullable', 'string', 'max:1000'],
+            'rx_id' => ['required', 'array', 'min:1'],
+            'rx_id.*' => ['required', 'string', 'max:15'],
+            'rf_id.*' => ['nullable', 'regex:/^\d{1,4}$/'],
+            'rx_count.*' => ['nullable', 'integer', 'min:1'],
+            'rx_date.*' => ['nullable', 'date'],
+        ], [
+            'user.required_without' => 'Choose a customer.',
+            'user.exists' => 'The selected customer does not belong to this pharmacy.',
+            'delivery_method.required' => 'Choose a delivery option.',
+            'delivery_time.required' => 'Choose a preferred delivery time.',
+            'rx_id.required' => 'Add at least one RX#.',
+            'rx_id.*.required' => 'Every RX row needs an RX#.',
+            'rx_id.*.max' => 'RX# can be at most 15 characters.',
+            'rf_id.*.regex' => 'Rf# must be a number of up to 4 digits.',
+            'rx_count.*.min' => 'Qty must be at least 1.',
+        ]);
+    }
+
+    /**
+     * Stores a new order with its prescriptions.
+     *
+     * @param  int|string  $pharmacy_id
+     * @return int the new order's id
+     */
+    private function createOrder(Request $request, $pharmacy_id): int
+    {
+        [$copay, $statuse_copay] = $this->copayFields($request);
+        $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
+        $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
+        $data = $this->rxRows($request);
+        $delivery_date = $this->deliveryDate($request);
+        $delivery_time_range = $this->deliveryTimeRange($request);
+        $driver_id = !empty($request->input('driver')) ? $request->input('driver') : NULL;
+        $order_row = !empty($request->input('facility'))
+            ? ['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]
+            : ['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('user'), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')];
+
+        return DB::transaction(function () use ($order_row, $data) {
+            $order_id = Order::query()->insertGetId($order_row);
+            Rx::query()->insert(array_map(fn ($rx) => ['order_id' => $order_id] + $rx, $data));
+            return $order_id;
+        });
+    }
+
+    /**
+     * Tells the patient their order was created, and dispatch when it is a rush order.
+     *
+     * @param  int|string  $pharmacy_id
+     */
+    private function announceNewOrder(Request $request, $pharmacy_id, int $id_max): void
+    {
+        $us = DB::table('users')->where('id', !empty($request->input('facility')) ? $request->input('facility') : $request->input('user'))->first(['primary_address', 'address', 'address2', 'address3', 'apartment', 'apartment2', 'apartment3']);
+        if($us->primary_address==3){
+            $user_address = !empty($us->apartment) ? $us->address3.' Apt '.$us->apartment3 : $us->address3;
+        } elseif($us->primary_address==2){
+            $user_address = !empty($us->apartment) ? $us->address2.' Apt '.$us->apartment2 : $us->address2;
+        } else {
+            $user_address = !empty($us->apartment) ? $us->address.' Apt '.$us->apartment : $us->address;
+        }
+        Notifications::send_push($request->input('user'),"QuikMedix","created your order #$id_max (medicines), which will be delivered to: $user_address. If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
+        if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
+            $this->announceRushOrder($pharmacy_id, $id_max);
+        }
+    }
+
+    /**
+     * @param  int|string  $pharmacy_id
+     * @param  int|string  $order_id
+     */
+    private function announceRushOrder($pharmacy_id, $order_id): void
+    {
+        Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
+            "Attention!",
+            "Urgent order No.".$order_id." has been created, which needs to be processed promptly.",
+            url('/')."/orders/".$pharmacy_id."?statuse%5B%5D=1",
+            "rush_order"
+        );
+    }
+
+    /**
+     * @return array{0: string|float, 1: string} the copay and its status: none, to collect, or already paid at the pharmacy
+     */
+    private function copayFields(Request $request): array
+    {
+        $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
+        $statuse_copay = (empty($request->input('copay')))?'1':'2';
+        if(!empty($request->input('copay_paid_pharm'))) {
+            $statuse_copay='6';
+        }
+
+        return [$copay, $statuse_copay];
+    }
+
+    /**
+     * The prescription rows typed into the order form. rxs.rx_id stores "<RX#>-<Rf#>".
+     *
+     * @return list<array{rx_id: string, rx_date: ?string, rx_count: int|string, rx_recipient: ?string}>
+     */
+    private function rxRows(Request $request): array
+    {
+        $rx_ids = $request->input('rx_id');
+        $rf_ids = $request->input('rf_id');
+        $rx_counts = $request->input('rx_count');
+        $rx_dates = $request->input('rx_date');
+        $rx_recipients = $request->input('rx_recipient');
+        $data=[];
+        foreach(array_keys($rx_ids ?? []) as $key){
+            $data[]=["rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.($rf_ids[$key] ?? ''),"rx_date"=>$rx_dates[$key] ?? null,"rx_count"=>$rx_counts[$key] ?? 1,"rx_recipient"=>empty($rx_recipients[$key]) ? NULL : $rx_recipients[$key]];
+        }
+
+        return $data;
+    }
+
+    /** The chosen delivery date; without one, tomorrow for next-day delivery and today otherwise. */
+    private function deliveryDate(Request $request): string
+    {
+        if(!empty($request->input('delivery_date'))){
+            return date("Y-m-d",strtotime($request->input('delivery_date')));
+        }
+
+        // Use the app's timezone; the database server's CURDATE() is UTC.
+        return $request->input('delivery_time')=="1" ? now()->addDay()->toDateString() : now()->toDateString();
+    }
+
+    /** The chosen delivery window as "from;to"; without one, the whole day. */
+    private function deliveryTimeRange(Request $request): string
+    {
+        return empty($request->input('delivery_time_range')) ? "9:00 AM;12:00 AM" : $request->input('delivery_time_range');
     }
 
     /**
@@ -484,28 +520,8 @@ class OrderController extends Controller
     public function update(Request $request,$pharmacy_id,$order_id, ChangeOrderStatus $changeOrderStatus) {
         Gate::authorize('access-order', $order_id);
         abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id) || Auth::user()->hasAnyRole('logist'), 403, AccessMessages::NO_PERMISSION);
-        if(request()->request->has('user_id')) {
-            $pharmacy=DB::table('pharmacys')->where('pharmacys.id',$pharmacy_id)->first();
-            $patient=DB::table('users')->where('users.id',$request->input('user_id'))->first();
-            if(!empty($patient)){
-                $zip_tariff=DB::table('area_zip')->where('area_zip.zip',$patient->zip)->join('area', 'area_zip.area_id', '=', 'area.id')->select("area.tariff")->first();
-                if(!empty($zip_tariff)){
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => $zip_tariff->tariff
-                    ]);
-                } else {
-                    return json_encode([
-                        'message' => 'OK',
-                        'tariff' => 0
-                    ]);
-                }
-            } else {
-                return json_encode([
-                    'message' => 'OK',
-                    'tariff' => 0
-                ]);
-            }
+        if($request->request->has('user_id')) {
+            return $this->tariffAnswer($request->input('user_id'));
         }
         if($request->input('save')>0) {
             $order = DB::table('orders')->where('id', $order_id)->first();
@@ -520,69 +536,38 @@ class OrderController extends Controller
             }
             $changeOrderStatus->assertCanChangeManually((int) $order->statuse_id, $statusId);
 
-            $copay = (empty($request->input('copay')))?'0':round($request->input('copay'),2);
-            $statuse_copay = (empty($request->input('copay')))?'1':'2';
-            if(!empty($request->input('copay_paid_pharm'))) {
-                $statuse_copay='6';
-            }
-            $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
-            $order = DB::table('orders')->where('id', $order_id)->first();
-            $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
-            Rx::query()->where('order_id',$order_id)->delete();
-            $rx_ids = $request->input('rx_id');
-            $rf_ids = $request->input('rf_id');
-            $rx_dates = $request->input('rx_date');
-            $rx_counts = $request->input('rx_count');
-            $rx_recipients = $request->input('rx_recipient');
-            $data=[];
-            if(!empty($rx_ids)){
-                foreach(array_keys($rx_ids) as $key){
-                    if(empty($rx_recipients[$key])) {
-                        $rx_recipient=NULL;
-                    } else {
-                        $rx_recipient=$rx_recipients[$key];
-                    }
-                    $data[]=["order_id"=>$order_id,"rx_id"=>str_replace([" ",'-',','],'',$rx_ids[$key]).'-'.$rf_ids[$key],"rx_date"=>$rx_dates[$key],"rx_count"=>$rx_counts[$key],"rx_recipient"=>$rx_recipient];
-                }
-            }
-            Rx::query()->insert($data);
-            if(!empty($request->input('delivery_date'))){
-                $delivery_date = date("Y-m-d",strtotime($request->input('delivery_date')));
-            } else {
-                if($request->input('delivery_time')=="1"){
-                    $delivery_date = DB::raw("DATE_ADD(CURDATE(), INTERVAL 1 DAY)");
-                } else {
-                    $delivery_date = DB::raw("CURDATE()");
-                }
-            }
-            if($request->input('statuse_copay')==4){
-                Order::query()->where('id', $order_id)->update(['statuse_copay' => 4]);
-            }
-            if($request->input('type_driver')==2) {
-                $driver_id = $request->input('driver2');
-            } else {
-                $driver_id = $request->input('driver');
-            }
-            $time_ranges = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM", "1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","12:00 AM"];
-            if(empty($request->input('delivery_time_range'))) {
-                $delivery_time_range = $time_ranges[0].";".end($time_ranges);
-            } else {
-                $delivery_time_range = $request->input('delivery_time_range');
-            }
-            Order::query()->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $validated['count_bags'] ?? max(1, (int) $order->count_bags), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge, 'family_id' => $request->input('family_id')]);
+            $this->saveOrderChanges($request, $order, $validated);
             if($request->input('statuse')==1 && ($request->input('delivery_time')==3 || $request->input('delivery_time')==4)) {
-                $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();
-                Notifications::send_push_web(array_map('strval', User::where('role', "admin")->orWhere("role","logist")->pluck('id')->toArray()),
-                    "Attention!",
-                    "Urgent order No.".$order_id." has been created, which needs to be processed promptly.",
-                    url('/')."orders/".$pharmacy_id."?statuse%5B%5D=1",
-                    "rush_order"
-                );
+                $this->announceRushOrder($pharmacy_id, $order_id);
             }
             $changeOrderStatus->handle((int) $order_id, $statusId);
             Medicine::query()->where('order_id', $order_id)->delete();
         }
         return redirect("orders/$pharmacy_id");
+    }
+
+    /**
+     * Replaces an order's prescriptions and writes the form's fields to it.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function saveOrderChanges(Request $request, object $order, array $validated): void
+    {
+        $order_id = $order->id;
+        [$copay, $statuse_copay] = $this->copayFields($request);
+        $fridge = (empty($request->input('fridge')))?'0':$request->input('fridge');
+        $special_instructions = (empty($request->input('special_instructions')))?NULL:addslashes($request->input('special_instructions'));
+        $delivery_date = $this->deliveryDate($request);
+        $delivery_time_range = $this->deliveryTimeRange($request);
+        $driver_id = $request->input('type_driver')==2 ? $request->input('driver2') : $request->input('driver');
+        DB::transaction(function () use ($request, $order, $order_id, $validated, $copay, $statuse_copay, $fridge, $special_instructions, $delivery_date, $delivery_time_range, $driver_id): void {
+            Rx::query()->where('order_id',$order_id)->delete();
+            Rx::query()->insert(array_map(fn ($rx) => ['order_id' => $order_id] + $rx, $this->rxRows($request)));
+            if($request->input('statuse_copay')==4){
+                Order::query()->where('id', $order_id)->update(['statuse_copay' => 4]);
+            }
+            Order::query()->where('id', $order_id)->update(['user_id' => $order->user_id, 'driver_id' => $driver_id, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'special_instructions' => $special_instructions, 'delivery_method_id' => $request->input('delivery_method'), 'count_bags' => $validated['count_bags'] ?? max(1, (int) $order->count_bags), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'),'delivery_time_range' => $delivery_time_range,'delivery_date'=>$delivery_date,'fridge' => $fridge, 'family_id' => $request->input('family_id')]);
+        });
     }
 
     /**

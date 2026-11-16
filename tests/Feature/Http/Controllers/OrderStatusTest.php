@@ -241,6 +241,25 @@ class OrderStatusTest extends TestCase
         $this->assertDatabaseHas('rxs', ['order_id' => 20, 'rx_id' => 'RX100-0']);
     }
 
+    public function test_editing_an_order_replaces_its_prescriptions_and_dates_it_by_the_applications_clock(): void
+    {
+        $this->createOrder(['statuse_id' => 7]);
+        $pharmacyUser = User::factory()->state(['isactive' => 1, 'isblocked' => 0])->create(['role' => 'medic', 'pharmacy_id' => 2]);
+        $this->travelTo(now()->setDate(2026, 11, 15)->setTime(23, 30));
+
+        $this->actingAs($pharmacyUser)->post('/orders/2/edit/20', [
+            'save' => 1, 'delivery_method' => 1, 'delivery_time' => 1, 'type_driver' => 1, 'copay' => '12.50',
+            'rx_id' => ['RX 200', 'RX-300'], 'rf_id' => ['1', ''], 'rx_count' => ['', 3], 'rx_date' => ['2026-11-10', ''],
+        ])->assertRedirect('/orders/2')->assertSessionHasNoErrors();
+
+        // Next-day delivery with no date chosen is tomorrow by the application's clock, not the database server's.
+        $this->assertDatabaseHas('orders', ['id' => 20, 'delivery_date' => '2026-11-16', 'copay' => 12.5, 'statuse_copay' => 2, 'delivery_time_range' => '9:00 AM;12:00 AM']);
+        $this->assertSame(
+            [['RX200-1', 1, '2026-11-10'], ['RX300-', 3, null]],
+            DB::table('rxs')->where('order_id', 20)->orderBy('rx_id')->get()->map(fn ($rx) => [$rx->rx_id, (int) $rx->rx_count, $rx->rx_date])->all()
+        );
+    }
+
     #[DataProvider('editPaths')]
     public function test_editing_an_order_with_a_disabled_status_preserves_status_and_bags(string $path): void
     {
