@@ -558,3 +558,14 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Commit status: four commits plus this record on `refactor/modularize-phase-8`, added to the owner's fork checkout. Not pushed by the session.
 - Next action: owner to decide whether to rotate remember-me tokens; then column lists for the user rows the API returns.
 
+
+## Session log — 2026-11-15: modularization phase 9
+
+- Goal: the owner installed Laravel Pint and Larastan and asked for them to be allowed in AGENTS.md, then for three items: column lists on user-row reads, tests and a tidy-up for the payment code (Square), and splitting `OrderController` create and update.
+- Done: AGENTS.md allows Pint and Larastan and records the no-backward-compatibility rule; `composer format` and `composer analyse`; `phpstan.neon.dist` at level 1. The order endpoint gives a patient the driver's row with private fields emptied (`App\Support\DriverCard`). The Square client is built in one place; `tests/Support/FakesSquare` stands in for it; `App\Support\SquarePayments` (charge, refund, status) and `App\Actions\SaveCardOnFile` replace six copies of the charge and two of the card-saving sequence. Fourteen API reads of a users row name their columns. `OrderController::store` and `update` are short methods over shared, named steps.
+- Behaviour changed on purpose: saving a card without a card token is refused with the form's message (was a server error); the billing report does not ask Square about invoices paid from the balance; invoice payment and refill write in one transaction and add to the balance in the database; the edit-order form dates by the application's clock, saves an empty quantity as 1, writes in one transaction, and its rush-order notice has a working link.
+- Not verified: Pint and Larastan were not run (the packages are not installed where the session works; the owner's machine has them). No request was sent to Square, sandbox or live. The driver route endpoints (`/api/routes*`) use MySQL-only SQL and have no tests; their column lists were derived from every property the code reads. Nothing was checked in a browser: the owner's running app is on `main`, not this branch.
+- Not done: the three Authorize.net handlers in `PaymentController` (`/cards`, `/payment-method/{id}/refill`, `/pay/copay/{id}`) are untouched and untested. 682 `DB::table` calls remain (693 before).
+- Found, not changed: `config/app.php` holds the Authorize.net login id and transaction key as literals, so they are in git history.
+- Commit status: seven commits plus this record on `refactor/modularize-phase-9`, added to the owner's fork checkout. Not pushed by the session.
+- Next action: owner to run `composer format -- --test` and `composer analyse` and decide what to do with their findings; decide whether Authorize.net is still used; move its credentials to the environment and rotate them.
