@@ -457,6 +457,28 @@
         "2026-11-15 composer test: 582 tests / 2821 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; caches OK."
       ],
       "notes": "Vite: public/build on the owner's Mac was built on 2026-11-13 and its sources (resources/js, resources/sass, resources/scss, the Vite config, package.json) last changed on 2026-09-29, so the build is current; nothing in phases 1 to 7 touches Vite inputs. The session cannot build: the Linux helper has no npm registry access and node_modules holds macOS binaries. Still inline: the driver page's position arrays (Blade loops) and the remaining small blocks. Not verified in a browser: a successful save through the validated forms. Found, unchanged: adding an admin area inserts no office_id and relies on MySQL's non-strict mode ('strict' => false in config/database.php)."
+    },
+    {
+      "id": "codebase-modularization-phase-8",
+      "priority": 18,
+      "area": "security and maintainability",
+      "title": "No password hashes in JSON answers, dashboard cache per zone, dead chat code removed, dashboard and billing handlers split",
+      "user_visible_behavior": "JSON answers no longer contain users.password or users.remember_token. A staff member with a zone no longer sees another zone's cached dashboard figures. The assign-a-driver map can look up driver names. Pages are otherwise unchanged.",
+      "status": "passing",
+      "verification_steps": [
+        "Test that /api/orders/show returns the driver without password or remember_token, and that the same test fails with the middleware removed.",
+        "Unit tests of the middleware: nested rows, plain-text JSON bodies, validation messages about the password field, HTML pages.",
+        "Test that the staff dashboard reads and writes a cache key that includes the zone.",
+        "Compare the recorded route answers before and after the dashboard and billing splits; check the moved lines are the old lines.",
+        "composer test; browser check of the dashboard, a JSON endpoint and the changed pages on MySQL."
+      ],
+      "evidence": [
+        "2026-11-15 OrderStatusApiTest: with RemoveSecretsFromJson removed the new test fails (the hash and token are in the answer); with it, 7 tests pass.",
+        "2026-11-15 dashboard: 405 lines moved into pharmacyDashboard and staffDashboard; billing: 154 lines moved into payInvoice and refillBalance, identical; 0 of 2,508 route answers changed.",
+        "2026-11-15 DashboardCacheTest: keys localhost:admin_dash:all and localhost:admin_dash:3.",
+        "2026-11-15 removed: resources/views/chats/chat.blade.php, chats.blade.php and public/js/twiliochat.js, referenced by nothing. Added POST /users/get for dispatch staff, which routes/show.blade.php was already calling."
+      ],
+      "notes": "The middleware is a safety net; the endpoints still read whole user rows. Proper follow-up: select only the columns each answer needs, and give the User model $hidden for password and remember_token (not done here because code that copies user rows through toArray would silently lose the password). Remember-me tokens that were already sent to clients stay valid until each user logs out or the tokens are rotated. Left alone on purpose: the card and copay handlers in PaymentController (payment gateway code without tests); OrderController store and update (single-purpose, already validated). About 660 DB::table calls remain, most of them row reads on users."
     }
   ]
 }
