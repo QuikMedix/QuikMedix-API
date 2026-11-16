@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\RemoveSecretsFromJson;
 use App\Providers\AppServiceProvider;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -20,15 +21,16 @@ use Tests\TestCase;
  */
 class ApplicationWiringTest extends TestCase
 {
-    public function test_the_stacks_are_the_frameworks_own_with_the_api_rate_limit_added(): void
+    public function test_the_stacks_are_the_frameworks_own_plus_the_api_rate_limit_and_the_secrets_check(): void
     {
         $defaults = new Middleware;
         $global = (fn (): array => $this->middleware)->call($this->app->make(Kernel::class));
         $groups = $this->app['router']->getMiddlewareGroups();
 
         $this->assertSame($defaults->getGlobalMiddleware(), $global);
-        $this->assertSame($defaults->getMiddlewareGroups()['web'], $groups['web']);
-        $this->assertSame(['throttle:api', SubstituteBindings::class], $groups['api']);
+        // Both groups end with the application's own check that no answer carries a password hash.
+        $this->assertSame([...$defaults->getMiddlewareGroups()['web'], RemoveSecretsFromJson::class], $groups['web']);
+        $this->assertSame(['throttle:api', SubstituteBindings::class, RemoveSecretsFromJson::class], $groups['api']);
         $this->assertNotNull(RateLimiter::limiter('api'));
         $this->assertNotNull(RateLimiter::limiter('login'));
     }

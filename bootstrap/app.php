@@ -15,6 +15,8 @@ return Application::configure(basePath: $_ENV['APP_BASE_PATH'] ?? dirname(__DIR_
         $middleware->trustProxies(at: '*');
         $middleware->preventRequestForgery(except: ['zadarma']);
         $middleware->throttleApi();
+        $middleware->web(append: \App\Http\Middleware\RemoveSecretsFromJson::class);
+        $middleware->api(append: \App\Http\Middleware\RemoveSecretsFromJson::class);
 
         $middleware->alias([
             '2fa' => \App\Http\Middleware\Check2FA::class,

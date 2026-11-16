@@ -549,3 +549,12 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Commit status: three commits, this record included, on `refactor/modularize-phase-7`, added to the owner's fork checkout. Not pushed by the session.
 - Next action: owner to save through a few forms; decide whether MySQL should run in strict mode.
 
+## Session log — 2026-11-15: modularization phase 8
+
+- Goal: the owner chose item 7 of the next list: finish the structural work (remaining raw queries, large controllers, dead chat code).
+- Done: dead Twilio chat views and script removed; `POST /users/get` for the assign map; `DashboardController::root` split into `pharmacyDashboard` and `staffDashboard`; `BillingController::billingHandler` split with `payInvoice` and `refillBalance`.
+- Found and fixed on the way: the staff dashboard cache was shared across zones (key now includes the zone); JSON answers carried users.password and users.remember_token (`RemoveSecretsFromJson` middleware on the web and api groups).
+- Not done: see FEATURE_LIST.json `codebase-modularization-phase-8` notes. Pint and Larastan were explained to the owner; installing them needs the owner's machine and a change to AGENTS.md.
+- Commit status: four commits plus this record on `refactor/modularize-phase-8`, added to the owner's fork checkout. Not pushed by the session.
+- Next action: owner to decide whether to rotate remember-me tokens; then column lists for the user rows the API returns.
+

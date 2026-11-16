@@ -84,4 +84,13 @@ class ChatAccessTest extends TestCase
         $this->postJson('/api/user/reset', ['phone' => '(555) 999-0000'])->assertTooManyRequests();
         $this->postJson('/api/user/reset', ['phone' => '(555) 999-0001'])->assertNotFound();
     }
+
+    public function test_dispatch_staff_can_look_up_a_drivers_name_from_the_assign_map(): void
+    {
+        DB::table('users')->where('id', 5)->update(['role' => 'logist', 'isactive' => 1, 'isblocked' => 0]);
+        DB::table('users')->where('id', 7)->update(['role' => 'user', 'isactive' => 1, 'isblocked' => 0]);
+
+        $this->actingAs(User::findOrFail(5))->postJson('/users/get', ['identity' => 6])->assertOk()->assertExactJson(['name' => 'Dee Test', 'image' => 'Dee.png']);
+        $this->actingAs(User::findOrFail(7))->postJson('/users/get', ['identity' => 6])->assertForbidden();
+    }
 }
