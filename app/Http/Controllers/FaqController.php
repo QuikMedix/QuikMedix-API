@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreFaqRequest;
 use App\Models\Faq;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
@@ -46,7 +47,7 @@ class FaqController extends Controller
     /**
      * An incomplete question is dropped without a message, as the form always behaved.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreFaqRequest $request): RedirectResponse
     {
 
         if ($request->input('save') > 0 && ! empty($request->input('title')) && ! empty($request->input('text'))) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SaveAdminAreaRequest;
 use App\Models\AdminArea;
 use App\Models\AdminAreaZone;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -33,7 +34,7 @@ class AdminAreaController extends Controller
         return view('settings.admin_areas_form',['admin_area'=>$admin_area,'admin_area_zones'=>$admin_area_zones,'areas'=>$areas,'title'=>'Settings Admin Zones Add','br1'=>'Settings','br2'=>'Admin Zones Add','alert'=>'']);
     }
 
-    public function settingsAdminAreasAddHandler(Request $request) {
+    public function settingsAdminAreasAddHandler(SaveAdminAreaRequest $request) {
         $row = DB::table('admin_areas')->where('name',$request->input('name'))->first();
         if(empty($row)){
             $admin_area_id = AdminArea::query()->insertGetId(['name'=>$request->input('name')]);
@@ -73,7 +74,7 @@ class AdminAreaController extends Controller
     /**
      * @param int|string $admin_area_id
      */
-    public function settingsAdminAreasEditHandler(Request $request,$admin_area_id) {
+    public function settingsAdminAreasEditHandler(SaveAdminAreaRequest $request,$admin_area_id) {
         $row = DB::table('admin_areas')->where('name',$request->input('name'))->where('id','!=',$admin_area_id)->first();
         if(empty($row)){
             AdminArea::query()->where('id',$admin_area_id)->update(['name'=>$request->input('name')]);

@@ -48,6 +48,7 @@
                                     @endif
                                     <form method="POST">
                                         @csrf
+                                        <x-form-errors />
                                         <div class="form-group row">
                                             <label for="example-text-input" class="col-sm-2 col-form-label">Zone Name</label>
                                             <div class="col-sm-10">

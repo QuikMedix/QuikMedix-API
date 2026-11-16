@@ -436,6 +436,27 @@
         "2026-11-15 final: composer test 578 tests / 2749 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; caches OK."
       ],
       "notes": "Not verified: a successful save through any of the validated forms in a browser. The session's attempt to re-submit an office with its own values was blocked by the session's safety check, so the passing case rests on the rule tests. Vite build: npm run build fails in the session's Linux helper because node_modules holds macOS binaries; it has to run on the owner's Mac. Not done: the remaining inline scripts (driver page third block, dashboard); the other forms (plans, areas, wishes, news, FAQ, admin areas); reads on the users table and in files that type-hint plain rows. The settings admins handler has no manage-account check of its own and relies on its route."
+    },
+    {
+      "id": "codebase-modularization-phase-7",
+      "priority": 17,
+      "area": "input checking and maintainability",
+      "title": "Server-side validation for the news, FAQ, admin area, wish and plan forms; the driver page's map code and the dashboard's copy handler in files",
+      "user_visible_behavior": "The news, FAQ, admin area, wish category, wish and plan forms return to the form with a message per field when something required is missing; news and FAQ items without a title or text used to be dropped silently. Pages are otherwise unchanged.",
+      "status": "passing",
+      "verification_steps": [
+        "FormValidationTest: refused submissions, complete submissions that still save, and permission before fields for patient news.",
+        "Node smoke check for the driver route map, now reading public/js/driver-route-map.js.",
+        "Browser, owner's local app on MySQL as the test superadmin: dashboard chart data before and after; driver route page functions and Show Map; refused submissions on five forms.",
+        "composer test."
+      ],
+      "evidence": [
+        "2026-11-15 FormValidationTest 10 tests / 147 assertions; FaqControllerTest updated for the new message.",
+        "2026-11-15 driver route map: 182 lines without Blade moved; smoke check 35 of 35.",
+        "2026-11-15 browser: dashboard chart, seven-day and app-count values identical before and after, three charts drawn; driver route page defines addMarker, initMap and mapCenter, Show Map loads Google Maps and creates the map with no script errors; plan, news, FAQ, wish category and admin area forms each came back to their own page with the expected messages and the plans list did not change; the eight affected pages answer 200.",
+        "2026-11-15 composer test: 582 tests / 2821 assertions, 45 routing and 69 tariff checks; Node smoke 35/35/23/20/68/19/23/25; caches OK."
+      ],
+      "notes": "Vite: public/build on the owner's Mac was built on 2026-11-13 and its sources (resources/js, resources/sass, resources/scss, the Vite config, package.json) last changed on 2026-09-29, so the build is current; nothing in phases 1 to 7 touches Vite inputs. The session cannot build: the Linux helper has no npm registry access and node_modules holds macOS binaries. Still inline: the driver page's position arrays (Blade loops) and the remaining small blocks. Not verified in a browser: a successful save through the validated forms. Found, unchanged: adding an admin area inserts no office_id and relies on MySQL's non-strict mode ('strict' => false in config/database.php)."
     }
   ]
 }

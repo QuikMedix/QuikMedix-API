@@ -1168,40 +1168,14 @@
 
 @section('footerScript')
 <script>
-var dataForChartDelivered = [
-    @foreach($chartDelivered as $chartDeliver)
-    { y: '{{date("F",strtotime("01-".$chartDeliver->date))}}', a: {{$chartDeliver->count}}},
-    @endforeach
-];
-@if(isset($orders_7days_c))
-var lineDataDelivered7days = [
-    @foreach($orders_7days_c as $key=>$orders_7day)
-    { y: '{{date("m.d.Y",strtotime($orders_7day->date ?? ''))}}', a: {{$orders_7day->count}}, b: {{(isset($orders_7days[$key]))?$orders_7days[$key]->count:0}}},
-    @endforeach
-];
-@else
-var lineDataDelivered7days=[];
-@endif
-var app_android_users = {{$app_android_users}};
-var app_android_drivers = {{$app_android_drivers}};
-var app_ios_users = {{$app_ios_users}};
-var app_ios_drivers = {{$app_ios_drivers}};
-$(document).ready(function() {
-    $('#copy-button,#copy-input').bind('click', function() {
-        $("#copy-input").select();      
-        try {
-            var success = document.execCommand('copy');
-            if (success) {
-                toastr["info"]("Copied!");
-            } else {
-                toastr["error"]("Copy with Ctrl-c");
-            }
-        } catch (err) {
-            toastr["error"]("Copy with Ctrl-c");
-        }
-    });
-});
+var dataForChartDelivered = {{ Illuminate\Support\Js::from(collect($chartDelivered)->map(fn ($month) => ['y' => date('F', strtotime('01-'.$month->date)), 'a' => $month->count + 0])->values()->all()) }};
+var lineDataDelivered7days = {{ Illuminate\Support\Js::from(isset($orders_7days_c) ? collect($orders_7days_c)->map(fn ($day, $key) => ['y' => date('m.d.Y', strtotime($day->date ?? '')), 'a' => $day->count + 0, 'b' => isset($orders_7days[$key]) ? $orders_7days[$key]->count + 0 : 0])->values()->all() : []) }};
+var app_android_users = {{ Illuminate\Support\Js::from($app_android_users + 0) }};
+var app_android_drivers = {{ Illuminate\Support\Js::from($app_android_drivers + 0) }};
+var app_ios_users = {{ Illuminate\Support\Js::from($app_ios_users + 0) }};
+var app_ios_drivers = {{ Illuminate\Support\Js::from($app_ios_drivers + 0) }};
 </script>
+<script src="{{ URL::asset('/js/dashboard-copy-link.js?v=1') }}"></script>
 <!--Morris Chart-->
 <script src="{{ URL::asset('/libs/morris.js/morris.js.min.js')}}"></script>
 <script src="{{ URL::asset('/libs/raphael/raphael.min.js')}}"></script>
