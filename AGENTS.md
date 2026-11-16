@@ -14,6 +14,8 @@
 - Keep at most one feature `in_progress`. Limit edits to that feature and necessary supporting fixes.
 - Record the intended observable behavior and verification steps before implementation. Do not weaken acceptance criteria or remove failing tests to obtain a pass.
 - Use the existing Laravel structure, skills, package versions, and tests. Do not add speculative product behavior or dependencies.
+- Laravel Pint and Larastan are approved development dependencies (owner decision, 2026-11-15). Format PHP with `vendor/bin/pint` and analyse it with `vendor/bin/phpstan analyse`. Reformat files that a change does not otherwise touch only in a commit that contains nothing else.
+- The application needs no backward compatibility (owner decision, 2026-11-14): use the framework's current conventions instead of keeping older shapes. The mobile API's responses, the partner webhooks and stored data are still contracts with live clients.
 - Maintain the existing `PROGRESS.md` and `FEATURE_LIST.json` as part of each work session. These two requested artifacts are authorized session documentation; create additional documentation only when requested.
 - Track feature status as `not_started`, `in_progress`, `blocked`, or `passing`. A blocked entry must explain the blocker; a passing entry must include actual verification evidence.
 - Each feature needs an ID, integer priority, area, title, user-visible behavior, status, verification steps, evidence, and notes. Record commands, dates, results, and relevant artifact paths without secrets or sensitive application data.
@@ -27,6 +29,8 @@
 | Verify with already synchronized dependencies | `SKIP_INSTALL=1 ./init.sh` |
 | Start development processes after verification | `RUN_START_COMMAND=1 ./init.sh` |
 | Start development processes directly | `composer run dev` |
+| Format PHP (Laravel Pint) | `composer format` |
+| Static analysis (Larastan) | `composer analyse` |
 | Clear cached configuration before tests | `php artisan config:clear --no-interaction` |
 | Run the full Pest suite directly | `vendor/bin/pest --compact` |
 | Run a focused test | `vendor/bin/pest --compact tests/Feature/ExampleTest.php` |

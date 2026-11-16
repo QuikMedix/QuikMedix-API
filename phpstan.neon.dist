@@ -1,0 +1,9 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+
+    # Start low on a codebase this size and raise it as findings are cleared.
+    level: 1

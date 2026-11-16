@@ -50,7 +50,9 @@
     "dev": [
       "Composer\\Config::disableProcessTimeout",
       "@php artisan dev"
-    ]
+    ],
+    "format": "@php vendor/bin/pint",
+    "analyse": "@php vendor/bin/phpstan analyse --memory-limit=1G"
   },
   "config": {
     "optimize-autoloader": true,
