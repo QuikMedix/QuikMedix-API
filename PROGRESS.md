@@ -539,3 +539,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Commit status: seven commits, this record included, on `refactor/modularize-phase-6`, added to the owner's fork checkout. Not pushed by the session.
 - Next action: owner to save one office, one user and one pharmacy through the forms and run `npm run build`; then the remaining forms and scripts.
 
+## Session log — 2026-11-15: modularization phase 7
+
+- Goal: the owner asked for the three items left after phase 6: the Vite build, the remaining inline scripts, the other forms.
+- Done: `SaveNewsRequest`, `StoreFaqRequest`, `SaveAdminAreaRequest`, `StoreWishCategoryRequest`, `StoreWishRequest`, `SavePlanRequest` with the message block on their six views; `public/js/driver-route-map.js`; dashboard chart data as JSON and `public/js/dashboard-copy-link.js`.
+- Vite: no build was needed; the build on the owner's Mac is newer than its sources. The session cannot run one.
+- Verification: see FEATURE_LIST.json `codebase-modularization-phase-7`.
+- Not verified: a successful save through the validated forms in a browser; PHP 8.5.
+- Commit status: three commits, this record included, on `refactor/modularize-phase-7`, added to the owner's fork checkout. Not pushed by the session.
+- Next action: owner to save through a few forms; decide whether MySQL should run in strict mode.
+

@@ -147,4 +147,24 @@ class FormValidationTest extends TestCase
         $this->assertTrue(Validator::make(['text' => 'Leave at the door'], (new \App\Http\Requests\StoreWishRequest)->rules())->passes());
         $this->assertTrue(Validator::make(['name' => 'Delivery'], (new \App\Http\Requests\StoreWishCategoryRequest)->rules())->passes());
     }
+
+    public function test_complete_smaller_forms_still_save(): void
+    {
+        $plan = ['save' => 1, 'name' => 'Basic', 'order_rate' => '1', 'tariff' => '5.50', 'tariff_next_day' => '0', 'tariff_same_day' => '2', 'tariff_asap' => '3',
+            'tariff_after_hours' => '4', 'tariff_fridge' => '0.5', 'tariff_area2' => '7', 'tariff_area3' => '9', 'tariff_area_more' => '20'];
+
+        $this->post('/news/add', ['save' => 1, 'title' => 'Notice', 'text' => '<p>Text</p>', 'type' => 'info', 'link' => ''])->assertRedirect('news');
+        $this->post('/faq/add', ['save' => 1, 'title' => 'Question', 'text' => '<p>Answer</p>'])->assertRedirect('faq');
+        $this->post('/settings/wishes/add', ['save' => 1, 'name' => 'Delivery'])->assertSessionHasNoErrors();
+        $categoryId = DB::table('wishes_category')->value('id');
+        $this->post("/settings/wishes/$categoryId/add", ['save' => 1, 'text' => 'Leave at the door'])->assertRedirect("settings/wishes/$categoryId/list");
+        $this->post('/settings/plans/add', $plan)->assertSessionHasNoErrors();
+        // The admin area form is not saved here: its insert leaves office_id to MySQL's non-strict default, which SQLite does not have.
+
+        $this->assertSame(['Notice'], DB::table('news')->pluck('title')->all());
+        $this->assertSame(['Question'], DB::table('faqs')->pluck('title')->all());
+        $this->assertSame(['Leave at the door'], DB::table('wishes')->where('category_id', $categoryId)->pluck('text')->all());
+        $this->assertSame(['Basic'], DB::table('plans')->pluck('name')->all());
+        $this->assertEqualsWithDelta(5.5, (float) DB::table('plans')->value('tariff'), 0.001);
+    }
 }
