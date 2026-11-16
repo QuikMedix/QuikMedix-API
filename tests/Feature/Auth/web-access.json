@@ -1040,5 +1040,10 @@
         "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
+    "POST /users/get": {
+        "login": "guest",
+        "no permission": "sale driver user facility",
+        "blocked account": "blocked"
+    },
     "POST /zadarma": []
 }

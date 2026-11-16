@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LexaAdminApiNoAuth;
 use App\Http\Controllers\DispatchingController;
 use App\Http\Controllers\RoutePlanningController;
 use App\Http\Controllers\RouteTemplatesController;
@@ -15,6 +16,8 @@ Route::get('/routes-pharmacys', [RoutePlanningController::class, 'pharmacies'])-
 
 Route::get('/routes-list/show/{order_id}', [RoutePlanningController::class, 'showOrder']);
 Route::post('/routes-list/show/{order_id}', [RoutePlanningController::class, 'assignOrder']);
+// The assign-a-driver map asks for each driver's name; the page had been calling an address that did not exist.
+Route::post('/users/get', [LexaAdminApiNoAuth::class, 'getUserInfo'])->middleware('role:superadmin,admin,dispadmin,logist,medic');
 
 Route::get('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'showDriver']);
 Route::post('/routes-list/driver/{driver_id}', [RoutePlanningController::class, 'updateDriver']);
