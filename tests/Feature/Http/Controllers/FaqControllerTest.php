@@ -145,8 +145,9 @@ class FaqControllerTest extends TestCase
     {
         $this->actingAsAdmin();
 
-        $this->post('/faq/add', ['save' => 1, 'title' => '', 'text' => '<p>Answer</p>'])->assertRedirect('/faq');
-        $this->post('/faq/add', ['save' => 1, 'title' => 'Question', 'text' => ''])->assertRedirect('/faq');
+        // A missing question or answer goes back to the form with a message.
+        $this->from('/faq/add')->post('/faq/add', ['save' => 1, 'title' => '', 'text' => '<p>Answer</p>'])->assertRedirect('/faq/add')->assertSessionHasErrors(['title']);
+        $this->from('/faq/add')->post('/faq/add', ['save' => 1, 'title' => 'Question', 'text' => ''])->assertRedirect('/faq/add')->assertSessionHasErrors(['text']);
         $this->post('/faq/add', ['title' => 'Question', 'text' => '<p>Answer</p>'])->assertRedirect('/faq');
 
         $this->assertDatabaseCount('faqs', 0);

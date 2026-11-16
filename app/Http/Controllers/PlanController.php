@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SavePlanRequest;
 use App\Models\Plan;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
@@ -51,7 +52,7 @@ class PlanController extends Controller
         return $this->page(request(), $res_view);
     }
 
-    public function settingsPlansAddHandler(Request $request) {
+    public function settingsPlansAddHandler(SavePlanRequest $request) {
         if($request->input('save')>0) {
             Plan::query()->insertGetId(['name' => $request->input('name'),'order_rate' => $request->input('order_rate'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more')]);
         }
@@ -70,7 +71,7 @@ class PlanController extends Controller
     /**
      * @param int|string $plan_id
      */
-    public function settingsPlansEditHandler($plan_id, Request $request) {
+    public function settingsPlansEditHandler($plan_id, SavePlanRequest $request) {
         if($request->input('save')>0) {
             Plan::query()->where("id",$plan_id)->update(['name' => $request->input('name'),'order_rate' => $request->input('order_rate'),'tariff' => $request->input('tariff'),'tariff_next_day' => $request->input('tariff_next_day'),'tariff_same_day' => $request->input('tariff_same_day'),'tariff_asap' => $request->input('tariff_asap'),'tariff_after_hours' => $request->input('tariff_after_hours'),'tariff_fridge' => $request->input('tariff_fridge'),'tariff_area2' => $request->input('tariff_area2'),'tariff_area3' => $request->input('tariff_area3'),'tariff_area_more' => $request->input('tariff_area_more')]);
         }

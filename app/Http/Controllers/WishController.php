@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreWishRequest;
+use App\Http\Requests\StoreWishCategoryRequest;
 use App\Models\WishCategory;
 use App\Models\Wish;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -49,7 +51,7 @@ class WishController extends Controller
         return $this->page(request(), $res_view);
     }
 
-    public function settingsWishesCategoryAddHandler(Request $request) {
+    public function settingsWishesCategoryAddHandler(StoreWishCategoryRequest $request) {
         if($request->input('save')>0) {
             if(!empty(WishCategory::query()->where('name', $request->input('name'))->first())) {
                 $input['name']=$request->input('name');
@@ -93,7 +95,7 @@ class WishController extends Controller
     /**
      * @param int|string $wish_id
      */
-    public function settingsWishesAddHandler($wish_id,Request $request) {
+    public function settingsWishesAddHandler($wish_id,StoreWishRequest $request) {
         if($request->input('save')>0) {
             Wish::query()->insert(['category_id'=>$wish_id,'text' => $request->input('text')]);
         }

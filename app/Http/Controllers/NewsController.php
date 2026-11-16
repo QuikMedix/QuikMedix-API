@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SaveNewsRequest;
 use App\Models\News;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\PageLinks;
@@ -47,7 +48,7 @@ class NewsController extends Controller
         return $this->page(request(), $res_view);
     }
 
-    public function newsAddHandler(Request $request) {
+    public function newsAddHandler(SaveNewsRequest $request) {
         if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
             News::query()->insert(["user_id"=>Auth::user()->id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }
@@ -73,8 +74,7 @@ class NewsController extends Controller
         return $this->page(request(), $res_view);
     }
 
-    public function news_patientAddHandler(Request $request) {
-        abort_unless(Auth::user()->hasRole('medic') && !empty(Auth::user()->pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+    public function news_patientAddHandler(SaveNewsRequest $request) {
         if($request->input('save')>0 && !empty($request->input('title')) && !empty($request->input('text'))) {
             DB::table('news_patient')->insert(["user_id"=>Auth::user()->id,"pharmacy_id"=>Auth::user()->pharmacy_id,"type"=>$request->input('type'),"link"=>$request->input('link'),"title"=>$request->input('title'),"text"=>$request->input('text')]);
         }
