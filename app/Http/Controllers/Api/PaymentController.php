@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\SaveCardOnFile;
 use App\Http\Controllers\Controller;
 use App\Models\CashLog;
 use App\Models\Order;
 use App\Models\PaymentAccount;
 use App\Models\RouteStop;
+use App\Support\SquarePayments;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -37,197 +39,50 @@ class PaymentController extends Controller
         }
     }
 
-    public function cardAddHandler(Request $request) {
-        if(Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
-            if(!empty($request->input('name')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
-                $card_token = $request->input('card');
-                $type = 'card';
-                $name=explode(' ',$request->input('name'));
-                if(count($name)==1) {
-                    $name[1]="";
-                }
-                $zip=$request->input('zip');
-                $user_address = explode(',',$request->input('address'));
-                if(count($user_address)==1) {
-                    $user_address[1]="";
-                    $user_address[2]="";
-                }
-                if(count($user_address)==2) {
-                    $user_address[2]="";
-                }
-                if(count($user_address)==3) {
-                    $user_address[3]="NY";
-                }
-                $amount = 1;
-                $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
-                $client = app(\Square\SquareClient::class);
-                $address = new \Square\Models\Address();
-                $address->setAddressLine1($user_address[0]);
-                $address->setAddressLine2($user_address[1]);
-                $address->setLocality($user_address[2]);
-                $address->setAdministrativeDistrictLevel1($user_address[3]);
-                $address->setPostalCode($zip);
-                $address->setCountry('US');
-                if(empty($payment_account)) {
-                    $body = new \Square\Models\CreateCustomerRequest();
-                    $body->setGivenName($name[0]);
-                    $body->setFamilyName($name[1]);
-                    $body->setEmailAddress(Auth::user()->email);
-                    $body->setAddress($address);
-                    $body->setPhoneNumber(str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",Auth::user()->phone)))));
-                    $body->setReferenceId(Auth::user()->id);
-                    $body->setNote('User #'.Auth::user()->id);
-                    $api_response = $client->getCustomersApi()->createCustomer($body);
-                    if ($api_response->isSuccess()) {
-                        $result = $api_response->getResult();
-                        PaymentAccount::query()->insert(['user_id'=>Auth::user()->id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
-                        $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
-                    } else {
-                        $error = json_encode($api_response->getErrors());
-                        return response()->json([
-                            'message' => $error,
-                            'errors' => 'Bad Request'
-                        ], 400);
-                    }
-                } else {
-                    PaymentAccount::query()->where('user_id',Auth::user()->id)->update(["type"=>$type]);
-                }
-                if($type=="card") {
-                    $amount_money = new \Square\Models\Money();
-                    $amount_money->setAmount(\App\Support\Money::cents($amount));
-                    $amount_money->setCurrency('USD');
-                    $unid = uniqid("",true).rand(0,100);
-                    $body = new \Square\Models\CreatePaymentRequest(
-                        $card_token,
-                        $unid
-                    );
-                    $body->setAmountMoney($amount_money);
-                    $body->setAutocomplete(true);
-                    $body->setCustomerId($payment_account->profile_id);
-                    $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
-                    $body->setNote('Authorization Card');
-                    $api_response = $client->getPaymentsApi()->createPayment($body);
-                    if ($api_response->isSuccess()) {
-                        $result = $api_response->getResult();
-                        $payment_id = $result->getPayment()->getId();
-                        $payment_status = $result->getPayment()->getStatus();
-                        if($payment_status=="COMPLETED" || $payment_status=="APPROVED" || $payment_status=="PENDING") {
-                            PaymentAccount::query()->where('user_id',Auth::user()->id)->update(["payment_id"=>$payment_id]);
-                            $card = new \Square\Models\Card();
-                            $card->setCardholderName($name[0].' '.$name[1]);
-                            $card->setBillingAddress($address);
-                            $card->setCustomerId($payment_account->profile_id);
-                            $unid = uniqid("",true).rand(0,100);
-                            $body = new \Square\Models\CreateCardRequest(
-                                $unid,
-                                $payment_id,
-                                $card
-                            );
-                            $api_response = $client->getCardsApi()->createCard($body);
-                            if ($api_response->isSuccess()) {
-                                $result = $api_response->getResult();
-                                $unid = uniqid("",true).rand(0,100);
-                                PaymentAccount::query()->where('user_id',Auth::user()->id)->update(["payment_profile_id"=>$result->getCard()->getId(),"card"=>$result->getCard()->getLast4()]);
-                                $body = new \Square\Models\RefundPaymentRequest($unid, $amount_money);
-                                $body->setPaymentId($payment_id);
-                                $api_response = $client->getRefundsApi()->refundPayment($body);
-                                if ($api_response->isSuccess()) {
-                                    $success="Payment Method successfully added!";
-                                    return response()->json([
-                                        'message' => $success
-                                    ], 200);
-                                } else {
-                                    $error = "Payment Method successfully added, but refund payment not completed. ".json_encode($api_response->getErrors());
-                                    return response()->json([
-                                        'message' => $error,
-                                        'errors' => 'Bad Request'
-                                    ], 400);
-                                }
-                            } else {
-                                $error = json_encode($api_response->getErrors());
-                                return response()->json([
-                                    'message' => $error,
-                                    'errors' => 'Bad Request'
-                                ], 400);
-                            }
-                        } else {
-                            $error = "Payment not completed!";
-                            return response()->json([
-                                'message' => $error,
-                                'errors' => 'Bad Request'
-                            ], 400);
-                        }
-                    } else {
-                        $error = json_encode($api_response->getErrors());
-                        return response()->json([
-                            'message' => $error,
-                            'errors' => 'Bad Request'
-                        ], 400);
-                    }
-                }
-            } else {
-                return response()->json([
-                    'message' => 'All card input is required.',
-                    'errors' => 'Bad Request'
-                ], 400);
-            }
-        } else {
-            return response()->json([
-                'message' => 'You cannot open this page',
-                'errors' => 'Forbidden'
-            ], 403);
+    public function cardAddHandler(Request $request, SaveCardOnFile $saveCard) {
+        if (! Auth::user()->hasAnyRole('admin', 'user', 'driver')) {
+            return response()->json(['message' => 'You cannot open this page', 'errors' => 'Forbidden'], 403);
         }
+        if (empty($request->input('name')) || empty($request->input('address')) || empty($request->input('zip')) || empty($request->input('card'))) {
+            return response()->json(['message' => 'All card input is required.', 'errors' => 'Bad Request'], 400);
+        }
+        $user = Auth::user();
+        $error = $saveCard->handle(
+            account: PaymentAccount::query()->firstOrNew(['user_id' => $user->id]),
+            type: 'card',
+            owner: ['email' => $user->email, 'phone' => $user->phone, 'reference' => (string) $user->id, 'note' => 'User #'.$user->id],
+            holder: ['name' => (string) $request->input('name'), 'address' => (string) $request->input('address'), 'zip' => (string) $request->input('zip')],
+            cardToken: (string) $request->input('card'),
+        );
+
+        return $error === null
+            ? response()->json(['message' => 'Payment Method successfully added!'], 200)
+            : response()->json(['message' => $error, 'errors' => 'Bad Request'], 400);
     }
 
     /**
      * @param int|string $order_id
      */
-    public function payCopay($order_id) {
+    public function payCopay($order_id, SquarePayments $payments) {
         // One attempt per order at a time, so a double tap cannot charge the card twice.
-        $response = Cache::lock('pay-copay:'.$order_id, 120)->get(function () use ($order_id) {
+        $response = Cache::lock('pay-copay:'.$order_id, 120)->get(function () use ($order_id, $payments) {
             $order = Order::query()->where('id',$order_id)->first();
             if(!empty($order)) {
                 if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('user')) && $order->user_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                     $payment_account = PaymentAccount::query()->where('user_id',$order->user_id)->first();
                     if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
-                        $client = app(\Square\SquareClient::class);
-                        $amount = floatval($order->copay);
-                        $amount_money = new \Square\Models\Money();
-                        $amount_money->setAmount(\App\Support\Money::cents($amount));
-                        $amount_money->setCurrency('USD');
-                        $unid = uniqid("",true).rand(0,100);
-                        $body = new \Square\Models\CreatePaymentRequest(
-                            $payment_account->payment_profile_id,
-                            $unid
-                        );
-                        $body->setAmountMoney($amount_money);
-                        $body->setAutocomplete(true);
-                        $body->setCustomerId($payment_account->profile_id);
-                        $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
-                        $body->setNote('Pay Copay #'.$order->id);
-                        $api_response = $client->getPaymentsApi()->createPayment($body);
-                        if ($api_response->isSuccess()) {
-                            $result = $api_response->getResult();
-                            $payment_status = $result->getPayment()->getStatus();
-                            if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
-                                Order::query()->where('id',$order_id)->update(['statuse_copay'=>3]);
-                                DB::table('payments')->insert(['order_id'=>$order_id,'transaction_id'=>$result->getPayment()->getId(),'type'=>'copay']);
-                                return response()->json([
-                                    'message' => 'OK'
-                                ], 200);
-                            } else {
-                                return response()->json([
-                                    'message' => 'Payment not completed!',
-                                    'errors' => 'Error'
-                                ], 400);
-                            }
-                        } else {
-                            $error = json_encode($api_response->getErrors());
+                        $charge = $payments->charge($payment_account->payment_profile_id, $payment_account->profile_id, floatval($order->copay), 'Pay Copay #'.$order->id);
+                        if ($charge->completed()) {
+                            Order::query()->where('id',$order_id)->update(['statuse_copay'=>3]);
+                            DB::table('payments')->insert(['order_id'=>$order_id,'transaction_id'=>$charge->paymentId,'type'=>'copay']);
                             return response()->json([
-                                'message' => 'Transaction Failed: '.$error,
-                                'errors' => 'Error'
-                            ], 400);
+                                'message' => 'OK'
+                            ], 200);
                         }
+                        return response()->json([
+                            'message' => $charge->errors === null ? 'Payment not completed!' : 'Transaction Failed: '.$charge->errors,
+                            'errors' => 'Error'
+                        ], 400);
                     } else {
                         return response()->json([
                             'message' => 'Card not added',

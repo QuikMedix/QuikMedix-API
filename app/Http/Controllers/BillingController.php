@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Support\AccessMessages;
+use App\Support\SquarePayments;
 
 /**
  * Pharmacy billing: the billing page and its actions, invoice printing, and adding and editing
@@ -398,123 +399,77 @@ class BillingController extends Controller
     }
 
     /**
-     * Pays one invoice from the pharmacy's saved payment method.
+     * Pays one invoice from the pharmacy's balance or its saved payment method.
      *
      * @param  object  $pharmacy
      * @param  int|string  $pharmacy_id
-     * @return mixed the result page when a charge was attempted, otherwise the message for the billing page
+     * @return mixed the page asking for a card when a bank-account pharmacy has to give one, otherwise the message for the billing page
      */
     private function payInvoice(Request $request, $pharmacy, $pharmacy_id, string $error)
     {
         $invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->first();
-        $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
-        if(!empty($invoice) && $invoice->payed=='1'){
-            $error = "This invoice is already paid.";
-        } else if(!empty($invoice)){
-            if($pharmacy->copay_bill=='1') {
-                if((($invoice->amount+$invoice->corrections)-$invoice->copay)<0) {
-                    $amount = 0;
-                } else {
-                    $amount = round((($invoice->amount+$invoice->corrections)-$invoice->copay),2);
-                }
-            } else {
-                $amount = round(($invoice->amount+$invoice->corrections),2);
-            }
-            // Creating an invoice already debited the balance; a balance of zero or more means it is covered.
-            if($amount==0 || floatval($pharmacy->balance)>=0) {
-                PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>'balance','type'=>'pay']);
-                Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
-                $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
-                Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
-            } else if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
-                $client = app(\Square\SquareClient::class);
-                $amount_money = new \Square\Models\Money();
-                $amount_money->setAmount(\App\Support\Money::cents($amount));
-                $amount_money->setCurrency('USD');
-                $unid = uniqid("",true).rand(0,100);
-                $body = new \Square\Models\CreatePaymentRequest(
-                    $payment_account->payment_profile_id,
-                    $unid
-                );
-                $body->setAmountMoney($amount_money);
-                $body->setAutocomplete(true);
-                $body->setCustomerId($payment_account->profile_id);
-                $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
-                $body->setNote('Invoice #'.$invoice->id);
-                $api_response = $client->getPaymentsApi()->createPayment($body);
-                if ($api_response->isSuccess()) {
-                    $result = $api_response->getResult();
-                    $payment_status = $result->getPayment()->getStatus();
-                    if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
-                        $balance = floatval($pharmacy->balance)+$amount;
-                        PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'pay']);
-                        Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                        Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
-                        $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
-                        Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
-                    } else {
-                        $error = "Payment not completed!";
-                    }
-                } else {
-                    $error = json_encode($api_response->getErrors());
-                }
-            } else if(!empty($payment_account) && $payment_account->type=="bank") {
-                if(!empty($request->input('card')) && !empty($request->input('name'))) {
-                    $card_token = $request->input('card');
-                    $name=explode(' ',$request->input('name'));
-                    if(count($name)==1) {
-                        $name[1]="";
-                    }
-                    $client = app(\Square\SquareClient::class);
-                    $amount_money = new \Square\Models\Money();
-                    $amount_money->setAmount(\App\Support\Money::cents($amount));
-                    $amount_money->setCurrency('USD');
-                    $unid = uniqid("",true).rand(0,100);
-                    $body = new \Square\Models\CreatePaymentRequest(
-                        $card_token,
-                        $unid
-                    );
-                    $body->setAmountMoney($amount_money);
-                    $body->setAutocomplete(true);
-                    $body->setCustomerId($payment_account->profile_id);
-                    $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
-                    $body->setNote('Invoice #'.$invoice->id);
-                    $api_response = $client->getPaymentsApi()->createPayment($body);
-                    if ($api_response->isSuccess()) {
-                        $result = $api_response->getResult();
-                        $payment_status = $result->getPayment()->getStatus();
-                        if($payment_status=="COMPLETED" || $payment_status=="APPROVED" || $payment_status=="PENDING") {
-                            $balance = floatval($pharmacy->balance)+$amount;
-                            PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'pay']);
-                            Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                            Invoice::query()->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
-                            $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
-                            Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
-                        } else {
-                            $error = "Payment not completed!";
-                        }
-                    } else {
-                        $error = json_encode($api_response->getErrors());
-                    }
-                } else {
-                    $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
-                    $invoice = DB::table('invoices')->where('id',$request->input('invoice_id'))->where('pharmacy_id',$pharmacy_id)->first();
-                    $success='';
-                    $error='';
-                    return view('card_pharmacy.pay',['payment_account'=>$payment_account,'invoice'=>$invoice,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
-                }
-            } else {
-                $error = "PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.";
-            }
-        } else {
-            $error = "Invoice with this ID not found!";
+        if (empty($invoice)) {
+            return "Invoice with this ID not found!";
         }
+        if ($invoice->payed=='1') {
+            return "This invoice is already paid.";
+        }
+        // A pharmacy billed for copays has the collected copays taken off, never below zero.
+        $amount = $pharmacy->copay_bill=='1'
+            ? max(round($invoice->amount + $invoice->corrections - $invoice->copay, 2), 0)
+            : round($invoice->amount + $invoice->corrections, 2);
+
+        // Creating an invoice already debited the balance; a balance of zero or more means it is covered.
+        if ($amount==0 || floatval($pharmacy->balance)>=0) {
+            $this->recordInvoicePayment($pharmacy_id, $invoice, $amount, 'balance');
+
+            return $error;
+        }
+
+        $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+        $payments = app(SquarePayments::class);
+        if (!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)) {
+            $charge = $payments->charge($payment_account->payment_profile_id, $payment_account->profile_id, $amount, 'Invoice #'.$invoice->id);
+            $paid = $charge->completed();
+        } else if (!empty($payment_account) && $payment_account->type=="bank") {
+            if (empty($request->input('card')) || empty($request->input('name'))) {
+                // A pharmacy that pays by bank account gives a card for this one payment.
+                return view('card_pharmacy.pay',['payment_account'=>$payment_account,'invoice'=>$invoice,'success'=>'','error'=>'','title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
+            }
+            $charge = $payments->charge((string) $request->input('card'), $payment_account->profile_id, $amount, 'Invoice #'.$invoice->id);
+            $paid = $charge->completedOrPending();
+        } else {
+            return "PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.";
+        }
+        if (! $paid) {
+            return $charge->failure();
+        }
+        $this->recordInvoicePayment($pharmacy_id, $invoice, $amount, $charge->paymentId, addToBalance: true);
 
         return $error;
     }
 
     /**
-     * Adds money to the pharmacy's balance from its saved payment method.
+     * Marks an invoice and its orders paid. Money that came from a card is added to the balance,
+     * which the invoice debited when it was made.
+     *
+     * @param  int|string  $pharmacy_id
+     */
+    private function recordInvoicePayment($pharmacy_id, object $invoice, float $amount, string $transaction, bool $addToBalance = false): void
+    {
+        DB::transaction(function () use ($pharmacy_id, $invoice, $amount, $transaction, $addToBalance): void {
+            PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'invoice_id'=>$invoice->id,'amount'=>$amount,'transaction_id'=>$transaction,'type'=>'pay']);
+            if ($addToBalance) {
+                Pharmacy::query()->where('id',$pharmacy_id)->increment('balance', $amount);
+            }
+            Invoice::query()->where('id',$invoice->id)->where('pharmacy_id',$pharmacy_id)->update(["payed"=>'1']);
+            $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$invoice->id)->pluck('order_id')->toArray();
+            Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
+        });
+    }
+
+    /**
+     * Adds money to the pharmacy's balance from its saved card.
      *
      * @param  object  $pharmacy
      * @param  int|string  $pharmacy_id
@@ -522,48 +477,25 @@ class BillingController extends Controller
      */
     private function refillBalance(Request $request, $pharmacy, $pharmacy_id, string $error): string
     {
-        $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
         $amount = round(floatval($request->input('refill-amount')),2);
-        if($amount < 1) {
-            $error = "Enter a refill amount of at least $1.00.";
-        } else if(!empty($payment_account)){
-            if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
-                $client = app(\Square\SquareClient::class);
-                $amount_money = new \Square\Models\Money();
-                $amount_money->setAmount(\App\Support\Money::cents($amount));
-                $amount_money->setCurrency('USD');
-                $unid = uniqid("",true).rand(0,100);
-                $body = new \Square\Models\CreatePaymentRequest(
-                    $payment_account->payment_profile_id,
-                    $unid
-                );
-                $body->setAmountMoney($amount_money);
-                $body->setAutocomplete(true);
-                $body->setCustomerId($payment_account->profile_id);
-                $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
-                $body->setNote('Refill #'.$pharmacy_id);
-                $api_response = $client->getPaymentsApi()->createPayment($body);
-                if ($api_response->isSuccess()) {
-                    $result = $api_response->getResult();
-                    $payment_status = $result->getPayment()->getStatus();
-                    if($payment_status=="COMPLETED" || $payment_status=="APPROVED") {
-                        $balance = floatval($pharmacy->balance)+$amount;
-                        PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'amount'=>$amount,'transaction_id'=>$result->getPayment()->getId(),'type'=>'refill']);
-                        Pharmacy::query()->where("id",$pharmacy_id)->update(['balance'=>$balance]);
-                    } else {
-                        $error = "Payment not completed!";
-                    }
-                } else {
-                    $error = json_encode($api_response->getErrors());
-                }
-            } else if(!empty($payment_account) && $payment_account->type=="bank") {
-                $error = "PAYMENT METHOD BANK ACCOUNT CAN`T REFILL BALANCE.";
-            } else {
-                $error = "PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.";
-            }
-        } else {
-            $error = "PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.";
+        if ($amount < 1) {
+            return "Enter a refill amount of at least $1.00.";
         }
+        $payment_account = DB::table('payment_pharmacy_accounts')->where('pharmacy_id',$pharmacy_id)->first();
+        if (!empty($payment_account) && $payment_account->type=="bank") {
+            return "PAYMENT METHOD BANK ACCOUNT CAN`T REFILL BALANCE.";
+        }
+        if (empty($payment_account) || $payment_account->type!="card" || empty($payment_account->payment_profile_id)) {
+            return "PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.";
+        }
+        $charge = app(SquarePayments::class)->charge($payment_account->payment_profile_id, $payment_account->profile_id, $amount, 'Refill #'.$pharmacy_id);
+        if (! $charge->completed()) {
+            return $charge->failure();
+        }
+        DB::transaction(function () use ($pharmacy_id, $amount, $charge): void {
+            PharmacyPayment::query()->insert(['pharmacy_id'=>$pharmacy_id,'amount'=>$amount,'transaction_id'=>$charge->paymentId,'type'=>'refill']);
+            Pharmacy::query()->where('id',$pharmacy_id)->increment('balance', $amount);
+        });
 
         return $error;
     }

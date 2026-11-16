@@ -105,6 +105,7 @@ class SquareCardsTest extends TestCase
         $declined = [['code' => 'DECLINED']];
         $cases = [
             'incomplete form' => [[], ['name' => ''], 'All Payment Method input is required.', [0, 0, 0, 0], null],
+            'no card token' => [[], ['card' => ''], 'All Payment Method input is required.', [0, 0, 0, 0], null],
             'customer refused' => [['createCustomer' => $declined], [], '[{"code":"DECLINED"}]', [1, 0, 0, 0], null],
             'charge refused' => [['createPayment' => $declined], [], '[{"code":"DECLINED"}]', [1, 1, 0, 0], ['cust_new', null, null]],
             'charge not completed' => [['createPayment' => 'FAILED'], [], 'Payment not completed!', [1, 1, 0, 0], ['cust_new', null, null]],
@@ -153,6 +154,7 @@ class SquareCardsTest extends TestCase
         $declined = [['code' => 'DECLINED']];
         $cases = [
             'incomplete form' => [[], ['zip' => ''], 'All card input is required.', null],
+            'no card token' => [[], ['card' => ''], 'All card input is required.', null],
             'customer refused' => [['createCustomer' => $declined], [], '[{"code":"DECLINED"}]', null],
             'charge refused' => [['createPayment' => $declined], [], '[{"code":"DECLINED"}]', ['cust_new', null, null]],
             'charge not completed' => [['createPayment' => 'CANCELED'], [], 'Payment not completed!', ['cust_new', null, null]],
@@ -220,11 +222,13 @@ class SquareCardsTest extends TestCase
     {
         $this->row('pharmacy_payments', ['pharmacy_id' => 1, 'amount' => 20, 'transaction_id' => 'pay_abc', 'type' => 'refill']);
         $this->row('pharmacy_payments', ['pharmacy_id' => 1, 'amount' => 30, 'transaction_id' => 'pay_def', 'type' => 'refill']);
+        $this->row('pharmacy_payments', ['pharmacy_id' => 1, 'amount' => 40, 'transaction_id' => 'balance', 'type' => 'pay']);
         $this->fakeSquare(['getPayment' => 'COMPLETED']);
 
         $payments = $this->asAdmin()->get('/reports/billing')->assertOk()->viewData('payments');
 
+        // Newest first; the one paid from the balance is not looked up.
         $this->assertEqualsCanonicalizing(['pay_abc', 'pay_def'], $this->square['getPayment']);
-        $this->assertSame(['COMPLETED', 'COMPLETED'], $payments->pluck('status')->all());
+        $this->assertSame([null, 'COMPLETED', 'COMPLETED'], $payments->map(fn ($payment) => $payment->status ?? null)->all());
     }
 }

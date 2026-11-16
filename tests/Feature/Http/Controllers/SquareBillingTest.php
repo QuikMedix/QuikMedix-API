@@ -105,6 +105,33 @@ class SquareBillingTest extends TestCase
         $this->assertSame(['pay_123'], DB::table('pharmacy_payments')->pluck('transaction_id')->all());
     }
 
+    public function test_collected_copays_come_off_the_invoice_of_a_pharmacy_billed_for_them(): void
+    {
+        DB::table('pharmacys')->where('id', 1)->update(['copay_bill' => '1']);
+        DB::table('invoices')->where('id', 1)->update(['copay' => 30.25, 'corrections' => -5]);
+        $this->fakeSquare();
+
+        $this->post('/billing/1', ['pay' => 1, 'invoice_id' => 1])->assertSessionHas('error', '');
+
+        $this->assertSame(6475, $this->square['createPayment'][0]->getAmountMoney()->getAmount());
+        $this->assertEqualsWithDelta(14.75, (float) DB::table('pharmacys')->where('id', 1)->value('balance'), 0.001);
+    }
+
+    public function test_a_refill_needs_a_saved_card(): void
+    {
+        $this->fakeSquare();
+        DB::table('payment_pharmacy_accounts')->where('pharmacy_id', 1)->update(['type' => 'bank']);
+        $this->post('/billing/1', ['refill-amount' => '25'])->assertSessionHas('error', 'PAYMENT METHOD BANK ACCOUNT CAN`T REFILL BALANCE.');
+
+        DB::table('payment_pharmacy_accounts')->delete();
+        $this->post('/billing/1', ['refill-amount' => '25'])->assertSessionHas('error', 'PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.');
+        $this->post('/billing/1', ['pay' => 1, 'invoice_id' => 1])->assertSessionHas('error', 'PAYMENT METHOD IS EMPTY! PLEASE, ADD YOUR PAYMENT METHOD.');
+        $this->post('/billing/1', ['pay' => 1, 'invoice_id' => 99])->assertSessionHas('error', 'Invoice with this ID not found!');
+
+        $this->assertCount(0, $this->square['createPayment']);
+        $this->assertSame(0, DB::table('pharmacy_payments')->count());
+    }
+
     public function test_a_refused_refill_changes_nothing_and_says_so(): void
     {
         $this->fakeSquare(['createPayment' => 'FAILED']);

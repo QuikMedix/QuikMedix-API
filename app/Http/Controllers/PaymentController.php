@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\SaveCardOnFile;
 use App\Models\PaymentAccount;
 use App\Models\PharmacyPaymentAccount;
 use App\Models\Pharmacy;
@@ -187,128 +188,28 @@ class PaymentController extends Controller
     /**
      * @param int|string $pharmacy_id
      */
-    public function cardPharmacyAddHandler($pharmacy_id,Request $request) {
+    public function cardPharmacyAddHandler($pharmacy_id, Request $request, SaveCardOnFile $saveCard) {
         $pharmacy = Pharmacy::query()->where("id",$pharmacy_id)->first();
-        if(!empty($pharmacy)) {
-            abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
-            $success='';
-            $error='';
-            if(!empty($request->input('type')) && !empty($request->input('name')) && !empty($request->input('address')) && !empty($request->input('zip'))) {
-                $card_token = $request->input('card');
-                $type = $request->input('type');
-                $name=explode(' ',$request->input('name'));
-                if(count($name)==1) {
-                    $name[1]="";
-                }
-                $zip=$request->input('zip');
-                $user_address = explode(',',$request->input('address'));
-                if(count($user_address)==1) {
-                    $user_address[1]="";
-                    $user_address[2]="";
-                }
-                if(count($user_address)==2) {
-                    $user_address[2]="";
-                }
-                if(count($user_address)==3) {
-                    $user_address[3]="NY";
-                }
-                $amount = 1;
-                $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
-                $client = app(\Square\SquareClient::class);
-                $address = new \Square\Models\Address();
-                $address->setAddressLine1($user_address[0]);
-                $address->setAddressLine2($user_address[1]);
-                $address->setLocality($user_address[2]);
-                $address->setAdministrativeDistrictLevel1($user_address[3]);
-                $address->setPostalCode($zip);
-                $address->setCountry('US');
-                if(empty($payment_account)) {
-                    $body = new \Square\Models\CreateCustomerRequest();
-                    $body->setGivenName($name[0]);
-                    $body->setFamilyName($name[1]);
-                    $body->setEmailAddress($pharmacy->email);
-                    $body->setAddress($address);
-                    $body->setPhoneNumber(str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$pharmacy->phone)))));
-                    $body->setReferenceId($pharmacy_id);
-                    $body->setNote('Pharmacy #'.$pharmacy_id);
-                    $api_response = $client->getCustomersApi()->createCustomer($body);
-                    if ($api_response->isSuccess()) {
-                        $result = $api_response->getResult();
-                        PharmacyPaymentAccount::query()->insert(['pharmacy_id'=>$pharmacy_id,"type"=>$type,"profile_id"=>$result->getCustomer()->getId()]);
-                        $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
-                    } else {
-                        $error = json_encode($api_response->getErrors());
-                        return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
-                    }
-                } else {
-                    PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->update(["type"=>$type]);
-                }
-                if($type=="card") {
-                    $amount_money = new \Square\Models\Money();
-                    $amount_money->setAmount(\App\Support\Money::cents($amount));
-                    $amount_money->setCurrency('USD');
-                    $unid = uniqid("",true).rand(0,100);
-                    $body = new \Square\Models\CreatePaymentRequest(
-                        $card_token,
-                        $unid
-                    );
-                    $body->setAmountMoney($amount_money);
-                    $body->setAutocomplete(true);
-                    $body->setCustomerId($payment_account->profile_id);
-                    $body->setLocationId(config('app.SQUARE_LOCATION_ID'));
-                    $body->setNote('Authorization Card');
-                    $api_response = $client->getPaymentsApi()->createPayment($body);
-                    if ($api_response->isSuccess()) {
-                        $result = $api_response->getResult();
-                        $payment_id = $result->getPayment()->getId();
-                        $payment_status = $result->getPayment()->getStatus();
-                        if($payment_status=="COMPLETED" || $payment_status=="APPROVED" || $payment_status=="PENDING") {
-                            PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->update(["payment_id"=>$payment_id]);
-                            $card = new \Square\Models\Card();
-                            $card->setCardholderName($name[0].' '.$name[1]);
-                            $card->setBillingAddress($address);
-                            $card->setCustomerId($payment_account->profile_id);
-                            $unid = uniqid("",true).rand(0,100);
-                            $body = new \Square\Models\CreateCardRequest(
-                                $unid,
-                                $payment_id,
-                                $card
-                            );
-                            $api_response = $client->getCardsApi()->createCard($body);
-                            if ($api_response->isSuccess()) {
-                                $result = $api_response->getResult();
-                                $unid = uniqid("",true).rand(0,100);
-                                PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->update(["payment_profile_id"=>$result->getCard()->getId(),"card"=>$result->getCard()->getLast4()]);
-                                $body = new \Square\Models\RefundPaymentRequest($unid, $amount_money);
-                                $body->setPaymentId($payment_id);
-                                $api_response = $client->getRefundsApi()->refundPayment($body);
-                                if ($api_response->isSuccess()) {
-                                    $success="Payment Method successfully added!";
-                                } else {
-                                    $error = "Payment Method successfully added, but refund payment not completed. ".json_encode($api_response->getErrors());
-                                    return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
-                                }
-                            } else {
-                                $error = json_encode($api_response->getErrors());
-                                return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
-                            }
-                        } else {
-                            $error = "Payment not completed!";
-                            return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
-                        }
-                    } else {
-                        $error = json_encode($api_response->getErrors());
-                        return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
-                    }
-                }
-            } else {
-                $error='All Payment Method input is required.';
-            }
-            $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
-            return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
+        abort_if(empty($pharmacy), 404, "Not found pharmacy");
+        abort_unless(Auth::user()->can('manage-pharmacy', $pharmacy_id), 403, AccessMessages::NO_PERMISSION);
+        $success = '';
+        $type = (string) $request->input('type');
+        if ($type === '' || empty($request->input('name')) || empty($request->input('address')) || empty($request->input('zip')) || ($type === 'card' && empty($request->input('card')))) {
+            $error = 'All Payment Method input is required.';
         } else {
-            return abort(404, "Not found pharmacy");
+            $error = (string) $saveCard->handle(
+                account: PharmacyPaymentAccount::query()->firstOrNew(['pharmacy_id' => $pharmacy->id]),
+                type: $type,
+                owner: ['email' => $pharmacy->email, 'phone' => $pharmacy->phone, 'reference' => (string) $pharmacy->id, 'note' => 'Pharmacy #'.$pharmacy->id],
+                holder: ['name' => (string) $request->input('name'), 'address' => (string) $request->input('address'), 'zip' => (string) $request->input('zip')],
+                cardToken: (string) $request->input('card'),
+            );
+            if ($error === '' && $type === 'card') {
+                $success = 'Payment Method successfully added!';
+            }
         }
+        $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
+        return view('card_pharmacy.add',['payment_account'=>$payment_account,'success'=>$success,'error'=>$error,'title'=>'Cards','br1'=>'Cards','br2'=>'Card','br3'=>'Cards','alert'=>'']);
     }
 
     /**
