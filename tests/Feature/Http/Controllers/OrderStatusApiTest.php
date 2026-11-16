@@ -142,6 +142,34 @@ class OrderStatusApiTest extends TestCase
         $this->assertStringNotContainsString('$2y$', $response->getContent());
     }
 
+    public function test_a_patient_sees_who_delivers_but_not_the_drivers_private_details(): void
+    {
+        $patient = $this->createOrders([7]);
+        foreach (['driving_license', 'identification_cards', 'payment_card', 'address', 'device_token', 'car_info'] as $column) {
+            if (! Schema::hasColumn('users', $column)) {
+                Schema::table('users', fn (Blueprint $table) => $table->string($column)->nullable());
+            }
+        }
+        $driver = User::factory()->create(['role' => 'driver', 'name' => 'Dee', 'phone' => '(555) 010-0009', 'isactive' => 1, 'isblocked' => 0]);
+        DB::table('users')->where('id', $driver->id)->update(['driving_license' => 'D-123', 'identification_cards' => 'ID-9', 'payment_card' => '4111', 'address' => '9 Home St', 'device_token' => 'push-token', 'car_info' => 'Blue Civic']);
+        DB::table('orders')->where('id', 7)->update(['driver_id' => $driver->id]);
+        Schema::create('locations', function (Blueprint $table): void {
+            $table->id();
+            $table->integer('user_id')->nullable();
+            $table->string('location')->nullable();
+        });
+
+        $seenByPatient = $this->actingAs($patient, 'api')->getJson('/api/orders/show/7')->assertOk();
+        $seenByPatient->assertJsonPath('driver.name', 'Dee')->assertJsonPath('driver.phone', '(555) 010-0009')->assertJsonPath('driver.car_info', 'Blue Civic');
+        foreach (['driving_license', 'identification_cards', 'payment_card', 'address', 'device_token'] as $column) {
+            $seenByPatient->assertJsonPath("driver.$column", '');
+        }
+
+        // The driver looking at their own order still gets their own details.
+        $this->actingAs(User::findOrFail($driver->id), 'api')->getJson('/api/orders/show/7')->assertOk()
+            ->assertJsonPath('driver.driving_license', 'D-123')->assertJsonPath('driver.address', '9 Home St')->assertJsonMissingPath('driver.password');
+    }
+
     public function test_patient_home_shows_ready_for_pickup_for_a_new_order(): void
     {
         $patient = $this->createOrders([1]);

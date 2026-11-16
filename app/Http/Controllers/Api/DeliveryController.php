@@ -88,7 +88,7 @@ class DeliveryController extends Controller
                 if(empty($order->signature_photo)) {
                     Order::query()->where('id',$order_id)->update(['drop_off_photo'=>$src]);
                 } else {
-                    $patient=DB::table('users')->where('users.id',$order->user_id)->first();
+                    $patient=DB::table('users')->where('users.id',$order->user_id)->first(['address', 'address2', 'address3', 'apartment', 'apartment2', 'apartment3', 'location', 'location2', 'location3', 'primary_address', 'zip', 'zip2', 'zip3']);
                     $tariff_res = app(CalculateOrderTariff::class)->handle($order);
                     if($patient->primary_address==3){
                         $user_address = $patient->address3.', '.$patient->zip3.', Apt '.$patient->apartment3;
@@ -182,7 +182,7 @@ class DeliveryController extends Controller
                     if(empty($order->drop_off_photo)) {
                         Order::query()->where('id',$order_id)->update(['signature_photo'=>$src,'signature_type'=>$request->input('signature_type')]);
                     } else {
-                        $patient=DB::table('users')->where('users.id',$order->user_id)->first();
+                        $patient=DB::table('users')->where('users.id',$order->user_id)->first(['address', 'address2', 'address3', 'apartment', 'apartment2', 'apartment3', 'location', 'location2', 'location3', 'primary_address', 'zip', 'zip2', 'zip3']);
                         $tariff_res = app(CalculateOrderTariff::class)->handle($order);
                         if($patient->primary_address==3){
                             $user_address = $patient->address3.', '.$patient->zip3.', Apt '.$patient->apartment3;

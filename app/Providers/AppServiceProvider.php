@@ -14,9 +14,13 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register()
+    public function register(): void
     {
-        //
+        // One place builds the Square client, so tests can put a stand-in here and no real charge is made.
+        $this->app->bind(\Square\SquareClient::class, fn (): \Square\SquareClient => new \Square\SquareClient([
+            'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
+            'environment' => config('app.SQUARE_ENVIRONMENT'),
+        ]));
     }
 
     /**

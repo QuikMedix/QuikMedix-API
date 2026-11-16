@@ -479,6 +479,30 @@
         "2026-11-15 removed: resources/views/chats/chat.blade.php, chats.blade.php and public/js/twiliochat.js, referenced by nothing. Added POST /users/get for dispatch staff, which routes/show.blade.php was already calling."
       ],
       "notes": "The middleware is a safety net; the endpoints still read whole user rows. Proper follow-up: select only the columns each answer needs, and give the User model $hidden for password and remember_token (not done here because code that copies user rows through toArray would silently lose the password). Remember-me tokens that were already sent to clients stay valid until each user logs out or the tokens are rotated. Left alone on purpose: the card and copay handlers in PaymentController (payment gateway code without tests); OrderController store and update (single-purpose, already validated). About 660 DB::table calls remain, most of them row reads on users."
+    },
+    {
+      "id": "codebase-modularization-phase-9",
+      "priority": 19,
+      "area": "payments, privacy and maintainability",
+      "title": "Square payments tested and in one service, driver details limited for patients, user reads name their columns, order create and update split",
+      "user_visible_behavior": "A patient's app no longer receives the driver's home address, licence and identity numbers, birth date, saved card or device token with an order. Saving a card without a card token shows the form's message instead of a server error. The edit-order form dates a delivery by the application's clock, saves an empty quantity as 1 and its rush-order notice links to the right page. Everything else behaves as before.",
+      "status": "passing",
+      "verification_steps": [
+        "Test that /api/orders/show gives a patient the driver's name, phone and vehicle with private fields emptied, and gives the driver their own details.",
+        "Tests with a stand-in for Square of: paying an invoice by saved card and by one-time card, refilling the balance, saving a card for a pharmacy and for a patient, paying a copay, the billing report, and each refusal.",
+        "Run the payment tests written before the tidy-up against the code after it.",
+        "Compare every recorded route answer with the answers saved at the end of phase 8.",
+        "Tests of the order forms' tariff lookup and of editing an order, the first run against the old and the new controller.",
+        "composer test; cache routes, config and views; class-reference check."
+      ],
+      "evidence": [
+        "2026-11-15 OrderStatusApiTest: 8 tests pass, including the new patient/driver test.",
+        "2026-11-15 SquareBillingTest (8 tests) and SquareCardsTest (11 tests): the 6 and 11 written first passed on the code before the tidy-up and pass after it; the 2 added later pass on both. A charge amount changed by one cent makes SquareCardsTest fail.",
+        "2026-11-15 route answers: 2,508 compared with the phase 8 baseline after the column lists and again after the OrderController split, 0 changed.",
+        "2026-11-15 OrderTariffLookupTest passes on the controller before and after the split; OrderStatusTest 45 tests pass with the new edit test.",
+        "2026-11-15 composer test: 609 tests, 3051 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve. git diff --check is clean."
+      ],
+      "notes": "Not run: Pint and Larastan (not installed in the session's workspace), any request to Square, MySQL, a browser. The driver route endpoints have no tests because their SQL is MySQL-only. Untouched: the Authorize.net handlers in PaymentController, which have no tests; whether Authorize.net is still used is the owner's call. config/app.php contains the Authorize.net credentials as literals. 682 DB::table calls remain."
     }
   ]
 }

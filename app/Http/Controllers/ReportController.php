@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SquarePayments;
 use App\Models\Invoice;
 use App\Models\Area;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -32,22 +33,14 @@ class ReportController extends Controller
         $page = $this->currentPage(request());
         $pages = PageLinks::around($page, $max_pages);
         $payments = $payments->orderBy('pharmacy_payments.id','desc')->offset(($page-1)*$countOnPage)->limit($countOnPage)->get();
-        $client = null;
+        $square = app(SquarePayments::class);
         foreach($payments as $key=>$payment) {
-            if(!empty($payment->transaction_id)){
+            // An invoice covered by the balance has no payment at Square to ask about.
+            if(!empty($payment->transaction_id) && $payment->transaction_id !== 'balance'){
                 try {
-                    if($client === null) {
-                        $client = new \Square\SquareClient([
-                            'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                            'environment' => config('app.SQUARE_ENVIRONMENT'),
-                        ]);
-                    }
-                    $api_response = $client->getPaymentsApi()->getPayment($payment->transaction_id);
-                    if($api_response->isSuccess()) {
-                        $result = $api_response->getResult();
-                        if($result->getPayment() !== null) {
-                            $payments[$key]->status = $result->getPayment()->getStatus();
-                        }
+                    $status = $square->status($payment->transaction_id);
+                    if($status !== null) {
+                        $payments[$key]->status = $status;
                     }
                 } catch (\Throwable $exception) {
                     Log::warning('Unable to retrieve Square payment status.', [

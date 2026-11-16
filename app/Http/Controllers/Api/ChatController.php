@@ -27,7 +27,7 @@ class ChatController extends Controller
             }
             $last_message_date=$chat->last_message_date;
             $last_message_body=$chat->last_message_body;
-            $user = DB::table('users')->where('id', $user_id)->first();
+            $user = DB::table('users')->where('id', $user_id)->first(['image', 'last_name', 'name', 'pharmacy_id']);
             $user_pharmacy = Pharmacy::query()->where('id', $user->pharmacy_id)->first();
             if(empty($user_pharmacy)) {
                 $user_pharmacy='';

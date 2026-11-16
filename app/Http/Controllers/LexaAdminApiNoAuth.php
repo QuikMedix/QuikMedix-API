@@ -68,7 +68,7 @@ class LexaAdminApiNoAuth extends Controller
                             }
                         }
                     }
-                    $user = DB::table('users')->where('isactive',1)->where('isblocked',0)->where('role','admin')->where('phone',$phone)->first();
+                    $user = DB::table('users')->where('isactive',1)->where('isblocked',0)->where('role','admin')->where('phone',$phone)->first(['id']);
                     if(empty($user)) {
                         $bot->sendMessage($message->getChat()->getId(), '❌ User admin with this phone was not found!');
                     } else {
@@ -140,13 +140,13 @@ class LexaAdminApiNoAuth extends Controller
                 'errors' => 'Bad Request'
             ], 400);
         }
-        if(!empty(DB::table('users')->where('email', $request->input('email'))->first())) {
+        if(DB::table('users')->where('email', $request->input('email'))->exists()) {
             return response()->json([
                 'message' => 'User with this email already exists',
                 'errors' => 'User already exists'
             ], 409);
         } else {
-            if(!empty(DB::table('users')->where('phone', $request->input('phone'))->first())) {
+            if(DB::table('users')->where('phone', $request->input('phone'))->exists()) {
                 return response()->json([
                     'message' => 'User with this phone already exists',
                     'errors' => 'User already exists'
@@ -225,8 +225,8 @@ class LexaAdminApiNoAuth extends Controller
                 } else {
                     $unread_user=$chat->unread_user2+1;
                 }
-                $user = DB::table('users')->where('id', $chat->user1)->first();
-                $user2 = DB::table('users')->where('id', $chat->user2)->first();
+                $user = DB::table('users')->where('id', $chat->user1)->first(['last_name', 'name', 'pharmacy_id']);
+                $user2 = DB::table('users')->where('id', $chat->user2)->first(['id']);
                 if(empty($user) || empty($user2)) {
                     return response()->json([
                         'message' => 'Chat user not found',
@@ -247,8 +247,8 @@ class LexaAdminApiNoAuth extends Controller
                 } else {
                     $unread_user=$chat->unread_user1+1;
                 }
-                $user = DB::table('users')->where('id', $chat->user2)->first();
-                $user2 = DB::table('users')->where('id', $chat->user1)->first();
+                $user = DB::table('users')->where('id', $chat->user2)->first(['last_name', 'name', 'pharmacy_id']);
+                $user2 = DB::table('users')->where('id', $chat->user1)->first(['id']);
                 if(empty($user) || empty($user2)) {
                     return response()->json([
                         'message' => 'Chat user not found',
@@ -277,7 +277,7 @@ class LexaAdminApiNoAuth extends Controller
     }
 
     public function getUserInfo(Request $request) {
-        $user = DB::table('users')->where('id', $request->input('identity'))->first();
+        $user = DB::table('users')->where('id', $request->input('identity'))->first(['id', 'image', 'last_name', 'name']);
         if(!empty($user->id)) {
             return json_encode([
                 'name' => $user->name.' '.$user->last_name,
@@ -292,7 +292,7 @@ class LexaAdminApiNoAuth extends Controller
     }
 
     public function reSendAuthMessage(Request $request) {
-        $user = DB::table('users')->where('phone',$request->input('phone'))->first();
+        $user = DB::table('users')->where('phone',$request->input('phone'))->first(['id', 'name', 'phone']);
         if(!empty($user)) {
             $password = bin2hex(openssl_random_pseudo_bytes(4));
             DB::table('users')->where('id',$user->id)->update(['password'=>Hash::make($password)]);

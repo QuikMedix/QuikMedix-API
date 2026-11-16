@@ -61,7 +61,7 @@ class RouteController extends Controller
                     $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
                 }
                 if($value->type=='patient') {
-                    $patient0 = DB::table('users')->where('id',$value->type_id)->first();
+                    $patient0 = DB::table('users')->where('id',$value->type_id)->first(['address', 'address2', 'address3', 'apartment', 'apartment2', 'apartment3', 'last_name', 'location', 'location2', 'location3', 'name', 'phone', 'primary_address', 'zip', 'zip2', 'zip3']);
                     if(empty($patient0)) {
                         continue;
                     }
@@ -144,7 +144,7 @@ class RouteController extends Controller
                 ], 200);
             }
             if($route->type=='patient') {
-                $patient0 = DB::table('users')->where('id',$route->type_id)->first();
+                $patient0 = DB::table('users')->where('id',$route->type_id)->first(['address', 'address2', 'address3', 'apartment', 'apartment2', 'apartment3', 'city', 'email', 'id', 'image', 'last_name', 'location', 'location2', 'location3', 'name', 'primary_address', 'state', 'zip', 'zip2', 'zip3']);
                 $patient=[];
                 $patient['id']=$patient0->id;
                 $patient['name']=$patient0->name.' '.$patient0->last_name;
@@ -218,7 +218,7 @@ class RouteController extends Controller
                     $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
                 }
                 if($value->type=='patient') {
-                    $patient0 = DB::table('users')->where('id',$value->type_id)->first();
+                    $patient0 = DB::table('users')->where('id',$value->type_id)->first(['address', 'address2', 'address3', 'last_name', 'name', 'phone', 'primary_address']);
                     if(empty($patient0)) {
                         continue;
                     }

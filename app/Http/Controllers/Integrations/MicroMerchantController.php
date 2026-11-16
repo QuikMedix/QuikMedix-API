@@ -416,7 +416,7 @@ class MicroMerchantController extends Controller
                             } else {
                                 $failure_reason = NULL;
                             }
-                            $driver = !empty($order->driver_id) ? DB::table('users')->where('id',$order->driver_id)->first() : null;
+                            $driver = !empty($order->driver_id) ? DB::table('users')->where('id',$order->driver_id)->first(['driving_license']) : null;
                             $record["delivery"]=[
                                 "occurred_at"=>date("Y-m-d\TH:i:s-00:00", strtotime($order->finish ?? '')),
                                 "signature_url"=>url($order->signature_photo),
