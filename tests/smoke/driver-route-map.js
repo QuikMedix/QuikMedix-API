@@ -4,8 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const toolsSource = fs.readFileSync(path.join(__dirname, '../../public/js/route-map-tools.js'), 'utf8');
-const viewSource = fs.readFileSync(path.join(__dirname, '../../resources/views/routes/driver.blade.php'), 'utf8');
-const markerFunctions = viewSource.slice(viewSource.indexOf('    function addMarker('), viewSource.indexOf('</script>', viewSource.indexOf('    function addMarker(')));
+// The map functions live in their own file; the view only declares the positions.
+const mapSource = fs.readFileSync(path.join(__dirname, '../../public/js/driver-route-map.js'), 'utf8');
+const markerFunctions = mapSource.slice(mapSource.indexOf('    function addMarker('));
 let checks = 0;
 function check(condition, message) { assert(condition, message); checks++; }
 
