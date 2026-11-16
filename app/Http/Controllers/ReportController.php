@@ -37,10 +37,7 @@ class ReportController extends Controller
             if(!empty($payment->transaction_id)){
                 try {
                     if($client === null) {
-                        $client = new \Square\SquareClient([
-                            'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                            'environment' => config('app.SQUARE_ENVIRONMENT'),
-                        ]);
+                        $client = app(\Square\SquareClient::class);
                     }
                     $api_response = $client->getPaymentsApi()->getPayment($payment->transaction_id);
                     if($api_response->isSuccess()) {

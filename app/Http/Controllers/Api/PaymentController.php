@@ -60,10 +60,7 @@ class PaymentController extends Controller
                 }
                 $amount = 1;
                 $payment_account = PaymentAccount::query()->where('user_id',Auth::user()->id)->first();
-                $client = new \Square\SquareClient([
-                    'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                    'environment' => config('app.SQUARE_ENVIRONMENT'),
-                ]);
+                $client = app(\Square\SquareClient::class);
                 $address = new \Square\Models\Address();
                 $address->setAddressLine1($user_address[0]);
                 $address->setAddressLine2($user_address[1]);
@@ -193,10 +190,7 @@ class PaymentController extends Controller
                 if(!in_array($order->statuse_id,[1,4,5,8,9,10]) && (Auth::user()->hasRole('user')) && $order->user_id==Auth::user()->id && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0) {
                     $payment_account = PaymentAccount::query()->where('user_id',$order->user_id)->first();
                     if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
-                        $client = new \Square\SquareClient([
-                            'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                            'environment' => config('app.SQUARE_ENVIRONMENT'),
-                        ]);
+                        $client = app(\Square\SquareClient::class);
                         $amount = floatval($order->copay);
                         $amount_money = new \Square\Models\Money();
                         $amount_money->setAmount(\App\Support\Money::cents($amount));

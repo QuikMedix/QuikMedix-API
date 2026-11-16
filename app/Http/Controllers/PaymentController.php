@@ -214,10 +214,7 @@ class PaymentController extends Controller
                 }
                 $amount = 1;
                 $payment_account = PharmacyPaymentAccount::query()->where('pharmacy_id',$pharmacy_id)->first();
-                $client = new \Square\SquareClient([
-                    'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                    'environment' => config('app.SQUARE_ENVIRONMENT'),
-                ]);
+                $client = app(\Square\SquareClient::class);
                 $address = new \Square\Models\Address();
                 $address->setAddressLine1($user_address[0]);
                 $address->setAddressLine2($user_address[1]);

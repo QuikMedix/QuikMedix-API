@@ -427,10 +427,7 @@ class BillingController extends Controller
                 $invoice_exclusions = DB::table('invoice_exclusion')->where('invoice_id',$request->input('invoice_id'))->pluck('order_id')->toArray();
                 Order::query()->where('pharmacy_id', $pharmacy_id)->whereIn('statuse_id',[4,8,9,10])->whereDate('finish', '>=', $invoice->date_from)->whereDate('finish', '<=', $invoice->date_to)->whereNotIn('id',$invoice_exclusions)->update(["invoice_payed"=>"1"]);
             } else if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
-                $client = new \Square\SquareClient([
-                    'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                    'environment' => config('app.SQUARE_ENVIRONMENT'),
-                ]);
+                $client = app(\Square\SquareClient::class);
                 $amount_money = new \Square\Models\Money();
                 $amount_money->setAmount(\App\Support\Money::cents($amount));
                 $amount_money->setCurrency('USD');
@@ -468,10 +465,7 @@ class BillingController extends Controller
                     if(count($name)==1) {
                         $name[1]="";
                     }
-                    $client = new \Square\SquareClient([
-                        'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                        'environment' => config('app.SQUARE_ENVIRONMENT'),
-                    ]);
+                    $client = app(\Square\SquareClient::class);
                     $amount_money = new \Square\Models\Money();
                     $amount_money->setAmount(\App\Support\Money::cents($amount));
                     $amount_money->setCurrency('USD');
@@ -534,10 +528,7 @@ class BillingController extends Controller
             $error = "Enter a refill amount of at least $1.00.";
         } else if(!empty($payment_account)){
             if(!empty($payment_account) && $payment_account->type=="card" && !empty($payment_account->payment_profile_id)){
-                $client = new \Square\SquareClient([
-                    'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
-                    'environment' => config('app.SQUARE_ENVIRONMENT'),
-                ]);
+                $client = app(\Square\SquareClient::class);
                 $amount_money = new \Square\Models\Money();
                 $amount_money->setAmount(\App\Support\Money::cents($amount));
                 $amount_money->setCurrency('USD');
