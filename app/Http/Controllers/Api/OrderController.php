@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\DriverCard;
 use App\Models\Location;
 use App\Models\Rx;
 use App\Actions\RequestDispatchApproval;
@@ -81,6 +82,10 @@ class OrderController extends Controller
             if((Auth::user()->hasRole('driver') && Auth::user()->id==$order->driver_id) || (Auth::user()->hasRole('user') && Auth::user()->id==$order->user_id)) {
                 if($order->driver_id>0) {
                     $driver = DB::table('users')->where('id',$order->driver_id)->first();
+                    // A patient gets the driver's name, phone, photo and vehicle; the driver's private details are emptied.
+                    if(!empty($driver) && Auth::user()->id != $order->driver_id) {
+                        $driver = DriverCard::forPatient($driver);
+                    }
                     $locations = Location::query()->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$order->driver_id)->first();
                 } else {
                     $driver="";
