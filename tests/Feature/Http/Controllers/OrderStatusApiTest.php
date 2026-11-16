@@ -122,6 +122,26 @@ class OrderStatusApiTest extends TestCase
             ->assertJsonPath('order.statuse_id', 7)->assertJsonPath('order.statusename', 'Hub');
     }
 
+    public function test_order_details_name_the_driver_without_their_password_hash_or_remember_token(): void
+    {
+        $patient = $this->createOrders([7]);
+        $driver = User::factory()->create(['role' => 'driver', 'name' => 'Dee', 'isactive' => 1, 'isblocked' => 0, 'remember_token' => 'remember-me']);
+        DB::table('orders')->where('id', 7)->update(['driver_id' => $driver->id]);
+        // An order with a driver also looks up the driver's last position.
+        Schema::create('locations', function (Blueprint $table): void {
+            $table->id();
+            $table->integer('user_id')->nullable();
+            $table->string('location')->nullable();
+        });
+
+        $response = $this->actingAs($patient, 'api')->getJson('/api/orders/show/7')->assertOk();
+
+        $response->assertJsonPath('driver.id', $driver->id)->assertJsonPath('driver.name', 'Dee')
+            ->assertJsonMissingPath('driver.password')->assertJsonMissingPath('driver.remember_token');
+        $this->assertStringNotContainsString('remember-me', $response->getContent());
+        $this->assertStringNotContainsString('$2y$', $response->getContent());
+    }
+
     public function test_patient_home_shows_ready_for_pickup_for_a_new_order(): void
     {
         $patient = $this->createOrders([1]);
