@@ -620,3 +620,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Not changed: the amount is entered when the route is completed, as before; it is not stored on Save, so it is empty again after a reload until Completed is pressed.
 - Commit status: one commit with this record on `fix/route-pay-completed`, from `main`. Not pushed by the session.
 - Next action: owner to deploy, open the test driver's route page, choose a rate and press Completed.
+
+## Session log — 2026-11-19: earnings history in the driver app
+
+- Goal: after a week was marked paid, the iOS driver app showed $0.00 and nothing about what the driver had earned; the owner asked for a history, with whatever the API needs.
+- Found: the app only had the wallet total, which is what is still unpaid, so it is zero as soon as everything is paid. The API had nothing else to offer.
+- Done (API): `GET /api/driver/earnings` answers `earned`, `paid`, `unpaid`, `pending`, `this_week` and `weeks` (the latest twelve weeks with completed stops, Monday to Sunday in the application's time zone, each with `from`, `to`, `stops`, `earned`, `paid`, `unpaid`, `pending`). `/api/driver/payouts` is unchanged.
+- Done (iOS app folder, not a git repository; edited in place): `ServerService.getEarnings` and the `DriverEarnings` type in `Services/ServerService.swift`; the Earnings screen in `QuikMedix/DriverAccountViewController.swift` shows what is still to be paid, earned this week, in total, paid so far, and week by week; the home tile in `QuikMedix/DriverDashboardViewController.swift` shows "Earned this week". Both fall back to the wallet total when the server has no earnings request.
+- Not verified: the Swift was not compiled or run (no Swift toolchain where the session works). The endpoint was not called on production. Week boundaries assume `payouts_driver.created` is UTC.
+- Commit status: one commit with this record on `feature/driver-earnings-history`, which starts from `fix/route-pay-completed`. Not pushed by the session.
+- Next action: owner to deploy the API, build the app in Xcode and check the Earnings screen with the test driver.
