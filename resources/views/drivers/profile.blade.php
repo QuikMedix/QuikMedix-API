@@ -122,7 +122,12 @@
                             </div>
                             <div class="col-xl-3 col-sm-6 bor text-center rating">    
                                 <h6 class="mb-1 font-size-16 mt-4">Driver rating</h6>    
-                                <i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i><i class="mdi mdi-star-outline"></i>                                    
+                                @if(($rating->count ?? 0) > 0)
+                                    @for($star = 1; $star <= 5; $star++)<i class="mdi {{ $star <= round($rating->average) ? 'mdi-star' : 'mdi-star-outline' }}"></i>@endfor
+                                    <p class="text-muted mb-0">{{ number_format($rating->average, 1) }} from {{ $rating->count }} {{ $rating->count == 1 ? 'rating' : 'ratings' }}</p>
+                                @else
+                                    <p class="text-muted mb-0">No ratings yet</p>
+                                @endif
                             </div>
                             <div class="col-xl-3 col-sm-6 bor text-center">     
                                 <h6 class="mb-1 font-size-16 mt-1">Copay debt: ${{number_format($duty ?? 0,2)}}</h6> 
@@ -133,12 +138,10 @@
                                 <a href="/drivers/{{$user->id}}/payouts"><button type="button" class="btn btn-outline-primary btn-sm waves-effect waves-light">History <i class="mdi mdi-history"></i></button></a>                              
                             </div>                            
                             <div class="col-xl-3 col-sm-6 text-center">
-                                <h6 class="mb-1 font-size-16 mt-1">Total routes: 0</h6>                            
-                                <p class="text-muted mb-0">Unpaid routes: 0</p>
-                                <h6 class="mb-3 font-size-18 mt-1">Salary: $0.00</h6>
+                                <h6 class="mb-1 font-size-16 mt-1">Completed stops: {{ $pay['stops'] }}</h6>
+                                <p class="text-muted mb-0">Waiting for a rate: {{ $pay['awaiting_rate'] }}</p>
+                                <h6 class="mb-3 font-size-18 mt-1">Unpaid earnings: ${{ number_format($pay['unpaid'], 2) }}</h6>
                                 <a href="/routes-list/driver/{{$user->id}}"><button type="button" class="btn btn-outline-primary btn-sm waves-effect waves-light">View route <i class="mdi mdi-car"></i></button></a>
-                                <a href="#"><button type="button" class="btn btn-outline-primary btn-sm waves-effect waves-light">Route history <i class="mdi mdi-history"></i></button></a>
-                                <a href="#"><button type="button" class="btn btn-outline-primary btn-sm waves-effect waves-light">Chat <i class="mdi mdi-message-processing-outline"></i></button></a>
                             </div>
                         </div>
                     </div>                               
@@ -218,31 +221,29 @@
                             </div>
                         </form>
                         <div class="col-xl-6 col-sm-6 text-center"> 
-                            <h5 class="mb-4 pb-2">Statistics</h5>
+                            <h5 class="mb-4 pb-2">Latest completed stops</h5>
                             <div class="table-responsive">
                             <table class="table mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Route#</th>
                                         <th>Date</th>
-                                        <th>Status</th>
-                                        <th>Waypoints</th>                                        
-                                        <th>Completed</th> 
-                                        <th>Salary</th>                                        
-                                        <th>Action</th>                                                     
+                                        <th>Order</th>
+                                        <th>Earned</th>
+                                        <th>Paid</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @forelse($recent_payouts as $payout)
                                     <tr>
-                                        <th scope="row">51</th>
-                                        <td>04.28.2023</td>
-                                        <td>Complete</td>
-                                        <td>38</td>
-                                        <td>34</td>
-                                        <td>$180.00</td>
-                                        <td><button type="button" class="btn btn-outline-secondary btn-sm waves-effect">View route</button></td>                                                    
+                                        {{-- The table's timestamps are the database's, in UTC. --}}
+                                        <td>{{ \Illuminate\Support\Carbon::parse($payout->created, 'UTC')->timezone(config('app.timezone'))->format('m.d.Y g:i A') }}</td>
+                                        <td>{{ $payout->order_id }}</td>
+                                        <td>@if($payout->amount == \App\Models\DriverPayout::AWAITING_RATE) Waiting for a rate @else ${{ number_format($payout->amount, 2) }} @endif</td>
+                                        <td>{{ $payout->withdraw ? 'Yes' : 'No' }}</td>
                                     </tr>
-                                    
+                                    @empty
+                                    <tr><td colspan="4" class="text-muted">No completed stops yet.</td></tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>

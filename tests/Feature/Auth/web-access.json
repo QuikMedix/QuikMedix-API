@@ -404,26 +404,32 @@
     "GET /register": [],
     "GET /reports": {
         "login": "guest",
+        "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /reports/apps": {
         "login": "guest",
+        "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /reports/billing": {
         "login": "guest",
+        "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /reports/customers": {
         "login": "guest",
+        "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /reports/drivers": {
         "login": "guest",
+        "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /reports/invoices": {
         "login": "guest",
+        "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /reports/map": {
@@ -433,6 +439,7 @@
     },
     "GET /reports/pharmacies": {
         "login": "guest",
+        "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
     "GET /route-templates": {

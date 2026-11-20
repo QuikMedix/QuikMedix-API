@@ -600,3 +600,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Correction to the two records above: the route-answer comparison differs on 16 answers without any of this day's work (delivery calendar 9, order statistics 4, report map 3; they depend on the date). The text-message work changed `GET /2fa/reset` for the ten signed-in roles, not 24.
 - Commit status: two commits and this record on `fix/driver-wallet-and-payroll`, which starts from `feature/twilio-conversations`. Not pushed by the session.
 - Next action: owner to close the test driver's route on `/routes-list/driver/{id}` with a pay type, which turns the waiting stops into money; build the iOS app in Xcode.
+
+## Session log — 2026-11-19: sample data on the pages
+
+- Goal: the owner saw made-up values on the dispatching page ("Dispatcher: Shahzod", Done 12, Urgently 4, Missed 4) and asked to remove all hard-coded or old data from before the last two months, believing it came over from the old application.
+- Found: the values are not data. They are markup left from the admin theme the application was built on, written into the templates: dispatching header, dashboard Payouts card, driver profile (rating, route figures, a route row from 2023), the reports overview and drivers report ("XXX"), the news list (Lorem Ipsum, entries from 2020 and 2023) and the ads page. Also found: seven report pages opened for any signed-in account, although the menu shows Reports to admin staff only.
+- Done: each of those shows real figures or says there is nothing (see FEATURE_LIST.json `no-sample-markup`); the report pages are limited to admin staff; `php artisan quikmedix:data-age` counts, per table, the rows older than a number of months, reading only.
+- Not done, on purpose: no database row was deleted and no deletion tool was written. Rows older than two months would include orders, invoices, payments and patient records; which of them may go is the owner's decision and needs a backup first.
+- Not verified: the dispatching board's queries are MySQL-only, so its page is not rendered by a test; the template compiles and the sample strings are gone. Nothing was checked in a browser.
+- Commit status: three commits, the third with the data-age command and this record, on `fix/remove-sample-markup`, which starts from `fix/driver-wallet-and-payroll`. Not pushed by the session.
+- Next action: owner to run `php artisan quikmedix:data-age` and say which tables, if any, should lose their old rows.

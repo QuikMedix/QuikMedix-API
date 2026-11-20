@@ -455,22 +455,22 @@
                                                         <div class="row"> 
                                                             <div class="col-md-4">
                                                                 <div>
-                                                                    <h3 class="mb-0">$0.00</h3>
-                                                                    <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format(0,2)}}</p>
+                                                                    <h3 class="mb-0">${{number_format($payouts['today'] ?? 0,2)}}</h3>
+                                                                    <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($payouts['today_prev'] ?? 0,2)}}</p>
                                                                     <p class="text-muted">Today</p>                                                    
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <div>
-                                                                    <h3 class="mb-0">$0.00</h3>
-                                                                    <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format(0,2)}}</p>
+                                                                    <h3 class="mb-0">${{number_format($payouts['week'] ?? 0,2)}}</h3>
+                                                                    <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($payouts['week_prev'] ?? 0,2)}}</p>
                                                                     <p class="text-muted">Week</p>                                                    
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <div>
-                                                                    <h3 class="mb-0">$0.00</h3>
-                                                                    <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format(0,2)}}</p>
+                                                                    <h3 class="mb-0">${{number_format($payouts['month'] ?? 0,2)}}</h3>
+                                                                    <p class="mt-1 mb-1" style="color: #474f58;" title="Previous Period"><i class="mdi mdi-page-previous"></i> ${{number_format($payouts['month_prev'] ?? 0,2)}}</p>
                                                                     <p class="text-muted">Month</p>                                                    
                                                                 </div>
                                                             </div>
@@ -1091,78 +1091,6 @@
                         </div>
                         <!-- end row -->
                     @endif
-                    <!--
-                    <div class="row">
-
-                        <div class="col-xl-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h4 class="card-title mb-4">Monthly Earnings</h4>
-
-                                    <div class="row text-center mt-4">
-                                        <div class="col-6">
-                                            <h5 class="font-size-20">$56241</h5>
-                                            <p class="text-muted">Marketplace</p>
-                                        </div>
-                                        <div class="col-6">
-                                            <h5 class="font-size-20">$23651</h5>
-                                            <p class="text-muted">Total Income</p>
-                                        </div>
-                                    </div>
-
-                                    <div id="morris-donut-example" class="morris-charts morris-charts-height" dir="ltr"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h4 class="card-title mb-4">Email Sent</h4>
-
-                                    <div class="row text-center mt-4">
-                                        <div class="col-4">
-                                            <h5 class="font-size-20">$ 89425</h5>
-                                            <p class="text-muted">Marketplace</p>
-                                        </div>
-                                        <div class="col-4">
-                                            <h5 class="font-size-20">$ 56210</h5>
-                                            <p class="text-muted">Total Income</p>
-                                        </div>
-                                        <div class="col-4">
-                                            <h5 class="font-size-20">$ 8974</h5>
-                                            <p class="text-muted">Last Month</p>
-                                        </div>
-                                    </div>
-
-                                    <div id="morris-area-example" class="morris-charts morris-charts-height" dir="ltr"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h4 class="card-title mb-4">Monthly Earnings</h4>
-
-                                    <div class="row text-center mt-4">
-                                        <div class="col-6">
-                                            <h5 class="font-size-20">$ 2548</h5>
-                                            <p class="text-muted">Marketplace</p>
-                                        </div>
-                                        <div class="col-6">
-                                            <h5 class="font-size-20">$ 6985</h5>
-                                            <p class="text-muted">Total Income</p>
-                                        </div>
-                                    </div>
-
-                                    <div id="morris-bar-stacked" class="morris-charts morris-charts-height" dir="ltr"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                    -->
                     <!-- end row -->
 @endsection
 
@@ -1179,5 +1107,5 @@ var app_ios_drivers = {{ Illuminate\Support\Js::from($app_ios_drivers + 0) }};
 <!--Morris Chart-->
 <script src="{{ URL::asset('/libs/morris.js/morris.js.min.js')}}"></script>
 <script src="{{ URL::asset('/libs/raphael/raphael.min.js')}}"></script>
-<script src="{{ URL::asset('/js/pages/dashboard.init.js?v=quikmedix-1')}}"></script>
+<script src="{{ URL::asset('/js/pages/dashboard.init.js?v=quikmedix-2')}}"></script>
 @endsection
