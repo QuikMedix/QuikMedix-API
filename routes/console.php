@@ -77,6 +77,33 @@ Artisan::command('sms:test {phone : Send a test text message to this number}', f
     }
 })->describe('Check the Twilio setup by texting a number you choose');
 
+Artisan::command('chat:test', function (\App\Support\ChatConversations $chat) {
+    $missing = array_keys(array_filter([
+        'TWILIO_SID' => ! config('app.twilio_sid'),
+        'TWILIO_AUTH_TOKEN' => ! config('app.twilio_auth_token'),
+        'TWILIO_API_KEY' => ! config('app.twilio_apiKey'),
+        'TWILIO_API_SECRET' => ! config('app.twilio_apiSecret'),
+        'TWILIO_CHAT_SERVICE_SID' => ! config('app.twilio_chatServiceSid'),
+    ]));
+    if ($missing !== []) {
+        $this->error('Not set in the environment: '.implode(', ', $missing).'.');
+
+        return 1;
+    }
+    try {
+        $service = app(\Twilio\Rest\Client::class)->conversations->v1->services(config('app.twilio_chatServiceSid'))->fetch();
+    } catch (\Throwable $exception) {
+        $this->error('Twilio did not find the Conversations service: '.$exception->getMessage());
+
+        return 1;
+    }
+    $this->info("Twilio found the Conversations service \"{$service->friendlyName}\".");
+    $chat->token('chat-test');
+    $this->line('A chat token can be signed. Twilio checks the API key and secret only when a chat page signs in.');
+
+    return 0;
+})->describe('Check the Twilio Conversations setup behind the chat page');
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->describe('Display an inspiring quote');

@@ -112,10 +112,6 @@ return [
     'twilio_auth_token' => env('TWILIO_AUTH_TOKEN'),
     'twilio_from_phone' => env('TWILIO_FROM_PHONE'),
     'twilio_chatServiceSid' => env('TWILIO_CHAT_SERVICE_SID'),
-    'twilio_notifyClientServiceSid' => env('TWILIO_NOTIFY_CLIENT_SERVICE_SID'),
-    'twilio_notifyClientIOSServiceSid' => env('TWILIO_NOTIFY_CLIENT_IOS_SERVICE_SID'),
-    'twilio_notifyDriverIOSServiceSid' => env('TWILIO_NOTIFY_DRIVER_IOS_SERVICE_SID'),
-    'twilio_notifyDriverServiceSid' => env('TWILIO_NOTIFY_DRIVER_SERVICE_SID'),
     'twilio_apiKey' => env('TWILIO_API_KEY'),
     'twilio_apiSecret' => env('TWILIO_API_SECRET'),
 

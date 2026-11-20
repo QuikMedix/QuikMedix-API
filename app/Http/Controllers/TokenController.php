@@ -1,31 +1,25 @@
 <?php
+
 namespace App\Http\Controllers;
+
+use App\Support\ChatConversations;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use Twilio\Jwt\AccessToken;
-use Twilio\Jwt\Grants\ChatGrant;
 
 class TokenController extends Controller
 {
-    public function generate(Request $request, AccessToken $accessToken, ChatGrant $chatGrant)
+    /**
+     * The token the chat page signs in to Twilio Conversations with.
+     */
+    public function generate(Request $request, ChatConversations $chat)
     {
-        $identity = $request->input("identity");
+        $identity = $request->input('identity');
         // A chat token lets its holder read and write as that identity, so it is only issued to that person.
         abort_unless((string) $identity === $request->attributes->get('chat_viewer'), 403, 'This chat identity is not yours.');
+        abort_unless($chat->isConfigured(), 503, 'Chat is not set up.');
 
-        $TWILIO_CHAT_SERVICE_SID = config()->string('app.twilio_chatServiceSid');
-
-        $accessToken->setIdentity($identity);
-
-        $chatGrant->setServiceSid($TWILIO_CHAT_SERVICE_SID);
-
-        $accessToken->addGrant($chatGrant);
-
-        $response = array(
+        return response()->json([
             'identity' => $identity,
-            'token' => $accessToken->toJWT()
-        );
-
-        return response()->json($response);
+            'token' => $chat->token((string) $identity),
+        ]);
     }
 }

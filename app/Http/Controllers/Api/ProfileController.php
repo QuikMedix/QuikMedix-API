@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Twilio\Rest\Client;
 
 /**
  * The signed-in person's own account in the mobile apps: profile, device, family members, the patient home screen and news.
@@ -224,25 +223,8 @@ class ProfileController extends Controller
                 'errors' => 'Bad Request'
             ], 400);
         }
-        // Save the token first: FCM pushes only need this column.
+        // Pushes go straight to Firebase with this token.
         DB::table('users')->where('id',Auth::user()->id)->update(['device_token'=>$device_token]);
-
-        // Optional legacy Twilio Notify binding. Never let it block saving the token.
-        $isAndroid = Auth::user()->os==1;
-        $isDriver = Auth::user()->hasRole('driver');
-        $serviceSid = config('app.twilio_notify'.($isDriver ? 'Driver' : 'Client').($isAndroid ? '' : 'IOS').'ServiceSid');
-        if(config('app.twilio_sid') && config('app.twilio_auth_token') && $serviceSid) {
-            try {
-                $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                $service = $twilio->notify->v1->services($serviceSid);
-                foreach ($service->bindings->read(["identity"=>Auth::user()->id], 20) as $record) {
-                    $service->bindings($record->sid)->delete();
-                }
-                $service->bindings->create(Auth::user()->id, "fcm", $device_token);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Twilio Notify binding failed', ['error' => $e->getMessage()]);
-            }
-        }
         return response()->json([
             'message' => 'Device Token was updated'
         ], 200);
