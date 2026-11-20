@@ -21,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
             'accessToken' => config('app.SQUARE_ACCESS_TOKEN'),
             'environment' => config('app.SQUARE_ENVIRONMENT'),
         ]));
+        // The same for Twilio: App\Support\Sms asks the container for the client.
+        $this->app->bind(\Twilio\Rest\Client::class, fn (): \Twilio\Rest\Client => new \Twilio\Rest\Client(config('app.twilio_sid'), config('app.twilio_auth_token')));
     }
 
     /**

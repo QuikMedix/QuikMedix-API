@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
-use Twilio\Rest\Client;
 use Pusher\PushNotifications\PushNotifications;
 
 class Notifications
@@ -28,20 +27,15 @@ class Notifications
                 DB::table('users')->where('id',$user->id)->update(['device_token'=>NULL]);
             }
             return $result;
-        } else if(!empty($user) && config('app.twilio_sid') && config('app.twilio_auth_token') && config('app.twilio_from_phone')) {
+        } else if(!empty($user) && app(Sms::class)->isConfigured()) {
+            // No app on a device to notify: the notice goes out as a text message.
             if($user->role=='user' && !empty($user->pharmacy_id)) {
                 $pharmacy = DB::table('pharmacys')->where('id',$user->pharmacy_id)->first();
                 if(!empty($pharmacy) && !empty($pharmacy->name)) {
                     $title = "QuikMedix is greeting you! \n".$pharmacy->name;
                 }
             }
-            $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-            try {
-                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => $title." ".$body, "from" => config('app.twilio_from_phone')]);
-            } catch (\Throwable $exception) {
-                // The work around it continues, but the failure is no longer lost.
-                report($exception);
-            }
+            app(Sms::class)->send($user->phone, $title." ".$body);
         }
     }
 

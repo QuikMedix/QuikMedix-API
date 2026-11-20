@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Sms;
 use App\Enums\Role;
 use Laravel\Passport\AccessToken;
 use Laravel\Passport\HasApiTokens;
@@ -14,7 +15,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Zadarma_API\Api as Zadarma_API;
-use Twilio\Rest\Client;
 use Illuminate\Support\Facades\Redis;
 use Exception;
 
@@ -58,14 +58,7 @@ class User extends Authenticatable implements OAuthenticatable
         DB::table('user_codes')->insert(['user_id' => auth()->user()->id,'code' => $code]);
         $message = "Authorization Code ". $code;
         if(empty(auth()->user()->auth_chat_id)){
-            $receiverNumber = auth()->user()->phone;
-           
-            try {
-                $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$receiverNumber)))), ["body" => $message, "from" => config('app.twilio_from_phone')]);
-            } catch (Exception $e) {
-                info("Error: ". $e->getMessage());
-            }
+            app(Sms::class)->send(auth()->user()->phone, $message);
         } else {
             $bot = new \TelegramBot\Api\Client(config('services.telegram.bot_token'));
             $bot->sendMessage(auth()->user()->auth_chat_id, $message);

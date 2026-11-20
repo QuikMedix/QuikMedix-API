@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Integrations;
 
+use App\Support\Sms;
 use App\Models\Pharmacy;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -9,7 +10,6 @@ use App\Models\Order;
 use App\Models\Rx;
 use App\Models\RouteStop;
 use Illuminate\Http\Request;
-use Twilio\Rest\Client;
 use App\Support\Notifications;
 use Illuminate\Support\Facades\Hash;
 use DB;
@@ -124,15 +124,7 @@ class BestRxController extends Controller
                             $email = $response->recipient->email;
                         }
                         DB::table('users')->insert(['isactive' => '1','name' => $response->recipient->first_name,'last_name' => $response->recipient->last_name,'email' => $email,'phone' => $patient_phone,'home_phone'=> $home_phone,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $response->recipient->address->zip_code,'pharmacy_id' => $pharmacy_auth->id]);
-                        try {
-                            $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                            if($twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$patient_phone)))), ["body" => "Hello, ".$response->recipient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')])){
-                                
-                            }
-                        } catch (\Throwable $exception) {
-                            // The work around it continues, but the failure is no longer lost.
-                            report($exception);
-                        }
+                        app(Sms::class)->send($patient_phone, "Hello, ".$response->recipient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix");
                         $patient = DB::table("users")->where("phone",$patient_phone)->where("pharmacy_id",$pharmacy_auth->id)->first();
                     }
                     $id_max = Order::query()->max('id')+1;

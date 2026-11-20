@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Sms;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Models\AdminArea;
@@ -16,7 +17,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
-use Twilio\Rest\Client;
 
 /**
  * Accounts in settings: the lists of administrators, patients, pharmacy staff, drivers and
@@ -365,14 +365,8 @@ class UserSettingsController extends Controller
         if($request->input('activate')>0) {
             DB::table('users')->where('id', $request->input('user_id'))->update(['isactive' => 1]);
             if($welcomeByText) {
-                $user = DB::table('users')->where('id', $request->input('user_id'))->first();
-                try {
-                    $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-                    $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Welcome to QuikMedix, ".$user->name."!\nYour account has been verified. Now you can use the app.\nAll the best,\nThe team at QuikMedix", "from" => config('app.twilio_from_phone')]);
-                } catch (\Throwable $exception) {
-                    // The work around it continues, but the failure is no longer lost.
-                    report($exception);
-                }
+                $user = DB::table('users')->where('id', $request->input('user_id'))->first(['name', 'phone']);
+                app(Sms::class)->send($user->phone, "Welcome to QuikMedix, ".$user->name."!\nYour account has been verified. Now you can use the app.\nAll the best,\nThe team at QuikMedix");
             }
         }
         if($request->input('block')>0) {

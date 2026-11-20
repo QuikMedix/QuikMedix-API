@@ -3,14 +3,16 @@
 namespace App\Actions;
 
 use App\Support\Branding;
+use App\Support\Sms;
 use Illuminate\Support\Facades\DB;
-use Twilio\Rest\Client;
 
 class SendWelcomeSms
 {
+    public function __construct(private Sms $sms) {}
+
     /**
-     * Texts a newly created patient or facility their login. Failures are reported, never thrown,
-     * so an SMS outage cannot undo the account that was just created.
+     * Texts a newly created patient or facility their login. A text that cannot be sent is reported
+     * and does not undo the account that was just created.
      */
     public function handle(object $account, string $password): void
     {
@@ -19,11 +21,6 @@ class SendWelcomeSms
             .'Hello, '.$account->name.". Account was created. \nLogin: ".$account->phone."\nPassword: ".$password."\n"
             .Branding::appAccessMessage()." \nBest regards, QuikMedix";
 
-        try {
-            $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-            $twilio->messages->create('+1'.preg_replace('/[\s()\-]/', '', $account->phone), ['body' => $body, 'from' => config('app.twilio_from_phone')]);
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        $this->sms->send($account->phone, $body);
     }
 }
