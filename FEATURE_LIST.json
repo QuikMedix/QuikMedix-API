@@ -520,7 +520,7 @@
       ],
       "evidence": [
         "2026-11-19 SmsTest: 16 tests pass. TextMessagesTest: 7 tests pass.",
-        "2026-11-19 route answers: 2,508 compared. GET /2fa/reset changed for all 24 roles from 500 (TypeError inside the Twilio client without credentials) to 302. The only other differences were on date-dependent pages (delivery calendar, order statistics), which also differ on the commit before this work.",
+        "2026-11-19 route answers: 2,508 compared. GET /2fa/reset changed for the ten signed-in roles from 500 (TypeError inside the Twilio client without credentials) to 302. The other 16 differences are on date-dependent pages (delivery calendar 9, order statistics 4, report map 3) and are the same on the commit before this work.",
         "2026-11-19 composer test: 632 tests, 3123 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve. git diff --check is clean."
       ],
       "notes": "No message was sent to Twilio by the session. The owner's .env has TWILIO_SID but neither TWILIO_AUTH_TOKEN nor TWILIO_FROM_PHONE. The BestRx and Micro Merchant patient texts use the same sender but no test reaches that line. Left alone: the Twilio Programmable Chat code (TokenController, Api\\ChatController, chats/chat_api view, twiliochat-api.js, two providers) and the Notify binding in Api\\ProfileController; Twilio ended both products."
@@ -542,10 +542,32 @@
       "evidence": [
         "2026-11-19 ChatConversationsTest 6 tests and ChatAccessTest 7 tests pass (80 assertions together).",
         "2026-11-19 node tests/smoke/chat-conversation.js: 33 checks pass; the other eight smoke scripts still pass.",
-        "2026-11-19 route answers: 2,508 compared; the same 26 differ as before this work (GET /2fa/reset from the text-message work, and the date-dependent delivery calendar).",
+        "2026-11-19 route answers: 2,508 compared; the same 26 differ as before this work (GET /2fa/reset from the text-message work, and 16 on the date-dependent delivery calendar, order statistics and report map).",
         "2026-11-19 composer test: 638 tests, 3164 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve. git diff --check is clean."
       ],
       "notes": "Nothing was run against Twilio, in a browser or in a mobile web view; the Conversations JavaScript SDK calls come from Twilio's documentation (SDK 3.0.1, script hash from Twilio's changelog) and are exercised against a stand-in only. Not known: whether the account's Chat service is available as a Conversations service, whether the SDK's supported browsers cover the apps' web views, and whether the apps still open this page. The page had been unable to run: Programmable Chat ended in 2022 and two script libraries it loaded are not in the repository."
+    },
+    {
+      "id": "driver-wallet-and-payroll",
+      "priority": 22,
+      "area": "driver pay",
+      "title": "The driver's wallet no longer shows unrated stops as negative dollars; the payroll page shows real earnings",
+      "user_visible_behavior": "In the driver app the wallet total is the money earned and not yet paid, to the cent; completed stops on a route dispatch has not closed are reported as a count instead of minus one dollar each. The payroll page lists, per week, every driver who completed stops with stops, total, stops waiting for a rate and paid status, and admin staff can mark a driver's week paid or not paid, which removes it from or returns it to the driver's wallet.",
+      "status": "passing",
+      "verification_steps": [
+        "Test of /api/driver/payouts with seven marker rows, run against the old and the new handler.",
+        "Tests of the payroll page: this week's drivers and figures, rows at the week's first and last second in New York time, other weeks, an empty week, marking paid and undoing it with the wallet before and after, validation, and who may open or change it.",
+        "Refresh web-access.json for POST /payroll and review its diff.",
+        "Compare every recorded route answer with the saved ones; composer test; caches; class-reference check."
+      ],
+      "evidence": [
+        "2026-11-19 DriverShiftControllerTest: on the old handler the new tests fail with amount -7 and 15.8; on the new one 8 tests pass with amount 0, pending 7 and 15.75.",
+        "2026-11-19 PayrollTest: 4 tests, 46 assertions pass.",
+        "2026-11-19 web-access.json gained POST /payroll with the same roles as GET /payroll.",
+        "2026-11-19 route answers: 2,508 compared; GET /payroll changed for the three admin roles; the other 26 differences predate this work.",
+        "2026-11-19 composer test: 643 tests, 3214 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve."
+      ],
+      "notes": "The owner's database was not read: that the test driver has seven marker rows is inferred. Week boundaries assume payouts_driver.created is stored in UTC. The iOS change (ServerService.getPayoutsSummary and the Earnings status line, in a folder that is not a git repository) was not compiled. Already-installed apps get the corrected total from the server without an update; only the 'waiting for pay' line needs the new build. Mark paid records that a week was paid; it moves no money."
     }
   ]
 }
