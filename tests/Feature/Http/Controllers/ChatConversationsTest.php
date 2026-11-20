@@ -117,6 +117,22 @@ class ChatConversationsTest extends TestCase
         $this->assertSame(2, substr_count($history, 'class="check2"'));
     }
 
+    public function test_the_chat_test_command_checks_the_service_and_says_what_is_missing(): void
+    {
+        $this->fakeChatConversations();
+        $this->artisan('chat:test')
+            ->expectsOutput('Twilio found the Conversations service "QuikMedix chat".')
+            ->expectsOutputToContain('A chat token can be signed.')
+            ->assertExitCode(0);
+        $this->assertSame(['GET '], $this->chatRequests);
+
+        config(['app.twilio_chatServiceSid' => 'ISwrong']);
+        $this->artisan('chat:test')->expectsOutputToContain('Twilio did not find the Conversations service: ')->assertExitCode(1);
+
+        config(['app.twilio_apiSecret' => null, 'app.twilio_chatServiceSid' => null]);
+        $this->artisan('chat:test')->expectsOutput('Not set in the environment: TWILIO_API_SECRET, TWILIO_CHAT_SERVICE_SID.')->assertExitCode(1);
+    }
+
     public function test_a_chat_with_someone_who_does_not_exist_is_not_found(): void
     {
         $this->fakeChatConversations();

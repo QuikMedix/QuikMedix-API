@@ -524,6 +524,28 @@
         "2026-11-19 composer test: 632 tests, 3123 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve. git diff --check is clean."
       ],
       "notes": "No message was sent to Twilio by the session. The owner's .env has TWILIO_SID but neither TWILIO_AUTH_TOKEN nor TWILIO_FROM_PHONE. The BestRx and Micro Merchant patient texts use the same sender but no test reaches that line. Left alone: the Twilio Programmable Chat code (TokenController, Api\\ChatController, chats/chat_api view, twiliochat-api.js, two providers) and the Notify binding in Api\\ProfileController; Twilio ended both products."
+    },
+    {
+      "id": "twilio-conversations-chat",
+      "priority": 21,
+      "area": "chat",
+      "title": "The mobile apps' chat page runs on Twilio Conversations; the Notify binding is removed",
+      "user_visible_behavior": "The chat page the mobile apps open signs in to Twilio Conversations with the token from /api/chat-token, shows the history, sends and receives messages, shows typing and read marks. Message text is shown as text. While chat is not set up the token call and the page answer 503. Saving a device token answers as before.",
+      "status": "passing",
+      "verification_steps": [
+        "Test that the chat token carries the caller's identity and the Conversations service grant, is signed with the API secret and lasts an hour.",
+        "Tests of the chat page with an in-memory Conversations service: first open creates the conversation and adds both people; an existing conversation is shown, the viewer added and marked read, the chat list row updated; unknown person 404; not set up 503.",
+        "Node smoke test of public/js/chat-conversation.js against a stand-in page, API and SDK: sign-in, finding the conversation, receiving, sending, typing, read marks, token renewal, failed start.",
+        "Test of php artisan chat:test.",
+        "Compare every recorded route answer with the saved ones; composer test; caches; class-reference check."
+      ],
+      "evidence": [
+        "2026-11-19 ChatConversationsTest 6 tests and ChatAccessTest 7 tests pass (80 assertions together).",
+        "2026-11-19 node tests/smoke/chat-conversation.js: 33 checks pass; the other eight smoke scripts still pass.",
+        "2026-11-19 route answers: 2,508 compared; the same 26 differ as before this work (GET /2fa/reset from the text-message work, and the date-dependent delivery calendar).",
+        "2026-11-19 composer test: 638 tests, 3164 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve. git diff --check is clean."
+      ],
+      "notes": "Nothing was run against Twilio, in a browser or in a mobile web view; the Conversations JavaScript SDK calls come from Twilio's documentation (SDK 3.0.1, script hash from Twilio's changelog) and are exercised against a stand-in only. Not known: whether the account's Chat service is available as a Conversations service, whether the SDK's supported browsers cover the apps' web views, and whether the apps still open this page. The page had been unable to run: Programmable Chat ended in 2022 and two script libraries it loaded are not in the repository."
     }
   ]
 }

@@ -55,6 +55,9 @@ trait FakesChatConversations
         $page = fn (string $key, array $items): Response => $json(200, [$key => $items, 'meta' => ['page' => 0, 'page_size' => 50, 'first_page_url' => $url, 'previous_page_url' => null, 'url' => $url, 'next_page_url' => null, 'key' => $key]]);
         $notFound = $json(404, ['code' => 20404, 'message' => 'The requested resource was not found', 'status' => 404]);
 
+        if ($path === '') {
+            return $json(200, ['sid' => 'IStest', 'friendly_name' => 'QuikMedix chat']);
+        }
         if ($method === 'POST' && $path === '/Conversations') {
             $name = $data['UniqueName'];
             $this->conversations[$name] = ['sid' => 'CH'.count($this->conversations), 'participants' => [], 'messages' => []];
