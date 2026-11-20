@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\RendersPages;
-use Illuminate\Support\Facades\Gate;
 
 /**
- * Pages that only show a view: feedback, holiday greetings, ads, payroll and the support chat.
+ * Pages that only show a view: feedback, holiday greetings, ads and the support chat.
  * Formerly actions of LexaAdmin, moved as they were.
  */
 class PageController extends Controller
@@ -26,12 +25,6 @@ class PageController extends Controller
 
     public function ads() {
         $res_view = view('ads.index',['alert'=>'','title'=>'ads','br1'=>'ads','br2'=>'Index']);
-        return $this->page(request(), $res_view);
-    }
-
-    public function payroll() {
-        Gate::authorize('admin');
-        $res_view = view('payroll.index',['alert'=>'','title'=>'payroll','br1'=>'payroll','br2'=>'Index']);
         return $this->page(request(), $res_view);
     }
 

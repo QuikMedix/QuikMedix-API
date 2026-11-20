@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,7 +31,8 @@ Route::get('/delivery-calendar', [DashboardController::class, 'deliveryCalendar'
 
 Route::get('/ads', [PageController::class, 'ads']);
 
-Route::get('/payroll', [PageController::class, 'payroll']);
+Route::get('/payroll', [PayrollController::class, 'index']);
+Route::post('/payroll', [PayrollController::class, 'update']);
 
 Route::get('/support-chat', [PageController::class, 'supportChat']);
 
