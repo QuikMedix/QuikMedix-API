@@ -569,3 +569,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Found, not changed: `config/app.php` holds the Authorize.net login id and transaction key as literals, so they are in git history.
 - Commit status: seven commits plus this record on `refactor/modularize-phase-9`, added to the owner's fork checkout. Not pushed by the session.
 - Next action: owner to run `composer format -- --test` and `composer analyse` and decide what to do with their findings; decide whether Authorize.net is still used; move its credentials to the environment and rotate them.
+
+## Session log — 2026-11-19: text messages through Twilio from the registered number
+
+- Goal: the owner asked how Twilio is used and to integrate the business's verified toll-free number, 888-898-8284.
+- Found: Twilio sends text messages from nine places (sign-in code, the notice sent when someone has no app on a device, welcome texts for new patients and facilities, the driver activation text, two password resets, and the BestRx and Micro Merchant patient texts). Each built its own client and wrote the recipient's number by hand. The owner's `.env` has `TWILIO_SID` only; `TWILIO_AUTH_TOKEN` and `TWILIO_FROM_PHONE` are not there, so no text is sent locally. The other Twilio code is for Programmable Chat and Notify, both ended by Twilio; it was left alone.
+- Done: `App\Support\Sms` sends every text from `TWILIO_FROM_PHONE` (written as 8888988284, (888) 898-8284 or +18888988284); the Twilio client comes from the container; `php artisan sms:test <phone>` checks the setup; `.env.branding.example` carries the number; `tests/Support/FakesSms`; `phpunit.xml` blanks the Twilio credentials.
+- Behaviour changed on purpose: the two password resets by text keep the new password only when Twilio accepted the text; asking for a new sign-in code without Twilio configured no longer answers 500; a number stored with a leading 1 or +1 is not given a second one.
+- Not verified: no message was sent to Twilio. The BestRx and Micro Merchant texts have no test that reaches the sending line. Nothing was checked in a browser.
+- Commit status: two commits, the second with this record, on `feature/twilio-sms`, which starts from `refactor/modularize-phase-9` (pushed, not merged when this was written). Not pushed by the session.
+- Next action: owner to set `TWILIO_AUTH_TOKEN` and `TWILIO_FROM_PHONE=+18888988284` in each environment and run `php artisan sms:test <own phone>`.

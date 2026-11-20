@@ -28,5 +28,10 @@
         <env name="PUSHER_APP_SECRET" value="testing" force="true"/>
         <env name="PUSHER_APP_CLUSTER" value="mt1" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <!-- The suite never holds real Twilio credentials, whatever the local .env contains. -->
+        <env name="TWILIO_SID" value="" force="true"/>
+        <env name="TWILIO_AUTH_TOKEN" value="" force="true"/>
+        <env name="TWILIO_FROM_PHONE" value="" force="true"/>
+        <env name="TWILIO_ACCOUNT_SID" value="" force="true"/>
     </php>
 </phpunit>

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Sms;
 use App\Models\Pharmacy;
 use App\Models\ActionLog;
 use App\Http\Controllers\Concerns\RendersPages;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Twilio\Rest\Client;
 use App\Support\AccessMessages;
 
 /**
@@ -44,51 +44,20 @@ class SessionController extends Controller
         $user = DB::table('users')->where('id',$user_id)->first();
         abort_unless(!empty($user), 403, AccessMessages::NO_PERMISSION);
         abort_unless(Auth::user()->hasAnyRole('superadmin', 'admin', 'dispadmin', 'logist', 'medic'), 403, AccessMessages::NO_PERMISSION);
+        $pharmacy_name = empty($user->pharmacy_id) ? null : Pharmacy::query()->where('id',$user->pharmacy_id)->value('name');
+        // The new password is kept only once the text carrying it was accepted, so a text that cannot be sent locks nobody out.
         $password = bin2hex(openssl_random_pseudo_bytes(4));
-        DB::table('users')->where('id',$user_id)->update(['password'=>Hash::make($password)]);
-        ActionLog::query()->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
-        if(!empty($user->pharmacy_id)) {
-            $pharmacy = Pharmacy::query()->where('id',$user->pharmacy_id)->first();
-            if(!empty($pharmacy) && !empty($pharmacy->name)) {
-                $pharmacy_name = $pharmacy->name;
-            } else {
-                $pharmacy_name = "";
-            }
-        } else {
-            $pharmacy_name = "";
-        }
-        try {
-            $twilio = new Client(config('app.twilio_sid'), config('app.twilio_auth_token'));
-            if(!empty($pharmacy_name)) {
-                try {
-                    $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "From: ".$pharmacy_name." \nHello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                    return json_encode([
-                        'message' => 'OK'
-                    ]);
-                } catch (\Throwable) {
-                    return json_encode([
-                        'message' => 'An error occurred while sending',
-                        'errors' => 'Error'
-                    ]);
-                }
-            } else {
-                try {
-                    $twilio->messages->create("+1".str_replace(" ","",str_replace("-","",str_replace(")","",str_replace("(","",$user->phone)))), ["body" => "Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix", "from" => config('app.twilio_from_phone')]);
-                    return json_encode([
-                        'message' => 'OK'
-                    ]);
-                } catch (\Throwable) {
-                    return json_encode([
-                        'message' => 'An error occurred while sending',
-                        'errors' => 'Error'
-                    ]);
-                }
-            }
-        } catch (\Throwable) {
+        $sent = app(Sms::class)->send($user->phone, (!empty($pharmacy_name) ? "From: ".$pharmacy_name." \n" : "")."Hello, ".$user->name.". Account was created. \nLogin: ".$user->phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix");
+        if (! $sent) {
             return json_encode([
                 'message' => 'An error occurred while sending',
                 'errors' => 'Error'
             ]);
         }
+        DB::table('users')->where('id',$user_id)->update(['password'=>Hash::make($password)]);
+        ActionLog::query()->insert(['type'=>'change password','user_id'=>$user_id,'action_user_id'=>Auth::user()->id]);
+        return json_encode([
+            'message' => 'OK'
+        ]);
     }
 }
