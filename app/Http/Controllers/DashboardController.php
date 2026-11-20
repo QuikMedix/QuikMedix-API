@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DriverPayout;
 use App\Models\Order;
 use App\Models\Area;
 use App\Models\User;
@@ -397,6 +398,25 @@ class DashboardController extends Controller
             $income_month_prev=$income_month_prev->join('pharmacys','pharmacys.id','=','pharmacy_payments.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
         }
         $income_month_prev=$income_month_prev->sum("pharmacy_payments.amount");
+        // What drivers earned in each period and the one before it. Stops still waiting for a rate carry a marker, not money, and are left out.
+        $now = Carbon::now();
+        $payout_periods = [
+            'today' => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'today_prev' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
+            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
+            'week_prev' => [$now->copy()->subWeek()->startOfWeek(), $now->copy()->subWeek()->endOfWeek()],
+            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            'month_prev' => [$now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth()],
+        ];
+        $payouts = [];
+        foreach ($payout_periods as $period => [$from, $to]) {
+            // The table's timestamps are the database's, in UTC.
+            $earned = DriverPayout::query()->settled()->whereBetween('payouts_driver.created', [$from->copy()->utc()->toDateTimeString(), $to->copy()->utc()->toDateTimeString()]);
+            if(!empty(Auth::user()->zone_id)){
+                $earned=$earned->join('users','users.id','=','payouts_driver.driver_id')->where('users.zone_id',Auth::user()->zone_id);
+            }
+            $payouts[$period] = round((float) $earned->sum('payouts_driver.amount'), 2);
+        }
         $orders_7days = DB::table('orders')->select(DB::raw('DATE(orders.finish) as date'),DB::raw('count(orders.id) as count'))->whereBetween('finish', [Carbon::now()->subDays(7),Carbon::now()])->where('statuse_id', '4')->groupBy(DB::raw('DATE(orders.finish)'))->orderBy(DB::raw('DATE(orders.finish)'),'asc');
         if(!empty(Auth::user()->zone_id)){
             $orders_7days=$orders_7days->join('pharmacys','pharmacys.id','=','orders.pharmacy_id')->where('pharmacys.zone_id',Auth::user()->zone_id);
@@ -447,6 +467,7 @@ class DashboardController extends Controller
             'income_today_prev'=>$income_today_prev,
             'income_week_prev'=>$income_week_prev,
             'income_month_prev'=>$income_month_prev,
+            'payouts'=>$payouts,
             'orders_7days'=>$orders_7days,
             'orders_7days_c'=>$orders_7days_c,
             'title'=>'Dashboard','br1'=>'Dashboard'];

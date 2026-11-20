@@ -55,89 +55,85 @@
                         <div class="col-xl-9">
                             <div class="card">
                                 <div class="card-body">
-                                <h4 class="card-title">Overview</h4>
-                                        <div class="row">
-                                            <div class="col-lg-12">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> Pharmacies
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Total: <mark>XXX</mark></h4>
-                                                            <h4>Active: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                                <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Notification</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
+                                    <h4 class="card-title">Overview</h4>
+                                    <div class="row">
+                                        <div class="col-lg-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <i class="ti-support"></i> Pharmacies
                                                 </div>
-                                            </div><!-- end col --> 
-                                            <div class="col-lg-12">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> Customers
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Total: <mark>XXX</mark></h4>
-                                                            <h4>With application: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                            <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Send sms/push</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
+                                                <div class="card-body">
+                                                    <blockquote class="card-blockquote mb-0">
+                                                        <h4>Total: <mark>{{ $counts['pharmacies'] }}</mark></h4>
+                                                        <h4>Active: <mark>{{ $counts['pharmacies_active'] }}</mark></h4>
+                                                        <footer class="mt-4 mb-4">
+                                                            <a href="/reports/pharmacies" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</a>
+                                                        </footer>
+                                                    </blockquote>
                                                 </div>
-                                            </div><!-- end col -->  
-                                            <div class="col-lg-12">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> Drivers
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Total: <mark>XXX</mark></h4>
-                                                            <h4>With application: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                            <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Send sms/push</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end col -->     
-                                            <div class="col-lg-12">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> Billing
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Total: <mark>XXX</mark></h4>
-                                                            <h4>With application: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                            <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Send sms/push</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end col -->      
-                                            <div class="col-lg-12">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> Apps analytics
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Total: <mark>XXX</mark></h4>
-                                                            <h4>With application: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                            <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Send sms/push</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end col -->     
+                                            </div>
                                         </div>
+                                        <div class="col-lg-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <i class="ti-face-smile"></i> Customers
+                                                </div>
+                                                <div class="card-body">
+                                                    <blockquote class="card-blockquote mb-0">
+                                                        <h4>Total: <mark>{{ $counts['customers'] }}</mark></h4>
+                                                        <h4>With application: <mark>{{ $counts['customers_with_app'] }}</mark></h4>
+                                                        <footer class="mt-4 mb-4">
+                                                            <a href="/reports/customers" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</a>
+                                                        </footer>
+                                                    </blockquote>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <i class="ti-truck"></i> Drivers
+                                                </div>
+                                                <div class="card-body">
+                                                    <blockquote class="card-blockquote mb-0">
+                                                        <h4>Total: <mark>{{ $counts['drivers'] }}</mark></h4>
+                                                        <h4>With application: <mark>{{ $counts['drivers_with_app'] }}</mark></h4>
+                                                        <footer class="mt-4 mb-4">
+                                                            <a href="/reports/drivers" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</a>
+                                                        </footer>
+                                                    </blockquote>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <i class="ti-credit-card"></i> Billing
+                                                </div>
+                                                <div class="card-body">
+                                                    <blockquote class="card-blockquote mb-0">
+                                                        <footer class="mt-4 mb-4">
+                                                            <a href="/reports/billing" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</a>
+                                                        </footer>
+                                                    </blockquote>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <i class="ti-mobile"></i> Apps analytics
+                                                </div>
+                                                <div class="card-body">
+                                                    <blockquote class="card-blockquote mb-0">
+                                                        <footer class="mt-4 mb-4">
+                                                            <a href="/reports/apps" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</a>
+                                                        </footer>
+                                                    </blockquote>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

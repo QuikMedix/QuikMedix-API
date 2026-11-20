@@ -189,26 +189,6 @@
                     </div>
 
 
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-								<div class="card-body">                                
-                                    <div class="row">	                                                
-                                        <div class="col-2">  
-                                            <img src="{{ asset('images/branding/quikmedix-logo.png?v=transparent-1') }}" alt="QuikMedix" class="img-fluid" style="max-height: 220px; width: auto;">
-                                        </div>  			
-                                        <div class="col-10">  
-                                        <h4><span class="badge bg-light">19.03.2023</span></h4>
-                                        
-                                        <h3>Subject</h3>                                                                                                 
-                                         <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
-                                         <a class="btn btn-primary waves-effect waves-light" href="#" role="button">Details</a> 
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
 
                 </div>
@@ -354,16 +334,7 @@
 						                <div class="col-12">
 											<h5 class="qm-section-title mb-5">History</h5>
 											
-											<div class="alert alert-success mt-2" role="alert">
-                                             <i class="mdi mdi-cellphone-message"></i>   <strong>05.10.2020</strong> Push from pharmacy <strong>Sinai Rx Pharmacy Inc</strong> Status - Successful
-                                            </div>
-											<div class="alert alert-success mt-2" role="alert">
-                                             <i class="mdi mdi-cellphone-message"></i>   <strong>05.09.2020</strong> Push from pharmacy <strong>MEDICOS PHARMACY</strong> Status - Successful
-                                            </div>
-											
-											<div class="alert alert-info mt-2" role="alert">
-                                             <i class="mdi mdi-email-open-multiple-outline"></i>   <strong>05.07.2020</strong> Notice from <strong>administrator</strong> Status - Successful
-                                            </div>
+											<p class="text-muted">Sent notifications are not recorded yet.</p>
 											
 										
 										</div>

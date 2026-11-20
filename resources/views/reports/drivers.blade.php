@@ -54,58 +54,10 @@
                         <div class="col-xl-9">
                             <div class="card">
                                 <div class="card-body">
-                                    <h4 class="card-title">Drivers</h4> 
-                                    <h4 class="mt-4 mb-4">Total: <mark>XXX</mark>  Active: <mark>XXX</mark></h4> 
-                                        <div class="row">
-                                            <div class="col-lg-4">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> New York
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Customers: <mark>XXX</mark></h4>
-                                                            <h4>With application: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                                <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Send sms/push</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end col -->
-                                            <div class="col-lg-4">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> Queens
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Customers: <mark>XXX</mark></h4>
-                                                            <h4>With application: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                                <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Send sms/push</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end col -->
-                                            <div class="col-lg-4">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                    <i class="ti-location-pin"></i> Manhattan
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <blockquote class="card-blockquote mb-0">
-                                                            <h4>Customers: <mark>XXX</mark></h4>
-                                                            <h4>With application: <mark>XXX</mark></h4>
-                                                            <footer class="mt-4 mb-4">
-                                                                <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">Send sms/push</button> <button type="button" class="btn btn-primary btn-sm waves-effect waves-light my-2">View on the map</button>
-                                                            </footer>
-                                                        </blockquote>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end col -->
-                                        </div>
+                                    <h4 class="card-title">Drivers</h4>
+                                    <h4 class="mt-4 mb-4">Total: <mark>{{ $counts['drivers'] }}</mark>  Active: <mark>{{ $counts['drivers_active'] }}</mark></h4>
+                                    <h4 class="mb-4">On shift now: <mark>{{ $counts['drivers_on_shift'] }}</mark>  With application: <mark>{{ $counts['drivers_with_app'] }}</mark></h4>
+                                    <a href="/payroll" class="btn btn-primary btn-sm waves-effect waves-light my-2">Payroll</a>
                                 </div>
                             </div>
                         </div>

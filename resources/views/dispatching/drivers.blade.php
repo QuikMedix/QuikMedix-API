@@ -79,8 +79,8 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-body pb-1">
-                <h4 class="float-left pb-1">Dispatcher: Shahzod </h4> 
-                <h6 class="float-right mt-2">Total Tasks <span class="badge bg-info text-light">{{$orders_count}}</span> Done <span class="badge bg-success text-light">12</span> Urgently <span class="badge bg-danger text-light">4</span> Missed <span class="badge bg-dark text-light">4</span></h5>
+                <h4 class="float-left pb-1">Dispatcher: {{ trim(Auth::user()->name.' '.Auth::user()->last_name) }}</h4>
+                <h6 class="float-right mt-2">Total Tasks <span class="badge bg-info text-light">{{$orders_count}}</span></h6>
                 
                 </div> 
             </div> 

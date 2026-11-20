@@ -67,13 +67,6 @@ function initAll () {
         });
     },
 
-    $('#sparkline').sparkline([8, 6, 4, 7, 10, 12, 7, 4, 9, 12, 13, 11, 12], {
-        type: 'bar',
-        height: '130',
-        barWidth: '10',
-        barSpacing: '7',
-        barColor: '#c90016'
-    });
   
     
     Dashboard.prototype.init = function() {

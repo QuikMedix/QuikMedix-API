@@ -22,7 +22,7 @@ class ReportController extends Controller
 
 
     public function reports() {
-        $res_view = view('reports.index',['alert'=>'','title'=>'Reports','br1'=>'Reports','br2'=>'Index']);
+        $res_view = view('reports.index',['counts'=>$this->counts(),'alert'=>'','title'=>'Reports','br1'=>'Reports','br2'=>'Index']);
         return $this->page(request(), $res_view);
     }
 
@@ -65,8 +65,31 @@ class ReportController extends Controller
         return $this->page(request(), $res_view);
     }
 
+    /**
+     * The headline numbers of the report pages. An account counts as active when it is activated
+     * and not blocked; "with application" means it has signed in from the Android or iOS app.
+     *
+     * @return array<string, int>
+     */
+    private function counts(): array
+    {
+        $accounts = fn (string $role) => DB::table('users')->where('role', $role);
+        $active = fn ($query) => $query->where('isactive', 1)->where('isblocked', 0);
+
+        return [
+            'pharmacies' => DB::table('pharmacys')->count(),
+            'pharmacies_active' => $active(DB::table('pharmacys'))->count(),
+            'customers' => $accounts('user')->count(),
+            'customers_with_app' => $accounts('user')->whereIn('os', [1, 2])->count(),
+            'drivers' => $accounts('driver')->count(),
+            'drivers_active' => $active($accounts('driver'))->count(),
+            'drivers_on_shift' => $active($accounts('driver'))->where('work_now', '1')->count(),
+            'drivers_with_app' => $accounts('driver')->whereIn('os', [1, 2])->count(),
+        ];
+    }
+
     public function reportsDrivers() {
-        $res_view = view('reports.drivers',['alert'=>'','title'=>'Reports Drivers','br1'=>'Reports','br2'=>'Drivers']);
+        $res_view = view('reports.drivers',['counts'=>$this->counts(),'alert'=>'','title'=>'Reports Drivers','br1'=>'Reports','br2'=>'Drivers']);
         return $this->page(request(), $res_view);
     }
 
