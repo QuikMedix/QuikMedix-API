@@ -610,6 +610,24 @@
         "2026-11-19 composer test: 655 tests, 45 routing checks, 69 tariff checks. route:cache and view:cache succeed. All class names resolve."
       ],
       "notes": "The route page is not rendered by a test (MySQL-only queries) and was not opened in a browser. Half pays 90 and Full 180 dollars, as the code did before; they are now named constants. The amount is not stored on Save. Completing pays every waiting stop the driver has, not only today's."
+    },
+    {
+      "id": "driver-earnings-history",
+      "priority": 25,
+      "area": "driver pay",
+      "title": "The driver app can show what a driver earned, what was paid, and each week",
+      "user_visible_behavior": "GET /api/driver/earnings gives a driver their total earned, paid and unpaid amounts, the stops still waiting for pay, what they earned this week, and the latest twelve weeks in which they completed stops with each week's stops, earnings and paid amount. The iOS app's Earnings screen and home tile use it, so a driver whose pay was all marked paid still sees what they made.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests of the endpoint: totals and weeks for fifty dollars shared over 22 stops across two weeks with one week paid, a stop on the week boundary in New York time, a row older than the history, another driver's rows, the twelve-week limit, a driver with no stops, and a patient refused.",
+        "The endpoint is in the list of routes the active-account guard test checks.",
+        "composer test; route and config cache; class-reference check."
+      ],
+      "evidence": [
+        "2026-11-19 DriverEarningsTest: 3 tests pass; with seven unpaid stops last week (15.95 and one dollar more) and fifteen paid this week it answers earned 66, paid 49.05, unpaid 16.95, this_week 34.05.",
+        "2026-11-19 composer test: 660 tests, 45 routing checks, 69 tariff checks. route:cache and config:cache succeed. All class names resolve."
+      ],
+      "notes": "The iOS changes (three Swift files in a folder that is not a git repository) were not compiled or run. The endpoint was not called on production. Installed app builds are unaffected: they keep using /api/driver/payouts. Weeks older than a year are in the totals but never in the list."
     }
   ]
 }
