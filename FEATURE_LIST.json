@@ -568,6 +568,28 @@
         "2026-11-19 composer test: 643 tests, 3214 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve."
       ],
       "notes": "The owner's database was not read: that the test driver has seven marker rows is inferred. Week boundaries assume payouts_driver.created is stored in UTC. The iOS change (ServerService.getPayoutsSummary and the Earnings status line, in a folder that is not a git repository) was not compiled. Already-installed apps get the corrected total from the server without an update; only the 'waiting for pay' line needs the new build. Mark paid records that a week was paid; it moves no money."
+    },
+    {
+      "id": "no-sample-markup",
+      "priority": 23,
+      "area": "admin pages",
+      "title": "Pages show real figures instead of the theme's sample data; reports are for admin staff",
+      "user_visible_behavior": "Dispatching names the signed-in dispatcher and no longer shows invented Done, Urgently and Missed counts. The dashboard's Payouts card shows what drivers earned today, this week and this month. A driver's profile shows their real rating, completed stops, stops waiting for a rate, unpaid earnings and latest stops. The reports overview and drivers report show real counts. The news page no longer shows a Lorem Ipsum notice or sample history. The ads page says it is coming soon. Report pages refuse accounts that are not admin staff.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests of the driver profile, the two report pages, the dashboard's payouts figures (with rows on period boundaries in New York time), the ads and news pages, and the report pages' access.",
+        "A test that scans every template for the sample strings.",
+        "Refresh web-access.json for the report routes and review its diff.",
+        "Test of php artisan quikmedix:data-age.",
+        "Compare every recorded route answer with the saved ones; composer test; caches (compiles every template); class-reference check; the JavaScript smoke scripts."
+      ],
+      "evidence": [
+        "2026-11-19 RealFiguresTest: 6 tests pass. DataAgeCommandTest: 1 test passes.",
+        "2026-11-19 web-access.json: the seven report GET routes that had no role limit now refuse logist, medic, sale, driver, user and facility, as the report map did.",
+        "2026-11-19 route answers before the access change: /, /ads, /news, /reports and /reports/drivers changed and still answered 200; the other differences predate this work.",
+        "2026-11-19 composer test: 650 tests, 45 routing checks, 69 tariff checks. route:cache and view:cache succeed. All class names resolve. The nine smoke scripts pass."
+      ],
+      "notes": "No database row was deleted. The dispatching board is not rendered by a test (MySQL-only queries). Report figures are not limited to a staff member's zone. On the ads page nothing was built; it only stopped pretending. Left as they are: reports/apps and reports/pharmacies, which already show the coming-soon picture."
     }
   ]
 }
