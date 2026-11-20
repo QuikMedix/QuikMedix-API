@@ -648,6 +648,9 @@ label {
                                     <form method="POST" id="close_route" class="d-none">
                                         @csrf
                                         <input type="hidden" name="close_route" value="1">
+                                        {{-- Filled in from the choice below when Completed is pressed. --}}
+                                        <input type="hidden" name="type_pay">
+                                        <input type="hidden" name="pay_value">
                                     </form>
                                     <form method="POST" id="eta_calculate" class="d-none">
                                         @csrf
@@ -681,11 +684,13 @@ label {
                                             <label class="btn btn-outline-primary" for="success-outlined">Flat rate</label>
                                             <div class="input-group" @if($type_pay!=1){{"style=display:none;"}}@endif >
                                                 <div class="input-group-text">$</div>
-                                                <input type="number" step="0.01" name="pay_value" value="{{ $pay_value }}" required class="form-control">
+                                                {{-- A route without a rate carries the marker -1; that is not an amount to show. --}}
+                                                <input type="number" step="0.01" min="0.01" name="pay_value" value="{{ $pay_value > 0 ? $pay_value : '' }}" placeholder="Amount" class="form-control">
                                             </div>
-                                            <button type="button" class="btn btn-outline-warning" onclick="if(confirm('Are you sure (after clicking, the driver will be credited with his payment)?')){$('#close_route').submit();}">Сompleted</button>
+                                            <button type="button" class="btn btn-outline-warning" id="close-route-button">Completed</button>
                                             <button type="button" class="btn btn-outline-secondary" onclick="if(confirm('Are you sure?')){$('#eta_calculate').submit();}">Refresh ETA</button>
                                         </div>
+                                        <p class="text-muted small mb-2">Half and Full are the shift rates; Flat rate pays the amount you type. Completed credits the driver for the stops they have completed.</p>
                                         <h4>Routes</h4>
                                         <p style="float:left;">Distance: {{$driver->distance}} miles</p>
                                         <p style="float:right;">Duration: {{floor($driver->eta / 60)}} hr {{$driver->eta % 60}} min</p>
@@ -921,6 +926,7 @@ label {
     };
 </script>
 <script src="{{ URL::asset('/js/driver-route-menu.js?v=1') }}"></script>
+<script src="{{ URL::asset('/js/driver-route-pay.js?v=1') }}"></script>
 <script src="{{ URL::asset('/js/driver-route-page.js?v=1') }}"></script>
 <script>
     var map;

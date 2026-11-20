@@ -610,3 +610,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Not verified: the dispatching board's queries are MySQL-only, so its page is not rendered by a test; the template compiles and the sample strings are gone. Nothing was checked in a browser.
 - Commit status: three commits, the third with the data-age command and this record, on `fix/remove-sample-markup`, which starts from `fix/driver-wallet-and-payroll`. Not pushed by the session.
 - Next action: owner to run `php artisan quikmedix:data-age` and say which tables, if any, should lose their old rows.
+
+## Session log — 2026-11-19: Completed on the driver's route page could not pay
+
+- Goal: the owner chose Flat rate on a driver's route page, typed an amount, and after the page reloaded the box showed -1 again; there was no way to pay the driver.
+- Found: (1) The Completed button sent a hidden form holding only `close_route`; the pay choice and the amount sit in the other form on the page, so the server always answered "Unknown pay type." and paid nothing. The original application's code read the same fields, so this predates the refactor. (2) The amount box showed the route's stored value, which is the marker -1 for Half, Full and Flat rate. (3) The share per stop was rounded, so the stops did not add up to the amount (50.00 over seven stops gave 49.98).
+- Done: the closing form carries `type_pay` and `pay_value`, filled by `public/js/driver-route-pay.js` when Completed is pressed; the amount box is empty instead of -1 and no longer required; `closeRoute` refuses a missing choice or a flat amount that is not above zero, and shares the amount to the cent. The button's first letter was a Cyrillic С.
+- Not verified: the page itself is not rendered by a test (its queries are MySQL-only); the template compiles, and its markup is checked as text. Nothing was checked in a browser.
+- Not changed: the amount is entered when the route is completed, as before; it is not stored on Save, so it is empty again after a reload until Completed is pressed.
+- Commit status: one commit with this record on `fix/route-pay-completed`, from `main`. Not pushed by the session.
+- Next action: owner to deploy, open the test driver's route page, choose a rate and press Completed.

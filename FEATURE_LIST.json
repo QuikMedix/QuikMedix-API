@@ -590,6 +590,26 @@
         "2026-11-19 composer test: 650 tests, 45 routing checks, 69 tariff checks. route:cache and view:cache succeed. All class names resolve. The nine smoke scripts pass."
       ],
       "notes": "No database row was deleted. The dispatching board is not rendered by a test (MySQL-only queries). Report figures are not limited to a staff member's zone. On the ads page nothing was built; it only stopped pretending. Left as they are: reports/apps and reports/pharmacies, which already show the coming-soon picture."
+    },
+    {
+      "id": "route-pay-completed",
+      "priority": 24,
+      "area": "driver pay",
+      "title": "Completed on a driver's route page pays the chosen rate",
+      "user_visible_behavior": "On a driver's route page, choosing Half, Full or Flat rate with an amount and pressing Completed credits the driver's completed stops that were waiting for a rate, and the page says how much was paid for how many stops. The amount box is empty until an amount is typed; it no longer shows -1. Without a choice, or with a flat rate and no amount, nothing is paid and the page says why.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests of POST /routes-list/driver/{id} with close_route: a flat amount shared to the cent, Half and Full, the refusals, a second completion, and the driver's wallet afterwards.",
+        "Node check of the Completed button's script: the choice is copied into the closing form; a flat rate without an amount, no choice and a declined confirmation send nothing.",
+        "Check of the template as text: the closing form carries the pay fields and the amount box cannot show the marker.",
+        "composer test; caches (compiles every template); class-reference check; all smoke scripts."
+      ],
+      "evidence": [
+        "2026-11-19 CloseRoutePayTest: 5 tests, 33 assertions pass; 50.00 over seven stops is stored as 7.15, 7.15 and five times 7.14, and the wallet endpoint answers amount 62.5, pending 0.",
+        "2026-11-19 node tests/smoke/driver-route-pay.js: 10 checks pass; the other nine smoke scripts pass.",
+        "2026-11-19 composer test: 655 tests, 45 routing checks, 69 tariff checks. route:cache and view:cache succeed. All class names resolve."
+      ],
+      "notes": "The route page is not rendered by a test (MySQL-only queries) and was not opened in a browser. Half pays 90 and Full 180 dollars, as the code did before; they are now named constants. The amount is not stored on Save. Completing pays every waiting stop the driver has, not only today's."
     }
   ]
 }
