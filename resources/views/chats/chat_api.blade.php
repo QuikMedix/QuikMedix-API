@@ -30,14 +30,14 @@
                     <div id="chat-window" class="col-md-12">
                         <div id="message-list" class="row connected">
                         @foreach($messages as $message)
-                          @if($message->from==Auth::user()->id)
+                          @if($message->author==Auth::user()->id)
                           <div class="row no-margin own-message">
                           @else
                           <div class="row no-margin">
                           @endif
                             <div class="row no-margin message-info-row" style="">
                               <div class="col-md-8 left-align">
-                                @if($message->from==Auth::user()->id)
+                                @if($message->author==Auth::user()->id)
                                 <img class="rounded-circle header-profile-user" src="{{ url('/') }}{{Auth::user()->image==''?'/images/users/Avatar.png':Auth::user()->image}}" style="float: left;margin-left: 15px;">
                                 <p class="message-username">{{Auth::user()->name.' '.Auth::user()->last_name}}</p>
                                 @else
@@ -77,36 +77,32 @@
     </div>
     @csrf
 </div>
-  <!-- HTML Templates -->
-  <script type="text/html" id="message-template">
+  <!-- One message, filled in by the chat script as text, never as HTML. -->
+  <template id="message-template">
     <div class="row no-margin">
       <div class="row no-margin message-info-row" style="">
-        <div class="col-md-8 left-align"><img class="rounded-circle header-profile-user" data-src="userimage" style="float: left;margin-left: 15px;"><p data-content="username" class="message-username"></p></div>
-        <div class="col-md-4 right-align"><span data-content="date" class="message-date"></span></div>
+        <div class="col-md-8 left-align"><img class="rounded-circle header-profile-user" data-part="image" style="float: left;margin-left: 15px;"><p data-part="name" class="message-username"></p></div>
+        <div class="col-md-4 right-align"><span data-part="date" class="message-date"></span></div>
       </div>
       <div class="row no-margin message-content-row">
-        <div style="" class="col-md-12"><p data-content="body" class="message-body"></p><svg xmlns="http://www.w3.org/2000/svg" class="check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" class="svg-inline--fa fa-check fa-w-16" role="img" viewBox="0 0 512 512"><path fill="currentColor" d="M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"/></svg><svg xmlns="http://www.w3.org/2000/svg" class="check2" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" class="svg-inline--fa fa-check fa-w-16" role="img" viewBox="0 0 512 512"><path fill="currentColor" d="M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"/></svg></div>
+        <div style="" class="col-md-12"><p data-part="body" class="message-body"></p><svg xmlns="http://www.w3.org/2000/svg" class="check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" class="svg-inline--fa fa-check fa-w-16" role="img" viewBox="0 0 512 512"><path fill="currentColor" d="M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"/></svg><svg xmlns="http://www.w3.org/2000/svg" class="check2" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" class="svg-inline--fa fa-check fa-w-16" role="img" viewBox="0 0 512 512"><path fill="currentColor" d="M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"/></svg></div>
       </div>
     </div>
-  </script>
-  <script type="text/html" id="member-notification-template">
-    <p class="member-status" data-content="status"></p>
-  </script>
+  </template>
   <script>
-      var username = '{{Auth::user()->id}}';
-      var username2 = '{{$user->id}}';
-      var chatViewer = { viewer: username, signature: '{{ App\Support\ChatViewer::sign(Auth::user()->id) }}' };
-      var GENERAL_CHANNEL_UNIQUE_NAME = '{{$chat_name}}';
-      var GENERAL_CHANNEL_NAME = '{{$chat_name}}';
+      window.chatPage = {
+          me: @json((string) Auth::user()->id),
+          other: @json((string) $user->id),
+          conversation: @json($chat_name),
+          viewer: { viewer: @json((string) Auth::user()->id), signature: @json(App\Support\ChatViewer::sign(Auth::user()->id)) },
+          avatar: @json(url('/images/users/Avatar.png')),
+          baseUrl: @json(url('/')),
+      };
   </script>
-  <script src="{{ URL::asset('/libs/jquery/jquery.min.js')}}"></script>
-  <script src="{{ URL::asset('/libs/bootstrap/bootstrap.min.js')}}"></script>
-  <script src="{{ asset('libs/jquery-throttle.min.js') }}"></script>
-  <script src="{{ asset('libs/jquery.loadTemplate-1.4.4.min.js') }}"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.1/moment.min.js"></script>
-  <script src="https://media.twiliocdn.com/sdk/js/common/v0.1/twilio-common.min.js"></script>
-  <script src="https://media.twiliocdn.com/sdk/js/chat/v4.0/twilio-chat.min.js"></script>
-  <script src="{{ asset('js/twiliochat-api.js').'?v=23' }}"></script>
-  <script src="{{ asset('js/dateformatter.js') }}"></script>
+  {{-- Twilio Conversations (classic) JavaScript SDK, pinned to one release and checked against its published hash. --}}
+  <script src="https://sdk.twilio.com/js/conversations/releases/3.0.1/twilio-conversations.min.js"
+          integrity="sha256-Zi521hD/ex09TXIw3GMW996Z/Ee8nxUY7rVNNYY/Z58="
+          crossorigin="anonymous"></script>
+  <script src="{{ asset('js/chat-conversation.js').'?v=1' }}"></script>
 </body>
 </html>

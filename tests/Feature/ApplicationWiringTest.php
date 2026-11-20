@@ -100,7 +100,7 @@ class ApplicationWiringTest extends TestCase
     {
         $loaded = array_keys($this->app->getLoadedProviders());
 
-        foreach ([AppServiceProvider::class, \App\Providers\AuthServiceProvider::class, \App\Providers\TwilioAccessTokenProvider::class, \App\Providers\TwilioChatGrantProvider::class] as $provider) {
+        foreach ([AppServiceProvider::class, \App\Providers\AuthServiceProvider::class] as $provider) {
             $this->assertContains($provider, $loaded);
         }
         // The verification email listener is registered once, not once per events provider.
