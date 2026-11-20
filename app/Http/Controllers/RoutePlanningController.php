@@ -408,7 +408,7 @@ class RoutePlanningController extends Controller
      */
     private function closeRoute(Request $request, $driver_id)
     {
-        $count = DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->count();
+        $count = DriverPayout::query()->where('driver_id',$driver_id)->awaitingRate()->count();
         $type_pay = $request->input('type_pay');
         if($type_pay==1) {
             $pay_value=floatval($request->input('pay_value'));
@@ -420,7 +420,7 @@ class RoutePlanningController extends Controller
             return redirect()->back()->with('error', 'Unknown pay type.');
         }
         if($count>0) {
-            DriverPayout::query()->where('driver_id',$driver_id)->where('amount',-1)->update(["amount"=>round($pay_value/$count,2)]);
+            DriverPayout::query()->where('driver_id',$driver_id)->awaitingRate()->update(["amount"=>round($pay_value/$count,2)]);
             return redirect()->back()->with('success', "Successfully, $count orders were paid to the driver at the selected rate.");
         } else {
             return redirect()->back()->with('error', 'Oh no, no completed orders have been found for the selected driver for the current shift.');

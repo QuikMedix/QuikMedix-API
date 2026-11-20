@@ -66,17 +66,21 @@ class DriverShiftController extends Controller
     }
 
     /**
-     * The driver's earned amount that has not been withdrawn yet.
+     * What the driver has earned and not yet been paid, and how many completed stops are still
+     * waiting for dispatch to close the route and set what it pays. Those stops are counted, not
+     * added in: they carry a marker amount, not money.
      */
     public function payouts(Request $request): JsonResponse
     {
         if (! $request->user()->hasAnyRole('admin', 'driver')) {
             return $this->forbidden();
         }
+        $unpaid = DriverPayout::query()->where('driver_id', $request->user()->id)->where('withdraw', 0);
 
-        $amount = round(DriverPayout::query()->where('driver_id', $request->user()->id)->where('withdraw', 0)->sum('amount'), 1);
-
-        return response()->json(['amount' => $amount]);
+        return response()->json([
+            'amount' => round((float) (clone $unpaid)->settled()->sum('amount'), 2),
+            'pending' => (clone $unpaid)->awaitingRate()->count(),
+        ]);
     }
 
     private function setWorkingNow(Request $request, int $workingNow): JsonResponse
