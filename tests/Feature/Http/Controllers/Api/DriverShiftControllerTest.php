@@ -124,7 +124,20 @@ class DriverShiftControllerTest extends TestCase
             ['driver_id' => $other->id, 'withdraw' => 0, 'amount' => 40],
         ]);
 
-        $this->actingAs($driver, 'api')->getJson('/api/driver/payouts')->assertOk()->assertExactJson(['amount' => 15.8]);
+        // To the cent: 10.25 + 5.50, not rounded to 15.80.
+        $this->actingAs($driver, 'api')->getJson('/api/driver/payouts')->assertOk()->assertExactJson(['amount' => 15.75, 'pending' => 0]);
+    }
+
+    public function test_stops_waiting_for_a_rate_are_counted_and_never_shown_as_negative_money(): void
+    {
+        $driver = $this->account('driver');
+        // Seven completed stops on a route dispatch has not closed yet: each is recorded with the marker -1.
+        DB::table('payouts_driver')->insert(array_fill(0, 7, ['driver_id' => $driver->id, 'withdraw' => 0, 'amount' => -1]));
+
+        $this->actingAs($driver, 'api')->getJson('/api/driver/payouts')->assertOk()->assertExactJson(['amount' => 0, 'pending' => 7]);
+
+        DB::table('payouts_driver')->insert(['driver_id' => $driver->id, 'withdraw' => 0, 'amount' => 12.35]);
+        $this->actingAs($driver, 'api')->getJson('/api/driver/payouts')->assertOk()->assertExactJson(['amount' => 12.35, 'pending' => 7]);
     }
 
     public function test_payouts_are_limited_to_drivers_and_admins(): void

@@ -866,6 +866,11 @@
         "no permission": "logist sale driver user facility",
         "blocked account": "blocked"
     },
+    "POST /payroll": {
+        "login": "guest",
+        "refused": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
     "POST /pharmacy/1/users": {
         "login": "guest",
         "no permission": "logist sale driver user facility",

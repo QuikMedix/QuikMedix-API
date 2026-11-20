@@ -2,33 +2,7 @@
 
 @section('title') Payroll @endsection
 
-@section('headerCss')
-<style>
-.rep-menu a {
-    font-size: 14px;
-    line-height: 30px;
-    color: black;
-    display: block;
-    margin: 10px 0;
-    padding: 5px 0 5px 20px;
-
-}
-.rep-menu a:hover {
-    background: #c90016;
-    color: #ffffff !important;
-}
-.rep-menu i {
-    font-size: 16px;
-    margin: 0px 7px;
-}
-
-</style>
-        
-
-@endsection
-
 @section('content')
- <!-- start page title -->
                     <div class="row">
                         <div class="col-xl-6 col-sm-6">
                                 <div class="card mini-stat bg-primary">
@@ -38,8 +12,8 @@
                                         </div>
                                         <div class="text-light">
                                             <h6 class="text-uppercase mb-3 font-size-16">Working drivers</h6>
-                                            <h4 class="mb-2">17</h4>
-                                            <span>This week</span>
+                                            <h4 class="mb-2">{{ $drivers->count() }}</h4>
+                                            <span>In this week</span>
                                         </div>
                                     </div>
                                 </div>
@@ -51,81 +25,91 @@
                                             <i class="mdi mdi-map-marker-multiple float-right"></i>
                                         </div>
                                         <div class="text-light">
-                                            <h6 class="text-uppercase mb-3 font-size-16">Total points in routes</h6>
-                                            <h4 class="mb-2">186</h4>
-                                            <span>This week</span>
+                                            <h6 class="text-uppercase mb-3 font-size-16">Completed stops</h6>
+                                            <h4 class="mb-2">{{ $drivers->sum('stops') }}</h4>
+                                            <span>In this week</span>
                                         </div>
                                     </div>
                                 </div>
                         </div>
                     </div>
-                    <!-- end page title -->                    
                     <div class="row">
                         <div class="col-xl-12">
                             <div class="card">
                                 <div class="card-body">
-                                    <h4 class="card-title">10.02.2023 - 10.08.2023</h4>
-                                        <div class="row">
-                                            <div class="table-responsive">
-                                                <table class="table table-striped mb-0">
-            
-                                                    <thead>
-                                                        <tr>
-                                                            <th class="text-center">#</th>
-                                                            <th>Driver</th>
-                                                            <th>Points</th>
-                                                            <th>Total</th>
-                                                            <th>Correction</th>
-                                                            <th>Status</th>
-                                                            <th class="text-right">Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <th scope="row text-center">1</th>
-                                                            <td>Rustem Mambetov</td>
-                                                            <td>395</td>
-                                                            <td>$1311.00</td>
-                                                            <td>$0.00 </td>
-                                                            <td><i class="mdi mdi-checkbox-blank-circle text-success"></i> Paid</td>
-                                                            <td class="text-right"><a href="#" target="_blank" rel="noopener noreferrer"><button class="btn btn-primary btn-sm waves-effect">Report <i class="mdi mdi-file-pdf"></i></button></a> </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <th scope="row text-center">2</th>
-                                                            <td>Rakhim Makhazhiev</td>
-                                                            <td>233</td>
-                                                            <td>$1311.00</td>
-                                                            <td>$0.00 <i style="color:#000;" class="mdi mdi-circle-edit-outline"></i></td>
-                                                            <td><i class="mdi mdi-checkbox-blank-circle text-warning"></i> Not paid</td>
-                                                            <td class="text-right">
-                                                                <a href="#"><button class="btn btn-warning btn-sm waves-effect">Change tariff <i class="mdi mdi-briefcase-edit"></i></button></a>
-                                                                <a href="#"><button class="btn btn-warning btn-sm waves-effect">Paid <i class="mdi mdi-briefcase-edit"></i></button></a>
-                                                                <a href="#"><button class="btn btn-success btn-sm waves-effect">Pay Driver <i class="mdi mdi-credit-card-plus-outline"></i></button></a>
-                                                                <a href="#" target="_blank" rel="noopener noreferrer"><button class="btn btn-primary btn-sm waves-effect">Report  <i class="mdi mdi-file-pdf"></i></button></a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <th scope="row text-center">3</th>
-                                                            <td>Jamshid Egamberdiyev</td>
-                                                            <td>176</td>
-                                                            <td>$1311.00</td>
-                                                            <td>$0.00 </td>
-                                                            <td><i class="mdi mdi-checkbox-blank-circle text-success"></i> Paid</td>
-                                                            <td class="text-right"><a href="#" target="_blank" rel="noopener noreferrer"><button class="btn btn-primary btn-sm waves-effect">Report <i class="mdi mdi-file-pdf"></i></button></a></td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
+                                    <x-flash-messages />
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <a href="/payroll?week={{ $week->subWeek()->toDateString() }}" class="btn btn-primary btn-sm waves-effect"><i class="mdi mdi-chevron-left"></i> Previous week</a>
+                                        <h4 class="card-title mb-0">{{ $week->format('m.d.Y') }} - {{ $week->addDays(6)->format('m.d.Y') }}</h4>
+                                        <a href="/payroll?week={{ $week->addWeek()->toDateString() }}" class="btn btn-primary btn-sm waves-effect">Next week <i class="mdi mdi-chevron-right"></i></a>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center">#</th>
+                                                    <th>Driver</th>
+                                                    <th>Stops</th>
+                                                    <th>Total</th>
+                                                    <th>Waiting for a rate</th>
+                                                    <th>Status</th>
+                                                    <th class="text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse($drivers as $driver)
+                                                <tr>
+                                                    <th scope="row" class="text-center">{{ $loop->iteration }}</th>
+                                                    <td>{{ trim($driver->name.' '.$driver->last_name) ?: 'Driver #'.$driver->driver_id }}</td>
+                                                    <td>{{ $driver->stops }}</td>
+                                                    <td>${{ number_format((float) $driver->total, 2) }}</td>
+                                                    <td>
+                                                        @if($driver->awaiting_rate > 0)
+                                                            {{ $driver->awaiting_rate }} {{ $driver->awaiting_rate == 1 ? 'stop' : 'stops' }}
+                                                        @else
+                                                            &mdash;
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($driver->unpaid_stops > 0)
+                                                            <i class="mdi mdi-checkbox-blank-circle text-warning"></i> Not paid
+                                                        @elseif($driver->awaiting_rate == $driver->stops)
+                                                            <i class="mdi mdi-checkbox-blank-circle text-secondary"></i> No rate yet
+                                                        @else
+                                                            <i class="mdi mdi-checkbox-blank-circle text-success"></i> Paid
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-right">
+                                                        @if($driver->awaiting_rate > 0)
+                                                            {{-- Closing the route on the driver's page sets what it pays and shares it over these stops. --}}
+                                                            <a href="/routes-list/driver/{{ $driver->driver_id }}" class="btn btn-warning btn-sm waves-effect">Set the rate <i class="mdi mdi-briefcase-edit"></i></a>
+                                                        @endif
+                                                        @if($driver->unpaid_stops > 0 || $driver->awaiting_rate < $driver->stops)
+                                                        <form method="POST" action="/payroll" class="d-inline">
+                                                            @csrf
+                                                            <input type="hidden" name="driver_id" value="{{ $driver->driver_id }}">
+                                                            <input type="hidden" name="week" value="{{ $week->toDateString() }}">
+                                                            @if($driver->unpaid_stops > 0)
+                                                                <input type="hidden" name="paid" value="1">
+                                                                <button type="submit" class="btn btn-success btn-sm waves-effect">Mark paid <i class="mdi mdi-check"></i></button>
+                                                            @else
+                                                                <input type="hidden" name="paid" value="0">
+                                                                <button type="submit" class="btn btn-outline-secondary btn-sm waves-effect">Mark not paid</button>
+                                                            @endif
+                                                        </form>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                @empty
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted">No driver completed a stop in this week.</td>
+                                                </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <!-- end col -->
                     </div>
-                    <!-- end row -->
-
-@endsection
-
-@section('footerScript')
-
 @endsection
