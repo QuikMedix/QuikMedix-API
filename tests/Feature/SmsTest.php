@@ -77,6 +77,31 @@ class SmsTest extends TestCase
         $this->assertSame([], $this->texts);
     }
 
+    public function test_the_sms_test_command_texts_the_chosen_number_and_says_what_is_missing(): void
+    {
+        $this->fakeSms();
+        $this->artisan('sms:test', ['phone' => '555-010-0002'])
+            ->expectsOutput('From +18888988284 to +15550100002')
+            ->expectsOutput('Twilio accepted the message: SM123')
+            ->assertExitCode(0);
+        $this->assertSame([['to' => '+15550100002', 'from' => '+18888988284', 'body' => 'QuikMedix test message.']], $this->texts);
+
+        $this->fakeSms(['code' => 30032, 'message' => 'Toll-Free Number Has Not Been Verified']);
+        $this->artisan('sms:test', ['phone' => '555-010-0002'])
+            ->expectsOutputToContain('Twilio refused the message: [HTTP 400] Unable to create record: Toll-Free Number Has Not Been Verified')
+            ->assertExitCode(1);
+
+        $this->fakeSms();
+        $this->artisan('sms:test', ['phone' => '010-0002'])->expectsOutputToContain('not a phone number')->assertExitCode(1);
+        $this->assertSame([], $this->texts);
+
+        config(['app.twilio_auth_token' => null, 'app.twilio_from_phone' => 'not a number']);
+        $this->artisan('sms:test', ['phone' => '555-010-0002'])
+            ->expectsOutput('Not set or not usable in the environment: TWILIO_AUTH_TOKEN, TWILIO_FROM_PHONE.')
+            ->assertExitCode(1);
+        $this->assertSame([], $this->texts);
+    }
+
     public function test_the_application_builds_its_twilio_client_from_the_configured_account(): void
     {
         config(['app.twilio_sid' => 'ACconfigured', 'app.twilio_auth_token' => 'configured-token']);

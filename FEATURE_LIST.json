@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-15",
+  "last_updated": "2026-11-19",
   "features": [
     {
       "id": "orders-qr-status",
@@ -503,6 +503,27 @@
         "2026-11-15 composer test: 609 tests, 3051 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve. git diff --check is clean."
       ],
       "notes": "Not run: Pint and Larastan (not installed in the session's workspace), any request to Square, MySQL, a browser. The driver route endpoints have no tests because their SQL is MySQL-only. Untouched: the Authorize.net handlers in PaymentController, which have no tests; whether Authorize.net is still used is the owner's call. config/app.php contains the Authorize.net credentials as literals. 682 DB::table calls remain."
+    },
+    {
+      "id": "twilio-sms-registered-number",
+      "priority": 20,
+      "area": "notifications",
+      "title": "Every text message goes through one sender, from the business's registered Twilio number",
+      "user_visible_behavior": "Text messages (sign-in codes, notices to people without the app, welcome and activation texts, new passwords) are sent from TWILIO_FROM_PHONE, the registered toll-free number 888-898-8284. A password reset by text keeps the old password when the text could not be sent. Asking for a new sign-in code no longer fails with a server error when Twilio is not configured.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests of the sender with a Twilio client that has no network: the request goes to the account's Messages endpoint with From +18888988284 and the recipient in +1 form; a refusal is reported and answered with false; nothing is requested without credentials, a sending number or a usable recipient.",
+        "Tests of each caller: sign-in code, notice without a device, welcome text, driver activation, staff password reset, public password reset, and both resets when the text is refused or Twilio is not configured.",
+        "Test of php artisan sms:test for an accepted text, a refused text, an unusable number and missing settings.",
+        "Compare every recorded route answer with the saved ones.",
+        "composer test; cache routes, config and views; class-reference check."
+      ],
+      "evidence": [
+        "2026-11-19 SmsTest: 16 tests pass. TextMessagesTest: 7 tests pass.",
+        "2026-11-19 route answers: 2,508 compared. GET /2fa/reset changed for all 24 roles from 500 (TypeError inside the Twilio client without credentials) to 302. The only other differences were on date-dependent pages (delivery calendar, order statistics), which also differ on the commit before this work.",
+        "2026-11-19 composer test: 632 tests, 3123 assertions, 45 routing checks, 69 tariff checks. route:cache, config:cache and view:cache succeed. All class names resolve. git diff --check is clean."
+      ],
+      "notes": "No message was sent to Twilio by the session. The owner's .env has TWILIO_SID but neither TWILIO_AUTH_TOKEN nor TWILIO_FROM_PHONE. The BestRx and Micro Merchant patient texts use the same sender but no test reaches that line. Left alone: the Twilio Programmable Chat code (TokenController, Api\\ChatController, chats/chat_api view, twiliochat-api.js, two providers) and the Notify binding in Api\\ProfileController; Twilio ended both products."
     }
   ]
 }

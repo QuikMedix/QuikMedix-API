@@ -38,7 +38,7 @@ final class Sms
             return false;
         }
         try {
-            app(Client::class)->messages->create($to, ['from' => $this->from(), 'body' => $body]);
+            $this->deliver($to, $body);
 
             return true;
         } catch (\Throwable $exception) {
@@ -46,6 +46,17 @@ final class Sms
 
             return false;
         }
+    }
+
+    /**
+     * Hands one message to Twilio and lets a refusal be thrown. For callers that show the reason.
+     *
+     * @param  string  $to  in +<country><number> form
+     * @return string Twilio's id for the message
+     */
+    public function deliver(string $to, string $body): string
+    {
+        return (string) app(Client::class)->messages->create($to, ['from' => $this->from(), 'body' => $body])->sid;
     }
 
     /**

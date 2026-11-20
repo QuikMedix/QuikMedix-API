@@ -48,6 +48,35 @@ Artisan::command('push:test {user_id? : Send a test notification to this user\'s
     return $result === \App\Support\FirebaseMessaging::RESULT_SENT ? 0 : 1;
 })->describe('Check Firebase push setup and optionally send a test notification');
 
+Artisan::command('sms:test {phone : Send a test text message to this number}', function (\App\Support\Sms $sms) {
+    $missing = array_keys(array_filter([
+        'TWILIO_SID' => ! config('app.twilio_sid'),
+        'TWILIO_AUTH_TOKEN' => ! config('app.twilio_auth_token'),
+        'TWILIO_FROM_PHONE' => $sms->from() === null,
+    ]));
+    if ($missing !== []) {
+        $this->error('Not set or not usable in the environment: '.implode(', ', $missing).'.');
+
+        return 1;
+    }
+    $to = \App\Support\Sms::e164($this->argument('phone'));
+    if ($to === null) {
+        $this->error('That is not a phone number the app can text. Use ten digits, or + and the country code.');
+
+        return 1;
+    }
+    $this->line("From {$sms->from()} to {$to}");
+    try {
+        $this->info('Twilio accepted the message: '.$sms->deliver($to, 'QuikMedix test message.'));
+
+        return 0;
+    } catch (\Throwable $exception) {
+        $this->error('Twilio refused the message: '.$exception->getMessage());
+
+        return 1;
+    }
+})->describe('Check the Twilio setup by texting a number you choose');
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->describe('Display an inspiring quote');
