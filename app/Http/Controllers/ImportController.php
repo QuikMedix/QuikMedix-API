@@ -155,8 +155,17 @@ class ImportController extends Controller
                     } else {
                         $birth_date = $data0[$key_birth_date];
                     }
-                    $password = bin2hex(openssl_random_pseudo_bytes(4));
-                    DB::table('users')->insert(['isactive' => '1','name' => $data0[$key_name],'last_name' => $data0[$key_last_name],'email' => $email,'phone' => $phone,'home_phone' => $home_phone,'address' => $data0[$key_address],'password' => Hash::make($password),'apartment' => $apartment,'zip' => $data0[$key_zip],'birth_date' => date("Y-m-d",strtotime($birth_date ?? '')),'pharmacy_id' => $pharmacy_id]);
+                    // A number that registered in the app keeps its account; it joins this pharmacy.
+                    $claimed = app(\App\Actions\ClaimRegisteredPatient::class)->handle($phone, $pharmacy_id, [
+                        'name' => $data0[$key_name], 'last_name' => $data0[$key_last_name],
+                        'email' => empty($key_email) || empty($data0[$key_email]) ? null : $email, 'home_phone' => $home_phone,
+                        'address' => $data0[$key_address], 'apartment' => $apartment, 'zip' => $data0[$key_zip],
+                        'birth_date' => $birth_date === null ? null : date('Y-m-d', strtotime($birth_date)),
+                    ]);
+                    if ($claimed === null) {
+                        $password = bin2hex(openssl_random_pseudo_bytes(4));
+                        DB::table('users')->insert(['isactive' => '1','name' => $data0[$key_name],'last_name' => $data0[$key_last_name],'email' => $email,'phone' => $phone,'home_phone' => $home_phone,'address' => $data0[$key_address],'password' => Hash::make($password),'apartment' => $apartment,'zip' => $data0[$key_zip],'birth_date' => date("Y-m-d",strtotime($birth_date ?? '')),'pharmacy_id' => $pharmacy_id]);
+                    }
                 }
             }
             return redirect("patients/$pharmacy_id");
@@ -244,7 +253,14 @@ class ImportController extends Controller
                 $data = app(\App\Actions\GeocodeAddress::class)->response($address);
                 $address = $data->results[0]->formatted_address;
                 $location = $data->results[0]->geometry->location->lat.','.$data->results[0]->geometry->location->lng;
-                DB::table('users')->insert(['isactive'=>1,'name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $pharmacy_id]);
+                // A number that registered in the app keeps its account; it joins this pharmacy.
+                $claimed = app(\App\Actions\ClaimRegisteredPatient::class)->handle($request->input('phone'), $pharmacy_id, [
+                    'name' => $request->input('name'), 'last_name' => $request->input('last_name'), 'email' => $request->input('email'),
+                    'address' => $address, 'location' => $location, 'zip' => $request->input('zip'), 'apartment' => $request->input('apartment'),
+                ]);
+                if ($claimed === null) {
+                    DB::table('users')->insert(['isactive'=>1,'name' => $request->input('name'),'last_name' => $request->input('last_name'),'email' => $email,'phone' => $request->input('phone'),'image' => $src,'address' => $address,'location' => $location,'password' => Hash::make($request->input('password')),'zip' => $request->input('zip'),'apartment' => $request->input('apartment'),'pharmacy_id' => $pharmacy_id]);
+                }
             } else {
                 $address = $request->input('address');
                 $data = app(\App\Actions\GeocodeAddress::class)->response($address);

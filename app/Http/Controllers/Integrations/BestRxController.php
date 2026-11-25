@@ -123,8 +123,16 @@ class BestRxController extends Controller
                         } else {
                             $email = $response->recipient->email;
                         }
-                        DB::table('users')->insert(['isactive' => '1','name' => $response->recipient->first_name,'last_name' => $response->recipient->last_name,'email' => $email,'phone' => $patient_phone,'home_phone'=> $home_phone,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $response->recipient->address->zip_code,'pharmacy_id' => $pharmacy_auth->id]);
-                        app(Sms::class)->send($patient_phone, "Hello, ".$response->recipient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix");
+                        // A number that registered in the app keeps its account; it joins this pharmacy.
+                        $claimed = app(\App\Actions\ClaimRegisteredPatient::class)->handle($patient_phone, $pharmacy_auth->id, [
+                            'name' => $response->recipient->first_name, 'last_name' => $response->recipient->last_name,
+                            'email' => empty($response->recipient->email) ? null : $email, 'home_phone' => $home_phone,
+                            'address' => $address, 'location' => $location, 'zip' => $response->recipient->address->zip_code,
+                        ]);
+                        if ($claimed === null) {
+                            DB::table('users')->insert(['isactive' => '1','name' => $response->recipient->first_name,'last_name' => $response->recipient->last_name,'email' => $email,'phone' => $patient_phone,'home_phone'=> $home_phone,'address' => $address,'location' => $location,'password' => Hash::make($password),'zip' => $response->recipient->address->zip_code,'pharmacy_id' => $pharmacy_auth->id]);
+                            app(Sms::class)->send($patient_phone, "Hello, ".$response->recipient->first_name.". Account was created. \nLogin: ".$patient_phone."\nPassword: ".$password."\n".\App\Support\Branding::appAccessMessage()." \nBest regards, QuikMedix");
+                        }
                         $patient = DB::table("users")->where("phone",$patient_phone)->where("pharmacy_id",$pharmacy_auth->id)->first();
                     }
                     $id_max = Order::query()->max('id')+1;
