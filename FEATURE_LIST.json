@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-19",
+  "last_updated": "2026-11-24",
   "features": [
     {
       "id": "orders-qr-status",
@@ -590,6 +590,26 @@
         "2026-11-19 composer test: 650 tests, 45 routing checks, 69 tariff checks. route:cache and view:cache succeed. All class names resolve. The nine smoke scripts pass."
       ],
       "notes": "No database row was deleted. The dispatching board is not rendered by a test (MySQL-only queries). Report figures are not limited to a staff member's zone. On the ads page nothing was built; it only stopped pretending. Left as they are: reports/apps and reports/pharmacies, which already show the coming-soon picture."
+    },
+    {
+      "id": "pharmacy-claims-registered-patient",
+      "priority": 24,
+      "area": "patients",
+      "title": "A pharmacy adding a phone number that registered in the app gets that account, not a duplicate",
+      "user_visible_behavior": "A patient who registered in the app has no pharmacy and sees no orders. When a pharmacy adds that phone number (add-patient page, BestRx or MicroMerchant order, patient list import, single-order import), the patient's existing account joins the pharmacy with the pharmacy's name and address; blanks keep the patient's own values. Its password is replaced and texted to the number, it is signed out on every device and its push token is cleared, because registration does not prove who owns a number. The add-patient page says the account was attached. Accounts another pharmacy has or had (including removed patients), accounts with orders, and non-patient accounts are not attached: a new patient is created as before.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests: register through /api/register, add the phone on the add-patient page, through the BestRx order webhook and through the patient list import; expect one account, attached, with the pharmacy's details.",
+        "Test: the token issued before the claim and the old password are refused; the texted password signs in and /api/patient/home names the pharmacy.",
+        "Tests: accounts of another pharmacy, removed patients, accounts with orders and drivers are left alone; a refused text still replaces the password; a number stored as digits matches.",
+        "Switch the claim off and remove the password replacement to see the tests fail.",
+        "composer test (full suite)."
+      ],
+      "evidence": [
+        "2026-11-24 ClaimRegisteredPatientTest: 10 tests, 72 assertions pass. With the lookup switched off 6 of them fail; without the password replacement 3 fail.",
+        "2026-11-24 full PHPUnit suite: 660 tests, 3343 assertions pass (PHP 8.4.27). PatientControllerTest's hand-built schema gained an orders table, which the add-patient page now reads."
+      ],
+      "notes": "Not exercised by a test: the MicroMerchant webhook and the single-order import (same call as the tested paths). The admin Settings > Users > Add page still creates a new row. Not run: Pint and Larastan (not installed where the session works), a browser, a real text. The same person at two pharmacies is still two accounts with one phone, and sign-in still finds the older one; that predates this work. The patient iOS app was changed in its own folder to return to sign-in when its token is refused; it was not compiled."
     }
   ]
 }

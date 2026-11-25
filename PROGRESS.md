@@ -610,3 +610,15 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Not verified: the dispatching board's queries are MySQL-only, so its page is not rendered by a test; the template compiles and the sample strings are gone. Nothing was checked in a browser.
 - Commit status: three commits, the third with the data-age command and this record, on `fix/remove-sample-markup`, which starts from `fix/driver-wallet-and-payroll`. Not pushed by the session.
 - Next action: owner to run `php artisan quikmedix:data-age` and say which tables, if any, should lose their old rows.
+
+## Session log — 2026-11-24: a pharmacy adding a phone number that registered in the app
+
+- Goal: the owner's patient test account, made on the iOS app's Register screen, showed an empty home screen. Asked who links a patient to a pharmacy, then asked for: when a pharmacy adds a phone that already registered, attach the existing account instead of creating a duplicate.
+- Found: only a pharmacy gives a patient a pharmacy (add-patient page, BestRx and MicroMerchant orders, the two imports). `/api/register` makes an account with no pharmacy. Phone numbers are unique within a pharmacy only, so adding a registered number made a second row; `/api/login` finds the older row, so the row with the orders could not be signed in to with the texted password.
+- Done: `App\Actions\ClaimRegisteredPatient`, called from `PatientController::store`, `BestRxController::orderAdd`, `MicroMerchantController::orderAdd` and both `ImportController` paths before they insert. It attaches the account that registered in the app (role `user`, no pharmacy, never removed, no orders), writes the pharmacy's details over it, replaces the password, revokes its tokens, clears its device token, logs `attached to pharmacy` and texts the new password. See FEATURE_LIST.json `pharmacy-claims-registered-patient`.
+- Decision made in the work, for the owner to confirm: the password is replaced on attach. Registration does not check that the person owns the number; without the replacement, someone who registered another person's number first would see that person's orders once a pharmacy adds them.
+- Patient iOS app (its own folder, not this repository): a refused token (401) now clears the session and returns to sign-in with a notice, so an attached patient is not left on screens that only say "Unauthenticated." Not compiled.
+- Not verified: the MicroMerchant webhook and the single-order import have no test. Pint and Larastan are not installed where the session works. Nothing was checked in a browser, on a phone or against Twilio.
+- Not done: the admin Settings > Users > Add page still creates a new row. The same person at two pharmacies is still two accounts with one phone number.
+- Commit status: two commits, the second with this record, on `feature/pharmacy-claims-patient`, which starts from `main` (PR #38). Not pushed by the session.
+- Next action: owner to add the test account's phone number as a patient at a pharmacy and sign in to the app with the texted password.
