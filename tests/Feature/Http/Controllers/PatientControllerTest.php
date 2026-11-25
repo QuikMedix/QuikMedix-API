@@ -56,6 +56,11 @@ class PatientControllerTest extends TestCase
             $table->integer('medic_id');
             $table->string('reason')->nullable();
         });
+        // Adding a patient checks whether the phone number already has an account with orders.
+        Schema::create('orders', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->integer('user_id');
+        });
         Schema::create('action_log', function (Blueprint $table): void {
             $table->increments('id');
             $table->string('type');

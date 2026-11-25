@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\ActionLog;
 use App\Models\FamilyMember;
 use Illuminate\Support\Facades\Gate;
+use App\Actions\ClaimRegisteredPatient;
 use App\Actions\GeocodeAddress;
 use App\Actions\LogUserChanges;
 use App\Actions\SendWelcomeSms;
@@ -122,34 +123,48 @@ class PatientController extends Controller
         ]));
     }
 
-    public function store(StorePatientRequest $request, string $pharmacy_id, GeocodeAddress $geocoder, SendWelcomeSms $welcomeSms): RedirectResponse
+    /**
+     * Adds a patient to the pharmacy. A phone number that already registered in the app keeps its
+     * account, which is attached to the pharmacy; any other number gets a new account.
+     */
+    public function store(StorePatientRequest $request, string $pharmacy_id, GeocodeAddress $geocoder, SendWelcomeSms $welcomeSms, ClaimRegisteredPatient $claim): RedirectResponse
     {
         if (Auth::user()->pharmacy_balance_ban()) {
             return redirect('billing/'.Auth::user()->pharmacy_id);
         }
 
         $geo = $geocoder->lookup(trim($request->input('address').' '.$request->input('zip')));
-        $password = bin2hex(random_bytes(4));
-        $email = $request->input('email') ?: 'patients'.User::query()->max('id').'@'.config('branding.account_email_domain');
-
-        $patientId = DB::table('users')->insertGetId([
-            ...$request->safe()->only(['name', 'last_name', 'phone', 'birth_date', 'zip', 'apartment']),
-            'isactive' => '1',
-            'email' => $email,
+        $details = [
+            ...$request->safe()->only(['name', 'last_name', 'birth_date', 'zip', 'apartment']),
             'home_phone' => $request->input('home_phone') ?: null,
-            'image' => $this->storeUpload($request->file('image'), 'users') ?? '',
+            'image' => $this->storeUpload($request->file('image'), 'users'),
             'address' => $geo['formatted_address'],
             'location' => $geo['location'],
-            'password' => Hash::make($password),
-            'pharmacy_id' => $pharmacy_id,
-        ]);
-        $welcomeSms->handle(DB::table('users')->where('id', $patientId)->first(), $password);
+        ];
+
+        $patientId = $claim->handle($request->input('phone'), $pharmacy_id, [...$details, 'email' => $request->input('email')]);
+        $claimed = $patientId !== null;
+        if (! $claimed) {
+            $password = bin2hex(random_bytes(4));
+            $patientId = DB::table('users')->insertGetId([
+                ...$details,
+                'phone' => $request->input('phone'),
+                'isactive' => '1',
+                'email' => $request->input('email') ?: 'patients'.User::query()->max('id').'@'.config('branding.account_email_domain'),
+                'image' => $details['image'] ?? '',
+                'password' => Hash::make($password),
+                'pharmacy_id' => $pharmacy_id,
+            ]);
+            $welcomeSms->handle(DB::table('users')->where('id', $patientId)->first(), $password);
+        }
 
         if ($request->filled('order_add')) {
             return redirect("orders/$pharmacy_id/add?patient=$patientId");
         }
 
-        return redirect("patients/$pharmacy_id")->with('success', 'Patient added.');
+        return redirect("patients/$pharmacy_id")->with('success', $claimed
+            ? 'This phone number already had a QuikMedix app account, so that account was added to your patients. A new password was texted to the patient.'
+            : 'Patient added.');
     }
 
     public function edit(Request $request, string $pharmacy_id, string $user_id): View|array
