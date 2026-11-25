@@ -48,7 +48,7 @@ class OrderStatusApiTest extends TestCase
         }
         Schema::create('orders', function (Blueprint $table): void {
             $table->increments('id');
-            foreach (['pharmacy_id', 'user_id', 'driver_id', 'statuse_id', 'statuse_copay', 'delivery_method_id', 'delivery_time_id', 'count_bags', 'signature', 'fridge', 'actual'] as $column) {
+            foreach (['pharmacy_id', 'user_id', 'driver_id', 'statuse_id', 'statuse_copay', 'delivery_method_id', 'delivery_time_id', 'count_bags', 'signature', 'fridge', 'actual', 'eta'] as $column) {
                 $table->integer($column)->nullable();
             }
             foreach (['created', 'finish', 'special_instructions', 'drop_off_photo', 'signature_photo', 'delivery_address', 'delivery_location'] as $column) {
