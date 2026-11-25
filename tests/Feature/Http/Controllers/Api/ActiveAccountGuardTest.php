@@ -59,7 +59,7 @@ class ActiveAccountGuardTest extends TestCase
             ['POST', 'update/device'], ['GET', 'driver/status'], ['GET', 'driver/status/start'],
             ['GET', 'driver/status/finish'], ['GET', 'test/notification/1'], ['GET', 'user/countunread'],
             ['GET', 'chats'], ['GET', 'chats/user/1'], ['GET', 'routes/start'], ['GET', 'user/count_noread'],
-            ['GET', 'driver/payouts'], ['GET', 'news'],
+            ['GET', 'driver/payouts'], ['GET', 'driver/earnings'], ['GET', 'news'],
         ];
 
         return array_combine(array_map(fn (array $endpoint): string => implode(' ', $endpoint), $endpoints), $endpoints);

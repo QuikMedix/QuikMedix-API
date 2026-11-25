@@ -125,5 +125,6 @@ Route::middleware(['auth:api', 'active.api'])->group(function () {
     Route::get('/routes/start', [RouteController::class, 'startRoute']);
     Route::get('/user/count_noread', [ChatController::class, 'get_unread_mess']);
     Route::get('/driver/payouts', [DriverShiftController::class, 'payouts']);
+    Route::get('/driver/earnings', [DriverShiftController::class, 'earnings']);
     Route::get('/news', [ProfileController::class, 'news']);
 });

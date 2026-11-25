@@ -592,8 +592,46 @@
       "notes": "No database row was deleted. The dispatching board is not rendered by a test (MySQL-only queries). Report figures are not limited to a staff member's zone. On the ads page nothing was built; it only stopped pretending. Left as they are: reports/apps and reports/pharmacies, which already show the coming-soon picture."
     },
     {
-      "id": "pharmacy-claims-registered-patient",
+      "id": "route-pay-completed",
       "priority": 24,
+      "area": "driver pay",
+      "title": "Completed on a driver's route page pays the chosen rate",
+      "user_visible_behavior": "On a driver's route page, choosing Half, Full or Flat rate with an amount and pressing Completed credits the driver's completed stops that were waiting for a rate, and the page says how much was paid for how many stops. The amount box is empty until an amount is typed; it no longer shows -1. Without a choice, or with a flat rate and no amount, nothing is paid and the page says why.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests of POST /routes-list/driver/{id} with close_route: a flat amount shared to the cent, Half and Full, the refusals, a second completion, and the driver's wallet afterwards.",
+        "Node check of the Completed button's script: the choice is copied into the closing form; a flat rate without an amount, no choice and a declined confirmation send nothing.",
+        "Check of the template as text: the closing form carries the pay fields and the amount box cannot show the marker.",
+        "composer test; caches (compiles every template); class-reference check; all smoke scripts."
+      ],
+      "evidence": [
+        "2026-11-19 CloseRoutePayTest: 5 tests, 33 assertions pass; 50.00 over seven stops is stored as 7.15, 7.15 and five times 7.14, and the wallet endpoint answers amount 62.5, pending 0.",
+        "2026-11-19 node tests/smoke/driver-route-pay.js: 10 checks pass; the other nine smoke scripts pass.",
+        "2026-11-19 composer test: 655 tests, 45 routing checks, 69 tariff checks. route:cache and view:cache succeed. All class names resolve."
+      ],
+      "notes": "The route page is not rendered by a test (MySQL-only queries) and was not opened in a browser. Half pays 90 and Full 180 dollars, as the code did before; they are now named constants. The amount is not stored on Save. Completing pays every waiting stop the driver has, not only today's."
+    },
+    {
+      "id": "driver-earnings-history",
+      "priority": 25,
+      "area": "driver pay",
+      "title": "The driver app can show what a driver earned, what was paid, and each week",
+      "user_visible_behavior": "GET /api/driver/earnings gives a driver their total earned, paid and unpaid amounts, the stops still waiting for pay, what they earned this week, and the latest twelve weeks in which they completed stops with each week's stops, earnings and paid amount. The iOS app's Earnings screen and home tile use it, so a driver whose pay was all marked paid still sees what they made.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests of the endpoint: totals and weeks for fifty dollars shared over 22 stops across two weeks with one week paid, a stop on the week boundary in New York time, a row older than the history, another driver's rows, the twelve-week limit, a driver with no stops, and a patient refused.",
+        "The endpoint is in the list of routes the active-account guard test checks.",
+        "composer test; route and config cache; class-reference check."
+      ],
+      "evidence": [
+        "2026-11-19 DriverEarningsTest: 3 tests pass; with seven unpaid stops last week (15.95 and one dollar more) and fifteen paid this week it answers earned 66, paid 49.05, unpaid 16.95, this_week 34.05.",
+        "2026-11-19 composer test: 660 tests, 45 routing checks, 69 tariff checks. route:cache and config:cache succeed. All class names resolve."
+      ],
+      "notes": "The iOS changes (three Swift files in a folder that is not a git repository) were not compiled or run. The endpoint was not called on production. Installed app builds are unaffected: they keep using /api/driver/payouts. Weeks older than a year are in the totals but never in the list."
+    },
+    {
+      "id": "pharmacy-claims-registered-patient",
+      "priority": 26,
       "area": "patients",
       "title": "A pharmacy adding a phone number that registered in the app gets that account, not a duplicate",
       "user_visible_behavior": "A patient who registered in the app has no pharmacy and sees no orders. When a pharmacy adds that phone number (add-patient page, BestRx or MicroMerchant order, patient list import, single-order import), the patient's existing account joins the pharmacy with the pharmacy's name and address; blanks keep the patient's own values. Its password is replaced and texted to the number, it is signed out on every device and its push token is cleared, because registration does not prove who owns a number. The add-patient page says the account was attached. Accounts another pharmacy has or had (including removed patients), accounts with orders, and non-patient accounts are not attached: a new patient is created as before.",
@@ -607,7 +645,8 @@
       ],
       "evidence": [
         "2026-11-24 ClaimRegisteredPatientTest: 10 tests, 72 assertions pass. With the lookup switched off 6 of them fail; without the password replacement 3 fail.",
-        "2026-11-24 full PHPUnit suite: 660 tests, 3343 assertions pass (PHP 8.4.27). PatientControllerTest's hand-built schema gained an orders table, which the add-patient page now reads."
+        "2026-11-24 full PHPUnit suite: 660 tests, 3343 assertions pass (PHP 8.4.27). PatientControllerTest's hand-built schema gained an orders table, which the add-patient page now reads.",
+        "2026-11-24 after merging main, which had gained the route-pay and earnings work (PRs #39 and #40): the only conflicts were this file and PROGRESS.md; full PHPUnit suite 670 tests, 3394 assertions pass."
       ],
       "notes": "Not exercised by a test: the MicroMerchant webhook and the single-order import (same call as the tested paths). The admin Settings > Users > Add page still creates a new row. Not run: Pint and Larastan (not installed where the session works), a browser, a real text. The same person at two pharmacies is still two accounts with one phone, and sign-in still finds the older one; that predates this work. The patient iOS app was changed in its own folder to return to sign-in when its token is refused; it was not compiled."
     }

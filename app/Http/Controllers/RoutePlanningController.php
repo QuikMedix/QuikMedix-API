@@ -28,6 +28,11 @@ use App\Actions\RecalculateDriverEta;
  */
 class RoutePlanningController extends Controller
 {
+    /** What a half and a full shift pay, in dollars, when dispatch closes a route with those choices. */
+    private const HALF_SHIFT_PAY = 90.0;
+
+    private const FULL_SHIFT_PAY = 180.0;
+
     use RendersPages;
 
 
@@ -401,30 +406,44 @@ class RoutePlanningController extends Controller
     }
 
     /**
-     * Closes the route and pays the driver for its completed orders.
+     * Closes the route: shares what it pays over the driver's completed stops that are still
+     * waiting for a rate. Half and Full are the two shift rates; Flat rate is the amount typed.
      *
      * @param  int|string  $driver_id
-     * @return mixed a response, or nothing to return to the driver's route page
+     * @return mixed a response
      */
     private function closeRoute(Request $request, $driver_id)
     {
-        $count = DriverPayout::query()->where('driver_id',$driver_id)->awaitingRate()->count();
-        $type_pay = $request->input('type_pay');
-        if($type_pay==1) {
-            $pay_value=floatval($request->input('pay_value'));
-        } else if($type_pay==4) {
-            $pay_value=90;
-        } else if($type_pay==5) {
-            $pay_value=180;
-        } else {
-            return redirect()->back()->with('error', 'Unknown pay type.');
+        $pay = match ((int) $request->input('type_pay')) {
+            1 => (float) $request->input('pay_value'),
+            4 => self::HALF_SHIFT_PAY,
+            5 => self::FULL_SHIFT_PAY,
+            default => null,
+        };
+        if ($pay === null) {
+            return redirect()->back()->with('error', 'Choose Half, Full or Flat rate before completing the route.');
         }
-        if($count>0) {
-            DriverPayout::query()->where('driver_id',$driver_id)->awaitingRate()->update(["amount"=>round($pay_value/$count,2)]);
-            return redirect()->back()->with('success', "Successfully, $count orders were paid to the driver at the selected rate.");
-        } else {
+        if ($pay <= 0) {
+            return redirect()->back()->with('error', 'Enter the amount to pay the driver.');
+        }
+        $waiting = DriverPayout::query()->where('driver_id',$driver_id)->awaitingRate()->orderBy('id')->pluck('id');
+        $count = $waiting->count();
+        if ($count === 0) {
             return redirect()->back()->with('error', 'Oh no, no completed orders have been found for the selected driver for the current shift.');
         }
+
+        // Shared out to the cent: the first stops take the cents that do not divide evenly, so the stops add up to exactly what was chosen.
+        $cents = (int) round($pay * 100);
+        $share = intdiv($cents, $count);
+        $extra = $cents % $count;
+        DB::transaction(function () use ($waiting, $share, $extra): void {
+            if ($extra > 0) {
+                DriverPayout::query()->whereIn('id', $waiting->take($extra))->awaitingRate()->update(['amount' => ($share + 1) / 100]);
+            }
+            DriverPayout::query()->whereIn('id', $waiting->skip($extra))->awaitingRate()->update(['amount' => $share / 100]);
+        });
+
+        return redirect()->back()->with('success', 'Paid $'.number_format($cents / 100, 2)." to the driver for $count completed ".($count === 1 ? 'stop' : 'stops').'.');
     }
 
     /**
