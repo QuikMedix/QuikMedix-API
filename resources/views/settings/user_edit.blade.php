@@ -221,7 +221,8 @@
                                         <div class="form-group row admin_zone_id" @if(!($user->role=='admin' || $user->role=='driver')){{'style=display:none;'}}@endif>
                                             <label for="zone_id" class="col-sm-2 col-form-label">Admin Zone</label>
                                             <div class="col-sm-10">
-                                                <select name="zone_id" id="zone_id" class="form-control" required>
+                                                {{-- Required only while it is shown: a browser will not send a form with a hidden required field, and cannot say why. --}}
+                                                <select name="zone_id" id="zone_id" class="form-control" @if($user->role=='admin' || $user->role=='driver') required @endif>
                                                     <option value="">Not Selected</option>
                                                     @foreach($admin_areas as $admin_area)
                                                     <option value="{{$admin_area->id}}" @if($admin_area->id==$user->zone_id){{'selected'}}@endif>{{$admin_area->name}}</option>
@@ -285,11 +286,9 @@ function encodeImageFileAsURL(element) {
     }
 }
 $('[name="role"]').on('change',function(){
-    if($(this).val()=='admin' || $(this).val()=='driver'){
-        $('.admin_zone_id').show();
-    } else {
-        $('.admin_zone_id').hide();
-    }
+    var needsZone = $(this).val()=='admin' || $(this).val()=='driver';
+    $('.admin_zone_id').toggle(needsZone);
+    $('#zone_id').prop('required', needsZone);
 });
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{config('app.googlemaps_apikey')}}&region=US&language=en&libraries=places&v=weekly&callback=initialize" defer></script>

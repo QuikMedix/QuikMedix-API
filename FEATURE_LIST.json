@@ -649,6 +649,25 @@
         "2026-11-24 after merging main, which had gained the route-pay and earnings work (PRs #39 and #40): the only conflicts were this file and PROGRESS.md; full PHPUnit suite 670 tests, 3394 assertions pass."
       ],
       "notes": "Not exercised by a test: the MicroMerchant webhook and the single-order import (same call as the tested paths). The admin Settings > Users > Add page still creates a new row. Not run: Pint and Larastan (not installed where the session works), a browser, a real text. The same person at two pharmacies is still two accounts with one phone, and sign-in still finds the older one; that predates this work. The patient iOS app was changed in its own folder to return to sign-in when its token is refused; it was not compiled."
+    },
+    {
+      "id": "admin-user-edit-saves",
+      "priority": 27,
+      "area": "admin pages",
+      "title": "Settings > Users > Edit saves for users who have no admin zone",
+      "user_visible_behavior": "On the edit-user page, Save did nothing for any user who is not an admin or driver and has no admin zone, which is every patient: the hidden Admin Zone field was required, so the browser would not send the form. The field is now required only while it is shown. An admin can therefore give a patient a pharmacy from this page. An address Google cannot find comes back as a message on the form instead of an error page.",
+      "status": "passing",
+      "verification_steps": [
+        "Test: the Admin Zone field has no required attribute on a patient's page and has it on a driver's page.",
+        "Test: the form as the browser sends it for a patient saves the pharmacy, geocoded address and location.",
+        "Test: an address with no result returns to the form with the address message and saves nothing.",
+        "Run the tests without the fix to see them fail; composer test."
+      ],
+      "evidence": [
+        "2026-11-24 AdminUserEditTest: 3 tests, 16 assertions pass. Without the fix 2 fail (the required attribute; Undefined array key 0 in the address lookup). The save test passes either way: the server always accepted the form, the browser never sent it.",
+        "2026-11-24 full PHPUnit suite: 673 tests, 3410 assertions pass (PHP 8.4.27)."
+      ],
+      "notes": "The two script lines that switch the attribute when the role is changed have no test. Not run: a browser, Pint, Larastan. The cause was read from the template; the owner's production page was not opened."
     }
   ]
 }

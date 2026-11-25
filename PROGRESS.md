@@ -643,3 +643,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Commit status: two commits, the second with this record, on `feature/pharmacy-claims-patient`, which starts from `main` (PR #38). Not pushed by the session.
 - Merged `main` afterwards: the owner's pull request conflicted because `main` had gained PRs #39 and #40, which add their own entries at the end of this file and of FEATURE_LIST.json. Both sides are kept; this feature's priority is 26. Full suite after the merge: 670 tests, 3394 assertions pass.
 - Next action: owner to add the test account's phone number as a patient at a pharmacy and sign in to the app with the texted password.
+
+## Session log — 2026-11-24: Settings > Users > Edit did not save
+
+- Goal: the owner tried to give a patient a pharmacy on `/settings/users/edit/14` in production; Save did nothing.
+- Found: `settings/user_edit.blade.php` marks the Admin Zone select `required` for every user but hides it unless the role is admin or driver. With no zone chosen, the browser blocks the form and cannot show its message on a hidden field. This affects every user who is not an admin or driver and has no zone. The handler itself accepted the form; a test posting it passes without any change.
+- Done: the select is required only while shown (in the template and in the role-change script). `UserSettingsController::settingsUserseditHandler` uses `GeocodeAddress::lookup`, so an address without a result is a form message; it was `Undefined array key 0`. See FEATURE_LIST.json `admin-user-edit-saves`.
+- Not verified: no browser was used and the production page was not opened; the cause is read from the template. The script lines have no test.
+- Noted, not changed: this page, like the add-user page, does not attach or check for another account with the same phone number. A viewer who is not shown the role and zone fields still clears the user's zone on save.
+- Commit status: two commits, the second with this record, on `fix/admin-user-edit-save`, which starts from `main` after PR #41. Not pushed by the session.
+- Next action: owner to save a patient on the page in production after deploying.
