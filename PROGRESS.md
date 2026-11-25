@@ -653,3 +653,13 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Noted, not changed: this page, like the add-user page, does not attach or check for another account with the same phone number. A viewer who is not shown the role and zone fields still clears the user's zone on save.
 - Commit status: two commits, the second with this record, on `fix/admin-user-edit-save`, which starts from `main` after PR #41. Not pushed by the session.
 - Next action: owner to save a patient on the page in production after deploying.
+
+## Session log — 2026-11-25: the patient app did not show that an order was delivered
+
+- Goal: the owner delivered an order in the driver app (photo and signature) and saw no sign of it, or of the pictures, in the patient app.
+- Found: the drop-off and signature handlers do mark the order delivered and store both pictures. The patient app draws one small card from `/api/patient/home` and `/api/orders`; the home answer selected the photo, signature and finish time and left them out, the list had the signature only, and the app never calls `/api/orders/show`. The home answer's `eta` was always "Processing" because the query did not select the column.
+- Done: `OrderStatus::DELIVERED` and `OrderStatus::deliveredAt()`; the three answers carry `delivered_at` and the pictures (see FEATURE_LIST.json `patient-delivery-proof`); `eta` is the driver's minutes as text.
+- Patient iOS app (its own folder, not this repository): the order card says "Delivered" with the time and drops the ETA and Track button for a delivered order; new `OrderDetailsViewController` shows the proof of delivery, driver and prescriptions; tapping an order in History opens it. Not compiled.
+- Not verified: the owner's production order was not read, so that it reached status 4 is assumed from the handlers. Nothing was run on a phone.
+- Commit status: two commits, the second with this record, on `feature/patient-delivery-proof`, which starts from `main` after PR #42. Not pushed by the session.
+- Next action: owner to deploy, build the patient app in Xcode and open a delivered order.
