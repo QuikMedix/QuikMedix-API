@@ -141,4 +141,13 @@ class DeliveryProgressTest extends TestCase
         $this->assertSame("Leave it at the doorman's desk", DeliveryProgress::patientNote(30));
         $this->assertNull(DeliveryProgress::patientNote(31));
     }
+
+    public function test_the_order_list_sends_a_patient_only_their_own_pharmacy_and_only_what_the_app_shows(): void
+    {
+        $this->row('pharmacys', ['id' => 2, 'name' => 'Someone Else Pharmacy', 'tariff_next_day' => 7.5, 'isactive' => 1, 'isblocked' => 0]);
+
+        $pharmacies = $this->getJson('/api/orders')->assertOk()->json('pharmacys');
+
+        $this->assertSame([['id' => 1, 'name' => 'Corner Pharmacy', 'address' => 'x', 'location' => '40.7484,-73.9857', 'phone' => 'x']], $pharmacies);
+    }
 }
