@@ -6,6 +6,7 @@ use App\Actions\LogUserChanges;
 use App\Http\Controllers\Controller;
 use App\Models\ActionLog;
 use App\Models\FamilyMember;
+use App\Support\DeliveryProgress;
 use App\Support\OrderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -162,31 +163,32 @@ class ProfileController extends Controller
             $wishs = DB::table('wishes')->join('wishes_category',"wishes.category_id","=","wishes_category.id")->where("wishes_category.status",1)->pluck('wishes.text')->toArray();
             $head_text = $wishs ? $wishs[array_rand($wishs)] : '';
             $pharmacy = DB::table('pharmacys')->where("id",Auth::user()->pharmacy_id)->first();
-            $last_order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->leftJoin('medicine', 'orders.id', '=', 'medicine.order_id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.eta', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', DB::raw('sum(medicine.count) as count'), 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.user_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.eta', 'orders.user_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name')->orderBy('orders.id','desc')->first();
+            $last_order = DB::table('orders')->join('users', 'orders.user_id', '=', 'users.id')->join('statuses', 'orders.statuse_id', '=', 'statuses.id')->leftJoin('statuses_copay', 'orders.statuse_copay', '=', 'statuses_copay.id')->join('delivery_methods', 'orders.delivery_method_id', '=', 'delivery_methods.id')->join('delivery_times', 'orders.delivery_time_id', '=', 'delivery_times.id')->leftJoin('medicine', 'orders.id', '=', 'medicine.order_id')->join('pharmacys', 'orders.pharmacy_id', '=', 'pharmacys.id')->select('orders.id', 'orders.created', 'orders.finish', 'orders.statuse_id', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.user_id',  'orders.copay', 'orders.driver_id', 'orders.count_bags', 'orders.drop_off_photo', 'orders.signature_photo', 'orders.eta', 'orders.copay_method', 'orders.statuse_copay as copay_status_id', 'users.name as username', 'users.last_name as last_name', 'delivery_methods.name as delivery_method', 'delivery_times.name as delivery_time', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end as useraddress'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end as userapartment'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end as userzip'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end as userlocation'), 'users.phone as userphone', DB::raw('sum(medicine.count) as count'), 'pharmacys.name as pharmacyname', 'pharmacys.address as pharmacyaddress','pharmacys.phone as pharmacyphone', 'pharmacys.location as pharmacylocation', 'statuses.name as statusename','statuses.color as statusecolor','orders.statuse_copay', 'statuses_copay.name as statuse_copay_name')->where('orders.user_id',Auth::user()->id)->groupBy('orders.id', 'orders.statuse_id', 'orders.created', 'orders.finish', 'orders.driver_id', 'orders.count_bags', 'orders.signature', 'orders.fridge', 'orders.special_instructions', 'orders.copay', 'orders.drop_off_photo','orders.signature_photo', 'orders.eta', 'orders.copay_method', 'orders.user_id', 'users.name', 'users.last_name', DB::raw('case when users.primary_address=2 then users.address2 when users.primary_address=3 then users.address3 else users.address end'), DB::raw('case when users.primary_address=2 then users.apartment2 when users.primary_address=3 then users.apartment3 else users.apartment end'), DB::raw('case when users.primary_address=2 then users.zip2 when users.primary_address=3 then users.zip3 else users.zip end'), DB::raw('case when users.primary_address=2 then users.location2 when users.primary_address=3 then users.location3 else users.location end'), 'users.phone','pharmacys.name', 'delivery_methods.name', 'delivery_times.name', 'pharmacys.location', 'pharmacys.address','pharmacys.phone', 'statuses.name','statuses.color','orders.statuse_copay', 'statuses_copay.name')->orderBy('orders.id','desc')->first();
             if(!empty($last_order)) {
-                if($last_order->statuse_id==3) {
-                    if($last_order->driver_id>0) {
-                        $locations = DB::table('locations')->whereIn('id', [DB::raw("select max(`id`) from locations GROUP BY user_id")])->where('user_id',$last_order->driver_id)->first();
-                    } else {
-                        $locations="";
-                    }
-                    if(!empty($locations)) {
-                        $location=$locations->location;
-                    } else {
-                        $location=NULL;
-                    }
-                } else {
-                    $location=NULL;
-                }
+                $eta = DeliveryProgress::etaMinutes($last_order->statuse_id, $last_order->eta);
+                $stops_ahead = DeliveryProgress::stopsAhead($last_order);
+                // Where the driver is, once they are on the way and close: a few stops before this one.
+                $location = DeliveryProgress::sharesDriverLocation($last_order->statuse_id, $stops_ahead)
+                    ? DB::table('locations')->where('user_id', $last_order->driver_id)->orderByDesc('id')->value('location')
+                    : null;
                 return response()->json([
                     'head_text' => $head_text,
-                    'pharmacy_name' => $pharmacy->name,
+                    'pharmacy_name' => $pharmacy?->name,
                     'last_order' => [
                         'id'=>$last_order->id,
                         'status'=>OrderStatus::label($last_order->statuse_id, $last_order->statusename),
                         'statuse_id'=>(int) $last_order->statuse_id,
-                        // The driver's minutes to this stop, as text: this field has always been a string.
-                        'eta'=>(!empty($last_order->eta))?$last_order->eta.' min':"Processing",
+                        // Minutes until the driver arrives, from the driver's stops in route order; null when none is expected.
+                        'eta_minutes'=>$eta,
+                        // The same as text; this field has always been a string.
+                        'eta'=>DeliveryProgress::etaText($eta),
+                        // Stops the driver makes before this one; null when the order is not on a route.
+                        'stops_ahead'=>$stops_ahead,
+                        // How the patient said they will pay the co-pay: cash, check or card.
+                        'copay_method'=>$last_order->copay_method,
+                        'copay_status_id'=>$last_order->copay_status_id === null ? null : (int) $last_order->copay_status_id,
+                        // The patient's note for the driver, such as where to leave the order.
+                        'customer_note'=>DeliveryProgress::patientNote($last_order->id),
                         // Proof of delivery: when it was handed over, the drop-off photo and the signature.
                         'delivered_at'=>OrderStatus::deliveredAt($last_order->statuse_id, $last_order->finish),
                         'drop_off_photo'=>$last_order->drop_off_photo,

@@ -210,7 +210,7 @@
                                             <div class="col-sm-2">
                                                 <small>Co-pay ($)</small>
                                                 <input type="number" min="0" step="0.01" class="form-control" name="copay" placeholder="Co-pay" value="{{ $order->copay }}">
-                                                @if($order->statuse_id==4 && $order->copay>0 && $order->statuse_copay!=3 && $order->statuse_copay!=4)
+                                                @if($order->statuse_id==4 && $order->copay>0 && !\App\Support\CopayStatus::isCollected($order->statuse_copay))
                                                 <div class="d-flex">
                                                     <label for="example-text-22" class="col-form-label">Paid in cash?</label>
                                                     <div class="form-check form-switch form-switch-md ml-4 mt-1" dir="ltr">

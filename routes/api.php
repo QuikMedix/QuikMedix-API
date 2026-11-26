@@ -96,6 +96,7 @@ Route::middleware(['auth:api', 'active.api'])->group(function () {
     Route::post('/orders/show/{order_id}', [OrderController::class, 'ordersShowHandler']);
     Route::get('/cards', [PaymentController::class, 'cards']);
     Route::post('/cards/add', [PaymentController::class, 'cardAddHandler']);
+    Route::get('/cards/add_link', [PaymentController::class, 'cardPageLink']);
     Route::get('/routes', [RouteController::class, 'routes']);
     Route::get('/routes-logs', [RouteController::class, 'routesLogs']);
     Route::get('/routes/show/{route_id}', [RouteController::class, 'routesShow']);
@@ -111,6 +112,8 @@ Route::middleware(['auth:api', 'active.api'])->group(function () {
     Route::post('/orders/{order_id}/rating', [OrderFeedbackController::class, 'storeRating']);
     Route::post('/orders/copay/pay/{order_id}', [PaymentController::class, 'payCopay']);
     Route::post('/orders/copay/pay_cash/{order_id}', [PaymentController::class, 'PayedCashCopay']);
+    Route::post('/orders/copay/pay_check/{order_id}', [PaymentController::class, 'PayedCheckCopay']);
+    Route::post('/orders/copay/method/{order_id}', [PaymentController::class, 'chooseCopayMethod']);
     Route::post('/orders/copay/not_pay/{order_id}', [PaymentController::class, 'notPayedCashCopay']);
     Route::post('/driver/add_location', [DriverShiftController::class, 'storeLocation']);
     Route::get('/driver/qr', [DriverShiftController::class, 'qr']);

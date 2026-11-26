@@ -281,6 +281,9 @@
     },
     "GET /password/reset": [],
     "GET /password/reset/1": [],
+    "GET /patient/card/1": {
+        "refused": "guest superadmin admin dispadmin logist medic sale driver user facility blocked"
+    },
     "GET /patients/1": {
         "login": "guest",
         "refused": "logist sale driver user facility",
@@ -833,6 +836,9 @@
     },
     "POST /password/email": [],
     "POST /password/reset": [],
+    "POST /patient/card/1": {
+        "refused": "guest superadmin admin dispadmin logist medic sale driver user facility blocked"
+    },
     "POST /patients/1": {
         "login": "guest",
         "refused": "superadmin admin dispadmin logist medic sale driver user facility",

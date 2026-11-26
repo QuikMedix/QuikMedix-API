@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PatientCardController;
 use App\Http\Controllers\Auth\ConfirmPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
@@ -19,6 +20,11 @@ Route::post('zadarma', [LexaAdminApiNoAuth::class, 'zadarma_post']);
 Route::get('/pusher/beams-auth', [LexaAdminApiNoAuth::class, 'pusher_auth']);
 
 // Signing in, registering and passwords.
+// The patient app opens this page through a signed, expiring link; the link is the sign-in.
+Route::middleware('signed:relative')->group(function () {
+    Route::get('patient/card/{user}', [PatientCardController::class, 'show'])->name('patient.card');
+    Route::post('patient/card/{user}', [PatientCardController::class, 'store']);
+});
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('login', [LoginController::class, 'login']);

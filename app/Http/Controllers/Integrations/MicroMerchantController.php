@@ -474,7 +474,7 @@ class MicroMerchantController extends Controller
                             $record["return"]=NULL;
                             $record["pickup"]=NULL;
                         }
-                        if($order->copay>0 && in_array($order->statuse_copay,[3,4,6])) {
+                        if($order->copay>0 && in_array($order->statuse_copay,\App\Support\CopayStatus::PAID)) {
                             $record["payment_collected"]=strval($order->copay);
                         } else {
                             $record["payment_collected"]=NULL;

@@ -15,13 +15,21 @@
                             @if(!empty($order->statuse_copay_name))
                                 <span style="font-size: 11px;" class="badge badge-pill badge-{{$order->statuse_copay_color}} mt-1">{{$order->statuse_copay_name}}</span>
                             @endif
+                            @if(!empty($order->copay_method) && !\App\Support\CopayStatus::isSettled($order->statuse_copay))
+                                <span style="font-size: 11px;" class="badge badge-pill badge-info mt-1">Patient will pay by {{$order->copay_method}}</span>
+                            @endif
                             
-                            @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->hasRole('logist')) && $order->copay>0 && !in_array($order->statuse_copay,[1,3,4,6]))
+                            @if(!in_array($order->statuse_id,[1,7,8,9,10]) && ((Auth::user()->hasAnyRole('superadmin', 'admin')) || Auth::user()->hasRole('logist')) && $order->copay>0 && !\App\Support\CopayStatus::isSettled($order->statuse_copay))
                             <a style="cursor:pointer;" onclick="var win=window.open('/pay/copay/{{$order->id}}','Pay order Co-Pay','width=800,height=700');var timer=setInterval(function(){if(win.closed){clearInterval(timer);document.location.reload();}},600);"><button class="btn btn-success btn-sm" type="button">Pay</button></a>
                             <form method="post" style="display: inline-block;">
                                 @csrf
                                 <input type="hidden" name="paid" value="1">
                                 <a class="btn btn-success btn-sm waves-effect" type="button" onclick="if(confirm('Are you sure?')){$(this).parent('form').submit();}" style="color: #fff;">Paid by cash</a>
+                            </form>
+                            <form method="post" style="display: inline-block;">
+                                @csrf
+                                <input type="hidden" name="paid_check" value="1">
+                                <a class="btn btn-success btn-sm waves-effect" type="button" onclick="if(confirm('Are you sure?')){$(this).parent('form').submit();}" style="color: #fff;">Paid by check</a>
                             </form>
                             <form method="post" style="display: inline-block;">
                                 @csrf
