@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-24",
+  "last_updated": "2026-11-25",
   "features": [
     {
       "id": "orders-qr-status",
@@ -668,6 +668,23 @@
         "2026-11-24 full PHPUnit suite: 673 tests, 3410 assertions pass (PHP 8.4.27)."
       ],
       "notes": "The two script lines that switch the attribute when the role is changed have no test. Not run: a browser, Pint, Larastan. The cause was read from the template; the owner's production page was not opened."
+    },
+    {
+      "id": "patient-delivery-proof",
+      "priority": 28,
+      "area": "mobile API",
+      "title": "The patient app is told when an order was delivered, with the drop-off photo and signature",
+      "user_visible_behavior": "For a delivered order, /api/patient/home, /api/orders and /api/orders/show answer delivered_at (the finish time with its UTC offset) and the paths of the driver's drop-off photo and signature; the home answer also gains statuse_id. Orders that are not delivered answer null. The home answer's eta says the driver's minutes (\"25 min\") instead of always \"Processing\". The patient iOS app (its own folder) shows \"Delivered\" with the time on the order card and has an order details screen with both pictures, the driver and the prescriptions.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests of the three answers for a delivered order, for one on its way (with a leftover finish time and an eta) and for another patient's order.",
+        "Run the tests without the change to see them fail; composer test."
+      ],
+      "evidence": [
+        "2026-11-25 PatientDeliveryProofTest: 5 tests, 18 assertions pass; without the change 4 fail (the fifth is the access check).",
+        "2026-11-25 full PHPUnit suite: 678 tests, 3428 assertions pass (PHP 8.4.27). OrderStatusApiTest's hand-built orders table gained the eta column the home query now reads."
+      ],
+      "notes": "Only additions to the answers, and eta stays text, so older app versions keep decoding them. The patient iOS app changes were not compiled (no Swift toolchain where the session works, and Xcode was not open). Not run: Pint, Larastan, a phone. orders.finish is taken to be in the application's zone, as the two drop-off handlers write it with date()."
     }
   ]
 }

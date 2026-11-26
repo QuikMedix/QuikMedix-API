@@ -2,11 +2,15 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Carbon;
+
 class OrderStatus
 {
     public const int READY_FOR_PICKUP = 1;
 
     public const int ON_THE_WAY = 3;
+
+    public const int DELIVERED = 4;
 
     public const int HUB = 7;
 
@@ -27,5 +31,18 @@ class OrderStatus
             self::HUB => 'Hub',
             default => trim((string) $name) !== '' ? $name : 'Unknown status',
         };
+    }
+
+    /**
+     * When a delivered order was handed over, with its UTC offset, for the mobile apps to show in the
+     * phone's own time. `orders.finish` is written in the application's time zone without one.
+     */
+    public static function deliveredAt(int|string|null $id, ?string $finish): ?string
+    {
+        if ((int) $id !== self::DELIVERED || trim((string) $finish) === '') {
+            return null;
+        }
+
+        return Carbon::parse($finish, config('app.timezone'))->toIso8601String();
     }
 }
