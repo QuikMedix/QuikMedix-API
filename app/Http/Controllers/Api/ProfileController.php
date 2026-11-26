@@ -182,6 +182,8 @@ class ProfileController extends Controller
                         'eta_minutes'=>$eta,
                         // The same as text; this field has always been a string.
                         'eta'=>DeliveryProgress::etaText($eta),
+                        // The delivery window the pharmacy chose, as the order list names it.
+                        'delivery_time'=>$last_order->delivery_time,
                         // Stops the driver makes before this one; null when the order is not on a route.
                         'stops_ahead'=>$stops_ahead,
                         // How the patient said they will pay the co-pay: cash, check or card.

@@ -72,7 +72,7 @@ class DeliveryProgressTest extends TestCase
         $this->route(stopsBefore: 3);
 
         foreach ($this->told() as $screen => $order) {
-            $this->assertSame([37, '37 min', 3], [$order['eta_minutes'], $order['eta'], $order['stops_ahead']], $screen);
+            $this->assertSame([37, '37 min', 3, 'Next day'], [$order['eta_minutes'], $order['eta'], $order['stops_ahead'], $order['delivery_time']], $screen);
         }
     }
 
