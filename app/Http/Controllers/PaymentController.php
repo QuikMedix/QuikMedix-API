@@ -312,7 +312,7 @@ class PaymentController extends Controller
         $order = Order::query()->where('id',$order_id)->first();
         abort_unless(!empty($order), 403, AccessMessages::NO_PERMISSION);
         $user = DB::table('users')->where('id',$order->user_id)->first();
-        abort_unless(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->can('admin')) || Auth::user()->hasRole('logist')) && !in_array($order->statuse_copay,[1,3,4,6]) && $order->copay>0, 403, AccessMessages::NO_PERMISSION);
+        abort_unless(!in_array($order->statuse_id,[1,5,8,9,10]) && ((Auth::user()->can('admin')) || Auth::user()->hasRole('logist')) && !\App\Support\CopayStatus::isSettled($order->statuse_copay) && $order->copay>0, 403, AccessMessages::NO_PERMISSION);
         $payment_account = PaymentAccount::query()->where('user_id',$order->user_id)->first();
         $success='';
         $error='';

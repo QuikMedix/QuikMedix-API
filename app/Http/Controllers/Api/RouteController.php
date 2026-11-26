@@ -98,6 +98,8 @@ class RouteController extends Controller
                     $routes[$key]->order->delivery_time=DB::table('delivery_times')->where('id',$order->delivery_time_id)->value('name') ?? '';
                     $routes[$key]->order->delivery_method=DB::table('delivery_methods')->where('id',$order->delivery_method_id)->value('name') ?? '';
                     $routes[$key]->order->count_scanned=PackageTransition::query()->where('order_id',$value->order_id)->where('user_id',$value->type_id)->where('driver_id',Auth::user()->id)->count();
+                    // What the patient asked of the driver, such as where to leave the order.
+                    $routes[$key]->order->customer_note=\App\Support\DeliveryProgress::patientNote($order->id);
                 }
                 if($value->type=='office') {
                     $office = DB::table('offices')->where('id',$value->type_id)->first();

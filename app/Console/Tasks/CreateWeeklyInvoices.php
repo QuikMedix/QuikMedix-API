@@ -25,7 +25,7 @@ class CreateWeeklyInvoices
                 foreach($orders as $order) {
                     if(!empty($order->tariff)) {
                         $sum_amount = $sum_amount+$order->tariff;
-                        if($order->statuse_copay==3 || $order->statuse_copay==4){
+                        if(\App\Support\CopayStatus::isCollected($order->statuse_copay)){
                             $sum_copay = $sum_copay+floatval($order->copay);
                         }
                     }

@@ -56,7 +56,7 @@ class BillingController extends Controller
                 foreach($orders as $order) {
                     if(!empty($order->tariff)) {
                         $sum_amount = $sum_amount+$order->tariff;
-                        if($order->statuse_copay==3 || $order->statuse_copay==4){
+                        if(\App\Support\CopayStatus::isCollected($order->statuse_copay)){
                             $sum_copay = $sum_copay+floatval($order->copay);
                         }
                     }
@@ -307,7 +307,7 @@ class BillingController extends Controller
                 foreach($orders as $order) {
                     if(!empty($order->tariff)) {
                         $sum_amount = $sum_amount+$order->tariff;
-                        if($order->statuse_copay==3 || $order->statuse_copay==4){
+                        if(\App\Support\CopayStatus::isCollected($order->statuse_copay)){
                             $sum_copay = $sum_copay+floatval($order->copay);
                         }
                     } else {
@@ -315,7 +315,7 @@ class BillingController extends Controller
                         $tariff_res = app(CalculateOrderTariff::class)->handle($order);
                         Order::query()->where('id', $order->id)->update(['tariff'=>$tariff_res]);
                         $sum_amount = $sum_amount+$tariff_res;
-                        if($order->statuse_copay==3 || $order->statuse_copay==4){
+                        if(\App\Support\CopayStatus::isCollected($order->statuse_copay)){
                             $sum_copay = $sum_copay+floatval($order->copay);
                         }
                     }

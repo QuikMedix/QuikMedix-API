@@ -124,7 +124,7 @@
                   </thead>
                   <tbody>
                     @foreach($orders as $order)
-                    @if($order->copay>0 && ($order->statuse_copay=='3' || $order->statuse_copay=='4'))
+                    @if($order->copay>0 && \App\Support\CopayStatus::isCollected($order->statuse_copay))
                     <tr>
                       <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">#{{$order->id}}</td>
                       <td class="tm_width_2 tm_f10" style="padding: 0px 10px;">{{date('m.d.Y', strtotime($order->finish ?? ''))}}</td>

@@ -40,9 +40,10 @@ class LegacySchemaBaselineTest extends TestCase
             $this->assertTrue(Schema::hasTable($name), "$name exists");
             $this->assertSame([], array_values(array_diff(array_column($definition['columns'], 0), Schema::getColumnListing($name))), "$name has every column");
         }
-        // A table made entirely by the baseline has exactly its columns, in order.
+        // A table made by the baseline has exactly its columns, in order, followed by what later migrations added.
+        $addedLater = ['orders' => ['copay_method']];
         foreach (['orders', 'pharmacys', 'routes_priority', 'area', 'action_log'] as $name) {
-            $this->assertSame(array_column($tables[$name]['columns'], 0), Schema::getColumnListing($name));
+            $this->assertSame([...array_column($tables[$name]['columns'], 0), ...($addedLater[$name] ?? [])], Schema::getColumnListing($name));
         }
         // users is created by an older migration; the baseline adds what that one lacks.
         $this->assertSame([], array_diff(['role', 'pharmacy_id', 'primary_address', 'location2', 'transport', 'work_now'], Schema::getColumnListing('users')));

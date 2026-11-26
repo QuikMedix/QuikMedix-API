@@ -51,10 +51,24 @@ class OrderStatusApiTest extends TestCase
             foreach (['pharmacy_id', 'user_id', 'driver_id', 'statuse_id', 'statuse_copay', 'delivery_method_id', 'delivery_time_id', 'count_bags', 'signature', 'fridge', 'actual', 'eta'] as $column) {
                 $table->integer($column)->nullable();
             }
-            foreach (['created', 'finish', 'special_instructions', 'drop_off_photo', 'signature_photo', 'delivery_address', 'delivery_location'] as $column) {
+            foreach (['created', 'finish', 'special_instructions', 'drop_off_photo', 'signature_photo', 'delivery_address', 'delivery_location', 'copay_method'] as $column) {
                 $table->string($column)->nullable();
             }
             $table->decimal('copay')->default(0);
+        });
+        // The patient answers read the driver's route and the patient's notes for the order.
+        Schema::create('routes_priority', function (Blueprint $table): void {
+            $table->increments('id');
+            foreach (['driver_id', 'order_id', 'type_id', 'priority'] as $column) {
+                $table->integer($column)->nullable();
+            }
+            $table->string('type')->nullable();
+        });
+        Schema::create('notes', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->integer('order_id');
+            $table->string('type');
+            $table->text('note');
         });
         Schema::create('medicine', function (Blueprint $table): void {
             $table->increments('id');

@@ -663,3 +663,17 @@ Limits: status submission through an authenticated browser, physical printer/sca
 - Not verified: the owner's production order was not read, so that it reached status 4 is assumed from the handlers. Nothing was run on a phone.
 - Commit status: two commits, the second with this record, on `feature/patient-delivery-proof`, which starts from `main` after PR #42. Not pushed by the session.
 - Next action: owner to deploy, build the patient app in Xcode and open a delivered order.
+
+## Session log — 2026-11-25: co-pay by cash, check or card; one ETA; stops ahead and driver notes
+
+- Goal (owner, to ship together): payment options for cash, check or card; a proper ETA from the driver's stops that reads the same on the patient app's Home and History; and, if possible, the patient seeing the driver when five stops away, the delivery picture, and a note for the driver.
+- Decisions the owner made when asked: the patient picks and the driver records; a check is treated the same as cash; the card is saved on a secure web page opened from the app.
+- Found: the driver app could only record "Paid" (cash) or "Not paid"; there was no check anywhere. The patient app's add-card form sent a raw card number, which the Square-based server refuses. The ETA was already worked out along the driver's stops (`RecalculateDriverEta`, `orders.eta`) but only the home answer carried it, so History showed the delivery window ("Next day") under the word ETA. Patient notes were saved and shown to the pharmacy but never sent to the driver. The delivery picture was done in the previous session.
+- Done, server: see FEATURE_LIST.json `copay-cash-check-card`, `patient-card-page` and `patient-delivery-progress`. New: `App\Support\CopayStatus`, `App\Support\DeliveryProgress`, `PatientCardController`, `card/patient.blade.php`, migration `2026_11_26_000000_add_check_copay_and_patient_payment_choice`, routes `POST /api/orders/copay/pay_check/{id}`, `POST /api/orders/copay/method/{id}`, `GET /api/cards/add_link`, `GET|POST /patient/card/{user}`.
+- Done, patient iOS app (its own folder): one order card for Home and History with the arrival time, stops ahead, delivery window and co-pay choice; the order screen lets the patient pick cash, check or card, pay by card, open the card page in a browser sheet, and send a note to the driver; Track your order follows the driver once the server shares the position. Built and launched from Xcode on the owner's phone on 2026-11-25 (build succeeded; the screens were not exercised).
+- Done, driver iOS app (its own folder): Cash / Check / Not paid on the co-pay card, the patient's stated choice, "Paid by check" status, and the patient's note on the stop. Not compiled: its project was not open in Xcode.
+- Behaviour change to know about: a patient more than five stops away no longer receives the driver's position.
+- Not verified: the card page in a real browser, any real Square call, a real route with stops (the driver route answer is MySQL-only SQL and has no test here), Pint and Larastan.
+- Deploy: run `php artisan migrate` for the new migration.
+- Commit status: two commits, the second with this record, on `feature/payment-eta-stops`, which starts from `main` after PR #43. Not pushed by the session.
+- Next action: owner to build the driver app, deploy with the migration, and walk one order through: choose a method in the patient app, see it in the driver app, record a check.

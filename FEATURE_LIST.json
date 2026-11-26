@@ -685,6 +685,61 @@
         "2026-11-25 full PHPUnit suite: 678 tests, 3428 assertions pass (PHP 8.4.27). OrderStatusApiTest's hand-built orders table gained the eta column the home query now reads."
       ],
       "notes": "Only additions to the answers, and eta stays text, so older app versions keep decoding them. The patient iOS app changes were not compiled (no Swift toolchain where the session works, and Xcode was not open). Not run: Pint, Larastan, a phone. orders.finish is taken to be in the application's zone, as the two drop-off handlers write it with date()."
+    },
+    {
+      "id": "copay-cash-check-card",
+      "priority": 29,
+      "area": "payments",
+      "title": "A co-pay can be paid in cash, by check or by card",
+      "user_visible_behavior": "A patient chooses in the app how they will pay an order's co-pay: cash or a check to the driver, or by card in the app (POST /api/orders/copay/method/{id}; orders.copay_method). The driver sees the choice on the stop and records cash (existing) or a check (POST /api/orders/copay/pay_check/{id}). A check is handled like cash: status 7 \"Paid by check\", logged against the driver in cash_log with method \"check\", a stop added to bring it back, and counted with cash wherever co-pay is settled or credited in billing. Pharmacy and admin staff get a \"Paid by check\" button beside \"Paid by cash\" on the order page, which also shows the patient's choice. Choosing a method pays nothing.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests: the choice is saved and answered by home, list and details; refused for another patient, a driver, an unknown method and a settled co-pay.",
+        "Tests: a driver's check sets status 7, writes the cash log with method check and adds the return stop; a second attempt and a card payment are then refused; cash still records cash; only the order's own driver may record.",
+        "Test: a patient who chose card pays with the saved card.",
+        "Route answers on main and on the branch compared; composer test."
+      ],
+      "evidence": [
+        "2026-11-25 CopayByCashCheckOrCardTest: 7 tests, 53 assertions pass.",
+        "2026-11-25 full PHPUnit suite: 700 tests, 3575 assertions pass (PHP 8.4.27).",
+        "2026-11-25 route answers: 2,519 answers taken on main, 0 differ on the branch."
+      ],
+      "notes": "Migration 2026_11_26_000000 adds orders.copay_method, cash_log.method and the statuses_copay row 7; run php artisan migrate on deploy. Not covered by a test: the staff \"Paid by check\" button's handler, and the billing pages with a check on them (the shared CopayStatus lists are tested). A driver app that does not know status 7 shows no co-pay state for such an order. Not run: Pint, Larastan, a browser."
+    },
+    {
+      "id": "patient-card-page",
+      "priority": 30,
+      "area": "payments",
+      "title": "A patient saves a card on a QuikMedix page with Square's card form",
+      "user_visible_behavior": "The patient app's card form sent the raw card number, which the server has refused since the move to Square. GET /api/cards/add_link now answers a signed link, valid fifteen minutes, to /patient/card/{user}. The page holds Square's own card form; only Square's token is posted back and saved with the existing SaveCardOnFile action. The app opens the page in a browser sheet, so no card number passes through the app or the API. The page shows the last four digits of the card on file and nothing else about the account.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests: the link opens the form without signing in, with Square's production or sandbox script; a changed, unsigned or expired link is refused; only a patient is given a link.",
+        "Tests: posting a token saves the card and /api/cards lists it; a refused card or incomplete form says so and saves nothing; a failed refund of the confirming dollar still counts as saved.",
+        "The web access matrix records both routes as refused to every role without the signature."
+      ],
+      "evidence": [
+        "2026-11-25 PatientCardPageTest: 7 tests, 50 assertions pass, with Square faked.",
+        "2026-11-25 tests/Feature/Auth/web-access.json regenerated: 6 lines added, the two new routes."
+      ],
+      "notes": "The page's script was not run in a browser and no real card or Square call was made. The link is signed without the host (signed:relative) so it validates behind a proxy. The old POST /api/cards/add is unchanged."
+    },
+    {
+      "id": "patient-delivery-progress",
+      "priority": 31,
+      "area": "mobile API",
+      "title": "One arrival time, the stops ahead and the driver note for the patient app",
+      "user_visible_behavior": "/api/patient/home, /api/orders and /api/orders/show now say the same about an order on its way: eta_minutes and eta text (\"25 min\", \"1 h 5 min\") from orders.eta, which RecalculateDriverEta works out along the driver's stops in route order; stops_ahead, the driver's stops before the patient's (orders for one pharmacy or patient are one stop, every office visit its own); and customer_note, the patient's latest note for the driver, which the driver's route answer also carries on the stop. The driver's live position is given to the patient only once five or fewer stops are left; before that the details answer points the map at the pharmacy. The home answer also names the delivery window. Finished orders and orders not on a route answer null and \"Processing\".",
+      "status": "passing",
+      "verification_steps": [
+        "Tests: all three answers agree on minutes, text and stops; an office visit counts as its own stop; position shared at five stops and withheld at six; no values for an order off a route or delivered; hours and minutes wording; the note comes back unescaped.",
+        "Break the five-stop rule and the stop grouping on purpose to see the tests fail."
+      ],
+      "evidence": [
+        "2026-11-25 DeliveryProgressTest: 8 tests, 44 assertions pass. With the limit set to 99 one test fails; with the grouping broken four fail.",
+        "2026-11-25 OrderStatusApiTest's hand-built schema gained routes_priority, notes and orders.copay_method, which the answers now read; LegacySchemaBaselineTest names orders.copay_method as added after the baseline."
+      ],
+      "notes": "Behaviour change for existing clients: a patient more than five stops away no longer receives the driver's position. /api/routes (the driver's stops) uses MySQL-only SQL and has no test here; the note it now carries is read by a tested helper. The ETA itself is unchanged: it is refreshed every fifteen minutes and on dispatch changes, and counted down each minute."
     }
   ]
 }
