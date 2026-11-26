@@ -729,15 +729,17 @@
       "priority": 31,
       "area": "mobile API",
       "title": "One arrival time, the stops ahead and the driver note for the patient app",
-      "user_visible_behavior": "/api/patient/home, /api/orders and /api/orders/show now say the same about an order on its way: eta_minutes and eta text (\"25 min\", \"1 h 5 min\") from orders.eta, which RecalculateDriverEta works out along the driver's stops in route order; stops_ahead, the driver's stops before the patient's (orders for one pharmacy or patient are one stop, every office visit its own); and customer_note, the patient's latest note for the driver, which the driver's route answer also carries on the stop. The driver's live position is given to the patient only once five or fewer stops are left; before that the details answer points the map at the pharmacy. The home answer also names the delivery window. Finished orders and orders not on a route answer null and \"Processing\".",
+      "user_visible_behavior": "/api/patient/home, /api/orders and /api/orders/show now say the same about an order on its way: eta_minutes and eta text (\"25 min\", \"1 h 5 min\") from orders.eta, which RecalculateDriverEta works out along the driver's stops in route order; stops_ahead, the driver's stops before the patient's (orders for one pharmacy or patient are one stop, every office visit its own); and customer_note, the patient's latest note for the driver, which the driver's route answer also carries on the stop. The driver's live position is given to the patient only once five or fewer stops are left; before that the details answer points the map at the pharmacy. The home answer also names the delivery window. Finished orders and orders not on a route answer null and \"Processing\". /api/orders sends a patient only the pharmacies of their own orders, with id, name, address, location and phone; it used to send every pharmacy's whole row.",
       "status": "passing",
       "verification_steps": [
         "Tests: all three answers agree on minutes, text and stops; an office visit counts as its own stop; position shared at five stops and withheld at six; no values for an order off a route or delivered; hours and minutes wording; the note comes back unescaped.",
-        "Break the five-stop rule and the stop grouping on purpose to see the tests fail."
+        "Break the five-stop rule and the stop grouping on purpose to see the tests fail.",
+        "Test: a patient's order list names only their own pharmacy, with those five values."
       ],
       "evidence": [
         "2026-11-25 DeliveryProgressTest: 8 tests, 44 assertions pass. With the limit set to 99 one test fails; with the grouping broken four fail.",
-        "2026-11-25 OrderStatusApiTest's hand-built schema gained routes_priority, notes and orders.copay_method, which the answers now read; LegacySchemaBaselineTest names orders.copay_method as added after the baseline."
+        "2026-11-25 OrderStatusApiTest's hand-built schema gained routes_priority, notes and orders.copay_method, which the answers now read; LegacySchemaBaselineTest names orders.copay_method as added after the baseline.",
+        "2026-11-25 after the pharmacy-list change: DeliveryProgressTest 9 tests, 47 assertions; full suite 701 tests, 3578 assertions pass."
       ],
       "notes": "Behaviour change for existing clients: a patient more than five stops away no longer receives the driver's position. /api/routes (the driver's stops) uses MySQL-only SQL and has no test here; the note it now carries is read by a tested helper. The ETA itself is unchanged: it is refreshed every fifteen minutes and on dispatch changes, and counted down each minute."
     }

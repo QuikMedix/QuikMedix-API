@@ -63,7 +63,11 @@ class OrderController extends Controller
             foreach ($statuses as $status) {
                 $status->name = OrderStatus::label($status->id, $status->name);
             }
-            $pharmacys = DB::table('pharmacys')->get();
+            // A patient is sent the pharmacies of their own orders, and only what the app shows: not every
+            // pharmacy's row, whose tariffs are none of a patient's business and have tripped the app's reader.
+            $pharmacys = $isPatient
+                ? DB::table('pharmacys')->whereIn('id', $orders->pluck('pharmacy_id')->unique()->values())->get(['id', 'name', 'address', 'location', 'phone'])
+                : DB::table('pharmacys')->get();
             return response()->json([
                 'orders' => $orders,
                 'statuses' => $statuses,
