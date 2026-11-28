@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Support\DispatchZones;
 use App\Models\Order;
 use App\Models\Rx;
 use Illuminate\Support\Facades\Auth;
@@ -37,6 +38,7 @@ class RepeatOrder
         $order = json_encode($order);
         $order = json_decode($order,true);
         $order_id = Order::query()->insertGetId($order);
+        DispatchZones::stampOrder($order_id);
         $rxs = Rx::query()->where('order_id',$orderId)->get();
         foreach($rxs as $rx) {
             $rx->id = NULL;

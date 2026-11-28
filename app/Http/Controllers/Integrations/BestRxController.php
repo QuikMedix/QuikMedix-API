@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Integrations;
 
+use App\Support\DispatchZones;
 use App\Support\Sms;
 use App\Models\Pharmacy;
 use App\Http\Controllers\Controller;
@@ -149,6 +150,7 @@ class BestRxController extends Controller
                     $statuse_copay = (empty($copay))?'1':'2';
                     Rx::query()->insert($data);
                     Order::query()->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_auth->id, 'bestrx_order_id'=>$response->bestrx_order_id, 'user_id' => $patient->id, 'count_bags'=>$count_bags, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => 4, 'special_instructions' => $special_instructions, 'type_driver' => 1, 'delivery_time_id' => $delivery_time_id, 'delivery_date'=>$delivery_date, 'fridge' => $fridge, 'signature'=>$signature]);
+                    DispatchZones::stampOrder($id_max);
                     if($patient->primary_address==3){
                         if(!empty($patient->apartment3)){
                             $user_address = $patient->address3.' Apt '.$patient->apartment3;

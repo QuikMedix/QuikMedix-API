@@ -2,12 +2,13 @@
 
 use App\Http\Controllers\AdminAreaController;
 use App\Http\Controllers\DeliveryAreaController;
+use App\Http\Controllers\DispatchZoneController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\WishController;
 use Illuminate\Support\Facades\Route;
 
-// Users, admin areas, delivery areas, wishes and plans. Loaded by routes/web.php for signed-in, active accounts.
+// Users, admin areas, delivery areas, dispatch zones, wishes and plans. Loaded by routes/web.php for signed-in, active accounts.
 
 Route::get('/settings/users', [UserSettingsController::class, 'settingsUsers'])->middleware('allowed:admin');
 Route::post('/settings/users', [UserSettingsController::class, 'settingsUsersHandler'])->middleware('allowed:admin');
@@ -46,6 +47,10 @@ Route::get('/settings/area/add', [DeliveryAreaController::class, 'settingsStates
 Route::post('/settings/area/add', [DeliveryAreaController::class, 'settingsStatesAddHandler'])->middleware('allowed:admin');
 Route::get('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEdit'])->middleware('allowed:admin');
 Route::post('/settings/area/{area_id}/edit', [DeliveryAreaController::class, 'settingsStatesEditHandler'])->middleware('allowed:admin');
+
+Route::get('/settings/dispatch-zones', [DispatchZoneController::class, 'index'])->middleware('allowed:admin');
+Route::post('/settings/dispatch-zones/import', [DispatchZoneController::class, 'import'])->middleware('allowed:admin');
+Route::post('/settings/dispatch-zones/{zone_id}', [DispatchZoneController::class, 'update'])->middleware('allowed:admin')->whereNumber('zone_id');
 
 Route::get('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishes'])->middleware('allowed:admin');
 Route::post('/settings/wishes/{wish_id}/list', [WishController::class, 'settingsWishesHandler'])->middleware('allowed:admin');

@@ -522,6 +522,11 @@
         "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
+    "GET /settings/dispatch-zones": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
     "GET /settings/drivers": {
         "login": "guest",
         "no permission": "logist medic sale driver user facility",
@@ -988,6 +993,16 @@
         "blocked account": "blocked"
     },
     "POST /settings/area/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/dispatch-zones/1": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/dispatch-zones/import": {
         "login": "guest",
         "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
