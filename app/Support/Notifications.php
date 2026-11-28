@@ -40,6 +40,22 @@ class Notifications
     }
 
     /**
+     * Notifies a user's app and nothing else: without the app on a device, no text message is
+     * sent in its place. For notices sent to many people at once.
+     *
+     * @param  object  $user  a users row
+     */
+    public static function pushToApp(object $user, string $title, string $body): void
+    {
+        if (empty($user->device_token) || ! FirebaseMessaging::isConfigured()) {
+            return;
+        }
+        if (FirebaseMessaging::send($user->device_token, $title, $body) === FirebaseMessaging::RESULT_INVALID_TOKEN) {
+            DB::table('users')->where('id', $user->id)->update(['device_token' => null]);
+        }
+    }
+
+    /**
      * @param string[] $user_id
      * @param string $title
      * @param string $body

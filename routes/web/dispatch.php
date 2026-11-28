@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\LexaAdminApiNoAuth;
 use App\Http\Controllers\DispatchingController;
+use App\Http\Controllers\RouteOfferController;
 use App\Http\Controllers\RoutePlanningController;
 use App\Http\Controllers\RouteTemplatesController;
 use Illuminate\Support\Facades\Route;
 
-// Route planning, the dispatch board and route templates. Loaded by routes/web.php for signed-in, active accounts.
+// Route planning, the dispatch board, route templates and route offers. Loaded by routes/web.php for signed-in, active accounts.
 
 Route::get('/routes-list', [RoutePlanningController::class, 'orders'])->middleware('role:superadmin,admin,dispadmin,logist,medic');
 
@@ -33,4 +34,10 @@ Route::middleware('role:superadmin,admin,dispadmin,logist,medic')->group(functio
     Route::resource('route-templates', RouteTemplatesController::class)->only(['index', 'store', 'show', 'destroy']);
     Route::post('route-templates/{id}/items', [RouteTemplatesController::class, 'updateItems']);
     Route::post('route-templates/{id}/assign', [RouteTemplatesController::class, 'assignToDriver']);
+});
+
+Route::middleware('role:superadmin,admin,dispadmin,logist')->group(function () {
+    Route::get('/route-offers', [RouteOfferController::class, 'index']);
+    Route::post('/route-offers', [RouteOfferController::class, 'store']);
+    Route::post('/route-offers/{offer_id}/withdraw', [RouteOfferController::class, 'withdraw'])->whereNumber('offer_id');
 });

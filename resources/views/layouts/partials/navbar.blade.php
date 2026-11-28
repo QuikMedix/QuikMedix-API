@@ -384,6 +384,7 @@
                                             </a>
                                             <a href="/delivery-calendar" class="dropdown-item">Delivery Calendar</a>
                                             <a href="/route-templates" class="dropdown-item">Route Templates</a>
+                                            <a href="/route-offers" class="dropdown-item">Route Offers</a>
                                             @endif
                                         </div>
                                     </li>
@@ -476,6 +477,7 @@
                                             <a href="/settings/wishes" class="dropdown-item">Print Text</a>
                                             <a href="/settings/plans" class="dropdown-item">Tariff Plans</a>
                                             <a href="/settings/area" class="dropdown-item">Area Tariff</a>
+                                            <a href="/settings/dispatch-zones" class="dropdown-item">Dispatch Zones</a>
                                         </div>
                                     </li>
                                     <!-- <li class="nav-item ">

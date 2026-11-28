@@ -691,6 +691,9 @@ label {
                                             <button type="button" class="btn btn-outline-secondary" onclick="if(confirm('Are you sure?')){$('#eta_calculate').submit();}">Refresh ETA</button>
                                         </div>
                                         <p class="text-muted small mb-2">Half and Full are the shift rates; Flat rate pays the amount you type. Completed credits the driver for the stops they have completed.</p>
+                                        @if(!empty($route_offer))
+                                        <p class="small mb-2"><span class="badge badge-success">Route offer</span> The driver took route <strong>{{ $route_offer->code }}</strong> ({{ $route_offer->stops }} {{ $route_offer->stops == 1 ? 'stop' : 'stops' }}), which pays ${{ number_format((float) $route_offer->pay, 2) }}. That amount is filled in as the flat rate.</p>
+                                        @endif
                                         <h4>Routes</h4>
                                         <p style="float:left;">Distance: {{$driver->distance}} miles</p>
                                         <p style="float:right;">Duration: {{floor($driver->eta / 60)}} hr {{$driver->eta % 60}} min</p>

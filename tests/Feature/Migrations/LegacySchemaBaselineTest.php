@@ -41,7 +41,7 @@ class LegacySchemaBaselineTest extends TestCase
             $this->assertSame([], array_values(array_diff(array_column($definition['columns'], 0), Schema::getColumnListing($name))), "$name has every column");
         }
         // A table made by the baseline has exactly its columns, in order, followed by what later migrations added.
-        $addedLater = ['orders' => ['copay_method']];
+        $addedLater = ['orders' => ['copay_method', 'dispatch_zone_id']];
         foreach (['orders', 'pharmacys', 'routes_priority', 'area', 'action_log'] as $name) {
             $this->assertSame([...array_column($tables[$name]['columns'], 0), ...($addedLater[$name] ?? [])], Schema::getColumnListing($name));
         }

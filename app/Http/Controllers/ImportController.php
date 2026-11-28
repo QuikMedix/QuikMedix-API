@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DispatchZones;
 use App\Models\Order;
 use App\Models\Rx;
 use App\Http\Controllers\Concerns\RendersPages;
@@ -301,6 +302,7 @@ class ImportController extends Controller
                 $driver_id = NULL;
             }
             Order::query()->insert(['id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id' => Auth::user()->id, 'driver_id'=>$driver_id, 'user_id' => $user->id, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags'), 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => $request->input('type_driver'), 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge]);
+            DispatchZones::stampOrder($id_max);
             Notifications::send_push($user->id,"QuikMedix","QuikMedix is greeting you! Your order #$id_max is ready to be shipped to this address: $user->address If the address is wrong, please contact ".\App\Support\Branding::supportContact()." as soon as possible");
             if($request->input('delivery_time')==3 || $request->input('delivery_time')==4) {
                 $pharmacy = DB::table('pharmacys')->where('id', $pharmacy_id)->first();

@@ -445,6 +445,11 @@
         "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
+    "GET /route-offers": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
     "GET /route-templates": {
         "login": "guest",
         "no permission": "sale driver user facility",
@@ -518,6 +523,11 @@
         "blocked account": "blocked"
     },
     "GET /settings/area/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "GET /settings/dispatch-zones": {
         "login": "guest",
         "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
@@ -935,6 +945,16 @@
         "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"
     },
+    "POST /route-offers": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /route-offers/1/withdraw": {
+        "login": "guest",
+        "no permission": "medic sale driver user facility",
+        "blocked account": "blocked"
+    },
     "POST /route-templates": {
         "login": "guest",
         "no permission": "sale driver user facility",
@@ -988,6 +1008,16 @@
         "blocked account": "blocked"
     },
     "POST /settings/area/add": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/dispatch-zones/1": {
+        "login": "guest",
+        "no permission": "logist medic sale driver user facility",
+        "blocked account": "blocked"
+    },
+    "POST /settings/dispatch-zones/import": {
         "login": "guest",
         "no permission": "logist medic sale driver user facility",
         "blocked account": "blocked"

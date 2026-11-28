@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DispatchZones;
 use App\Models\Status;
 use App\Models\FamilyMember;
 use App\Models\AreaZip;
@@ -123,6 +124,7 @@ class FacilityOrderController extends Controller
                 $driver_id = NULL;
             }
             Order::query()->insert(['statuse_id' => OrderStatus::READY_FOR_PICKUP, 'id'=>$id_max,'pharmacy_id' => $pharmacy_id, 'medic_id'=>Auth::id(), 'driver_id'=>$driver_id, 'user_id' => $request->input('facility'), 'facility'=>true, 'copay' => $copay, 'statuse_copay' => $statuse_copay, 'delivery_method_id' => $request->input('delivery_method'), 'special_instructions' => $special_instructions, 'count_bags' => $request->input('count_bags') ?? 1, 'extra_charge_driver'=>floatval($request->input('extra_charge_driver')), 'type_driver' => 1, 'delivery_time_id' => $request->input('delivery_time'), 'delivery_time_range' => $delivery_time_range, 'delivery_date'=>$delivery_date, 'fridge' => $fridge,'family_id' => $request->input('family_id')]);
+            DispatchZones::stampOrder($id_max);
             if(!empty($request->input('facility'))){
                 $us = DB::table('users')->where('id',$request->input('facility'))->first();
             } else {

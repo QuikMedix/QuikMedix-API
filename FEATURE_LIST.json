@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-25",
+  "last_updated": "2026-11-27",
   "features": [
     {
       "id": "orders-qr-status",
@@ -742,6 +742,66 @@
         "2026-11-25 after the pharmacy-list change: DeliveryProgressTest 9 tests, 47 assertions; full suite 701 tests, 3578 assertions pass."
       ],
       "notes": "Behaviour change for existing clients: a patient more than five stops away no longer receives the driver's position. /api/routes (the driver's stops) uses MySQL-only SQL and has no test here; the note it now carries is read by a tested helper. The ETA itself is unchanged: it is refreshed every fifteen minutes and on dispatch changes, and counted down each minute."
+    },
+    {
+      "id": "dispatch-zones",
+      "priority": 32,
+      "area": "dispatch",
+      "title": "Dispatch zones loaded from a GeoJSON file",
+      "user_visible_behavior": "Settings > Dispatch Zones lists the zones deliveries are grouped by, with the orders waiting in each. Load zones takes a GeoJSON file of outlines (one zone for each feature, named by zone_name, with a two-letter state); without a file it loads the 83 New York and New Jersey counties that come with the project (database/data/ny_nj_dispatch_zones.geojson, U.S. Census Bureau 2024 boundaries, the five boroughs named Brooklyn, Queens, Manhattan, The Bronx and Staten Island). The same is done by php artisan quikmedix:import-zones, with --state and --only to load part of a file. Each zone has a route prefix (BK, QN, MN, BX and SI for the boroughs, three letters of the name otherwise, never the same twice), target stops (35), pay per stop ($3.75) and an In use box. Loading a file again updates the outlines and keeps those settings. Zones are their own table, dispatch_zones, and do not touch the price areas of Area Tariff.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests: the shipped file loads 83 zones, 62 in NY and 21 in NJ, with 83 different prefixes; sixteen known places land in the right zone or in none, including an island that is a separate part of Manhattan and Newark in the New Jersey Essex County.",
+        "Tests: --state and --only; reloading keeps prefix, in-use, target and pay; the smaller of two overlapping zones wins and a switched-off zone takes nothing; a hole in an outline is outside; unusable features are skipped and named; a file that is not GeoJSON loads nothing.",
+        "Tests of the settings page: empty state, loading with and without a file, messages, saving a zone, prefix rules, switching a zone off moves its waiting orders, administrators only."
+      ],
+      "evidence": [
+        "2026-11-27 ImportDispatchZonesTest: 10 tests, 43 assertions pass. DispatchZoneSettingsTest: 9 tests, 49 assertions pass.",
+        "2026-11-27 WebAccessMatrixTest regenerated: the three settings routes are open to superadmin, admin and dispadmin only."
+      ],
+      "notes": "The outline check is done in PHP (App\\Support\\DispatchZones), not with MySQL's ST_CONTAINS, so it behaves the same on every database and is tested as it runs. Counties are coarse: Brooklyn is one zone. A finer file (neighbourhoods) can be loaded on top and takes the orders that fall inside it. The page has no map. Not run against MySQL in this session."
+    },
+    {
+      "id": "order-dispatch-zone",
+      "priority": 33,
+      "area": "orders",
+      "title": "Every order carries the dispatch zone of the patient's address",
+      "user_visible_behavior": "A new order gets orders.dispatch_zone_id from the patient's primary address, whether it is made on the site, for a facility, by BestRx or MicroMerchant, by import, or by repeating an order. An address without a map position, or outside every zone in use, leaves the order without a zone. Orders made before the zones were loaded, and orders of patients who moved, are put in their zone when zones are loaded and each time the Route Offers page opens. An order is never refused because of its zone: if the zone cannot be worked out, a missing table included, the problem is reported and the order is made without one.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests: an order made on the site, one from BestRx and a repeated order get the zone of the address; an address outside every zone gets none; a repeated order follows the patient's current address.",
+        "Test: with the dispatch_zones table dropped, the site and BestRx still make their orders.",
+        "Remove the stamping calls on purpose to see the tests fail.",
+        "Compare every existing route's answer before and after."
+      ],
+      "evidence": [
+        "2026-11-27 OrderZoneTest: 4 tests, 23 assertions pass. With the calls in OrderController, RepeatOrder and BestRxController removed, three of the four fail.",
+        "2026-11-27 route comparison against main: 2,541 answers, 239 changed with the two new menu links, 0 changed with the old menu put back.",
+        "2026-11-27 LegacySchemaBaselineTest names orders.dispatch_zone_id as added after the baseline."
+      ],
+      "notes": "The facility, MicroMerchant and import paths call the same helper but have no test of their own here. Answers that send a whole orders row, such as the driver's /api/routes, now also carry dispatch_zone_id."
+    },
+    {
+      "id": "route-offers",
+      "priority": 34,
+      "area": "dispatch",
+      "title": "Route offers: dispatch publishes a route and the first driver to take it gets it",
+      "user_visible_behavior": "Routes > Route Offers shows the orders waiting for a QuikMedix driver, grouped by zone. Dispatch ticks the orders of one zone (the first ones up to the zone's target are ticked already), sets a delivery day, pickup time, pay and a note, and publishes. The route is named from the zone prefix, the day and its number that day (BK-1127-01), counts two orders for one patient as one stop, says about how many miles it is, and pays the zone's rate for each stop unless an amount is typed. The driver app lists open offers at GET /api/route-offers with zone, day, pickup time and pharmacies, stops, miles and pay, and no patient names or addresses; POST /api/route-offers/{id}/accept gives the route to the first driver who asks (the others get 409 and the reason), puts its orders on that driver's route after any stops they have, pharmacies first and then the nearest patient each time, and marks the orders as theirs. A driver takes one offer at a time. Orders cancelled or assigned elsewhere after publishing are left out; an offer with none left is withdrawn. Dispatch can withdraw an open offer. Publishing sends an app notification to every active driver and never a text. The taken route's stops are Flat rate with the amount still to come, and the driver's route page fills in the offer's pay, so Completed pays it.",
+      "status": "passing",
+      "verification_steps": [
+        "Tests: the board groups waiting orders by zone and leaves out orders with a driver, delivered orders and the pharmacy's own deliveries; a patient who moved changes zone; a dispatcher with an admin zone sees and offers only that zone's pharmacies.",
+        "Tests: publishing names, counts, measures and prices the route; the next route that day gets the next number; a typed pay wins; orders that cannot be offered are left out; an empty offer is refused.",
+        "Tests: the driver's list has no patient details; taking an offer writes the stops in order after existing ones, as flat rate awaiting an amount; the second driver gets 409; one offer at a time; orders that left the offer are not handed over; withdrawing; roles.",
+        "Test: publishing pushes to the one active driver with the app and sends no text.",
+        "Break the one-at-a-time rule, the own-driver filter, the zone filter, the admin-zone filter and the first-driver rule on purpose to see a test fail each time.",
+        "node tests/smoke/route-offer-form.js for the form's stop counter."
+      ],
+      "evidence": [
+        "2026-11-27 RouteOfferTest: 18 tests, 181 assertions pass. Each of the five deliberate breaks fails exactly one test.",
+        "2026-11-27 route-offer-form smoke: 6 checks pass.",
+        "2026-11-27 full suite: 742 tests, 3880 assertions pass. WebAccessMatrixTest regenerated: the three route-offer routes are open to superadmin, admin, dispadmin and logist."
+      ],
+      "notes": "Not verified: two drivers pressing at the same instant on MySQL (the rule is a single conditional UPDATE inside a transaction; the tests run one request after another on SQLite), the driver's route page with the offer line (it needs MySQL to draw), a real push, and the driver app screen, which was written but not compiled. Miles are straight lines between stops times 1.3, not a routed distance. A taken offer cannot be handed back from the app; dispatch changes it on the driver's route page."
     }
   ]
 }
