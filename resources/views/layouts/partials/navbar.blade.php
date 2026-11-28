@@ -384,6 +384,7 @@
                                             </a>
                                             <a href="/delivery-calendar" class="dropdown-item">Delivery Calendar</a>
                                             <a href="/route-templates" class="dropdown-item">Route Templates</a>
+                                            <a href="/route-offers" class="dropdown-item">Route Offers</a>
                                             @endif
                                         </div>
                                     </li>

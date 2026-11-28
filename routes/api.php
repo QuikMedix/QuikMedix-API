@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Api\RouteController;
+use App\Http\Controllers\Api\RouteOfferController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\LexaAdminApiNoAuth;
@@ -126,6 +127,8 @@ Route::middleware(['auth:api', 'active.api'])->group(function () {
     Route::get('/chats', [ChatController::class, 'chats']);
     Route::get('/chats/user/{user_id}', [ChatController::class, 'chatUser']);
     Route::get('/routes/start', [RouteController::class, 'startRoute']);
+    Route::get('/route-offers', [RouteOfferController::class, 'index']);
+    Route::post('/route-offers/{offer_id}/accept', [RouteOfferController::class, 'accept'])->whereNumber('offer_id');
     Route::get('/user/count_noread', [ChatController::class, 'get_unread_mess']);
     Route::get('/driver/payouts', [DriverShiftController::class, 'payouts']);
     Route::get('/driver/earnings', [DriverShiftController::class, 'earnings']);

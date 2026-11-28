@@ -12,6 +12,7 @@ use App\Models\Office;
 use App\Http\Controllers\Concerns\RendersPages;
 use App\Support\Notifications;
 use App\Support\PageLinks;
+use App\Support\RouteOffers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -326,6 +327,12 @@ class RoutePlanningController extends Controller
             $type_pay=4;
             $pay_value=-1;
         }
+        // A route the driver took from the offers pays what the offer said: Flat rate, with that amount filled in.
+        $route_offer = RouteOffers::awaitingPay($driver_id);
+        if($route_offer !== null) {
+            $type_pay = 1;
+            $pay_value = (float) $route_offer->pay;
+        }
         if(!empty($driver->pharmacy_id)) {
             $pharmacys = DB::table('pharmacys')->where("isactive",1)->where("isblocked",0)->where("id",$driver->pharmacy_id)->get();
         } else {
@@ -335,7 +342,7 @@ class RoutePlanningController extends Controller
         $orders_id=DB::table('routes_priority')->where('driver_id', $driver_id)->select('order_id')->groupBy('order_id')->get();
         $show_ids = [];
         $show_priority = [];
-        $res_view = view('routes.driver',['orders'=>$orders,'pharmacys'=>$pharmacys,'pharmacys_list'=>$pharmacys_list,'locations'=>$locations,'driver'=>$driver,'delivery_times'=>$delivery_times,'filter'=>$filter,'offices'=>$offices,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'pay_value'=>$pay_value,'type_pay'=>$type_pay,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'order_statuses'=>$order_statuses,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'orders_id'=>$orders_id,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Driver Detail','br1'=>'Routes','br2'=>'Driver Detail']);
+        $res_view = view('routes.driver',['route_offer'=>$route_offer,'orders'=>$orders,'pharmacys'=>$pharmacys,'pharmacys_list'=>$pharmacys_list,'locations'=>$locations,'driver'=>$driver,'delivery_times'=>$delivery_times,'filter'=>$filter,'offices'=>$offices,'patient_routes_priority'=>$patient_routes_priority,'pharmacy_routes_priority'=>$pharmacy_routes_priority,'pay_value'=>$pay_value,'type_pay'=>$type_pay,'routes_priority'=>$routes_priority,'patients_locations'=>$patients_locations,'order_statuses'=>$order_statuses,'show_ids'=>$show_ids,'show_priority'=>$show_priority,'orders_id'=>$orders_id,'pharmacy_locations'=>$pharmacy_locations,'title'=>'Driver Detail','br1'=>'Routes','br2'=>'Driver Detail']);
         return $this->page(request(), $res_view);
     }
 
