@@ -134,7 +134,8 @@ class RouteOffers
             'state' => $offer->zone_state,
             'delivery_date' => $offer->delivery_date === null ? null : substr((string) $offer->delivery_date, 0, 10),
             'pickup_time' => $offer->pickup_time,
-            'stops' => (int) $offer->stops,
+            // Counted from the orders still in the offer: two orders for one patient are one stop.
+            'stops' => $orders->unique('user_id')->count(),
             'orders' => $orders->count(),
             'miles' => $offer->miles === null ? null : (float) $offer->miles,
             'pay' => (float) $offer->pay,

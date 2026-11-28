@@ -125,7 +125,7 @@
                                                     <td>{{ $offer->zone_name }}</td>
                                                     <td>{{ $offer->delivery_date ? date('m/d/Y', strtotime($offer->delivery_date)) : '' }}</td>
                                                     <td>{{ $offer->pickup_time }}</td>
-                                                    <td>{{ $offer->stops }}</td>
+                                                    <td>{{ $offer->stops }}@if($offer->orders_gone > 0)<br><span class="text-danger small">{{ $offer->orders_gone }} {{ $offer->orders_gone == 1 ? 'order has' : 'orders have' }} left this route since. Withdraw it and publish again to change what it pays.</span>@endif</td>
                                                     <td>{{ $offer->miles === null ? '' : 'about '.round((float) $offer->miles) }}</td>
                                                     <td>${{ number_format((float) $offer->pay, 2) }}</td>
                                                     <td>

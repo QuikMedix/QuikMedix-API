@@ -65,6 +65,8 @@ class AcceptRouteOffer
             }
             RouteStop::query()->insert($stops);
             Order::query()->whereIn('id', $orders->pluck('id'))->update(['driver_id' => $driverId, 'ready' => '2']);
+            // The offer now says what was handed over, which is less than was published when orders left it since.
+            RouteOffer::query()->where('id', $offerId)->update(['stops' => count($plan['patients'])]);
 
             return ['accepted' => true, 'message' => "Route {$offer->code} is yours.", 'orders' => $orders->count()];
         });

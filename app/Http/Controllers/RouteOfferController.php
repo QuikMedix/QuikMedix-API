@@ -53,7 +53,13 @@ class RouteOfferController extends Controller
             ->leftJoin('users', 'users.id', '=', 'route_offers.driver_id')
             ->where(fn ($query) => $query->where('route_offers.status', RouteOffer::OPEN)->orWhere('route_offers.updated_at', '>=', now()->subDays(self::DAYS_SHOWN)))
             ->orderByRaw("case when route_offers.status = 'open' then 0 else 1 end")->orderByDesc('route_offers.id')
-            ->get(['route_offers.*', 'dispatch_zones.name as zone_name', 'users.name as driver_name', 'users.last_name as driver_last_name']);
+            ->get(['route_offers.*', 'dispatch_zones.name as zone_name', 'users.name as driver_name', 'users.last_name as driver_last_name'])
+            ->each(function (object $offer): void {
+                // Orders cancelled or given to a driver since an offer was published are no longer part of it.
+                $offer->orders_gone = $offer->status === RouteOffer::OPEN
+                    ? DB::table('route_offer_orders')->where('route_offer_id', $offer->id)->count() - RouteOffers::freeOrders($offer->id)->count()
+                    : 0;
+            });
 
         return $this->page($request, view('routes.offers', [
             'zones' => $zones, 'counts' => $counts, 'zone' => $zone, 'noZone' => $request->query('zone') === 'none', 'orders' => $orders, 'offers' => $offers,

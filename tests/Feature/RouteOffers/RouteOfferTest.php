@@ -295,8 +295,12 @@ class RouteOfferTest extends TestCase
         DB::table('orders')->where('id', 30)->update(['statuse_id' => 5]);
         DB::table('orders')->where('id', 31)->update(['driver_id' => 21]);
 
-        $this->assertSame(1, $this->asDriver(20)->getJson('/api/route-offers')->assertOk()->json('offers.0.orders'));
+        // Dispatch is told on the board, and the driver is shown what is left.
+        $this->asDispatch()->get('/route-offers')->assertOk()->assertSee('2 orders have left this route since.');
+        $listed = $this->asDriver(20)->getJson('/api/route-offers')->assertOk()->json('offers.0');
+        $this->assertSame([1, 1], [$listed['orders'], $listed['stops']]);
         $this->asDriver(20)->postJson("/api/route-offers/{$offer->id}/accept")->assertOk()->assertJson(['orders' => 1]);
+        $this->assertSame(1, (int) DB::table('route_offers')->where('id', $offer->id)->value('stops'));
 
         $this->assertSame([32], DB::table('routes_priority')->where('driver_id', 20)->distinct()->pluck('order_id')->map(fn ($id) => (int) $id)->all());
         $this->assertSame(21, (int) DB::table('orders')->where('id', 31)->value('driver_id'));
